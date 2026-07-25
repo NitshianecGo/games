@@ -630,7 +630,6 @@
         const state = {
             steps: 0,
             tab: 'home',
-            autoWalk: false,
             toasts: [],
             unlocked: [],
             unlockedAch: [],
@@ -647,7 +646,6 @@
             raid: { stage: 'idle', stageIndex: 0, meters: 0, target: 0, combo: 0, puzzle: null, result: null },
             prevLevel: 1,
             challengeTimer: null,
-            autoWalkInterval: null,
             _portfolioSub: 'achievements',
         };
 
@@ -735,9 +733,7 @@
                 if (!raw) return;
                 const data = JSON.parse(raw);
                 Object.assign(state, data);
-                // re-init computed fields
                 state.prevLevel = getLevelInfo().level;
-                // ensure arrays are arrays
                 state.unlocked = state.unlocked || [];
                 state.unlockedAch = state.unlockedAch || [];
                 state.owned = state.owned || [];
@@ -755,7 +751,6 @@
 
         function runEffects() {
             const li = getLevelInfo();
-            // unlock blueprints & recipes
             ALL_LEARNABLE.forEach(bp => {
                 if (state.steps >= bp.threshold && !state.unlocked.includes(bp.id)) {
                     state.unlocked.push(bp.id);
@@ -775,17 +770,6 @@
             const milestone = Math.floor(state.steps / 30000);
             if (milestone > state.lastAdMilestone && state.steps < 500000 && !getAdsDisabled()) {
                 state.showAd = true;
-            }
-            // auto-walk interval
-            if (state.autoWalk && !state.autoWalkInterval) {
-                state.autoWalkInterval = setInterval(() => {
-                    state.steps += 150 + Math.floor(Math.random() * 250);
-                    render();
-                }, 600);
-            }
-            if (!state.autoWalk && state.autoWalkInterval) {
-                clearInterval(state.autoWalkInterval);
-                state.autoWalkInterval = null;
             }
             // challenge timer
             if (state.challenge.active) {
@@ -815,7 +799,6 @@
                     state.challengeTimer = null;
                 }
             }
-            // save after changes
             saveState();
         }
 
@@ -825,15 +808,6 @@
 
         function setTab(tab) { state.tab = tab;
             render(); }
-
-        function setAutoWalk(val) {
-            state.autoWalk = val;
-            if (!val && state.autoWalkInterval) {
-                clearInterval(state.autoWalkInterval);
-                state.autoWalkInterval = null;
-            }
-            render();
-        }
 
         function addSteps(n) {
             state.steps += n;
@@ -1051,10 +1025,12 @@
             <p class="text-xs text-stone-400 leading-relaxed">Система пробудилась вместе с тобой в первый день Пустоши. Каждый шаг здесь — ещё и шаг к настоящему навыку в реальном мире.</p>
           `)}
           ${sysWindow('СИМУЛЯЦИЯ ШАГОМЕРА', `
-            <div class="text-[11px] text-stone-400 mb-3">Включи автопрогулку, чтобы наблюдать, как шаги накапливаются в реальном времени. Это демонстрация механики — в реальном приложении данные будут поступать с шагомера.</div>
-            <button class="w-full flex items-center justify-center gap-2 rounded-sm py-2.5 text-xs font-bold uppercase tracking-wide border ${state.autoWalk ? 'bg-rose-950/50 border-rose-700 text-rose-300' : 'bg-amber-500 border-amber-400 text-stone-950'}" data-autowalk>
-              ${state.autoWalk ? '<i data-lucide="pause" class="w-4 h-4"></i> Остановить автопрогулку' : '<i data-lucide="play" class="w-4 h-4"></i> Запустить автопрогулку'}
-            </button>
+            <div class="text-[11px] text-stone-400 mb-3">Нажимай кнопки, чтобы добавлять шаги и прокачивать персонажа. В реальном приложении данные поступают с шагомера.</div>
+            <div class="grid grid-cols-3 gap-2">
+              <button class="bg-stone-800 hover:bg-stone-700 border border-stone-700 rounded-sm py-2 text-xs font-mono text-amber-300" data-add="100">+${fmt(100)}</button>
+              <button class="bg-stone-800 hover:bg-stone-700 border border-stone-700 rounded-sm py-2 text-xs font-mono text-amber-300" data-add="1000">+${fmt(1000)}</button>
+              <button class="bg-stone-800 hover:bg-stone-700 border border-stone-700 rounded-sm py-2 text-xs font-mono text-amber-300" data-add="5000">+${fmt(5000)}</button>
+            </div>
           `)}
           `;
         }
@@ -1276,7 +1252,6 @@
 
         function renderSettings() {
             const s = state.notifSettings;
-            // Добавим кнопку сброса
             return sysWindow('УВЕДОМЛЕНИЯ', `
             <div class="space-y-3">
               ${NOTIF_CATEGORIES.map(c => `
@@ -1299,7 +1274,6 @@
         // ============================================================
 
         function render() {
-            // run effects
             runEffects();
 
             const root = document.getElementById('root');
@@ -1308,7 +1282,6 @@
             const adsDisabled = getAdsDisabled();
             const progressPct = li.progress * 100;
 
-            // Build top bar
             let topBar = `
           <div class="hazard-stripe"></div>
           <div class="sticky top-0 z-30 bg-stone-950/95 backdrop-blur border-b border-stone-800">
@@ -1339,7 +1312,6 @@
           </div>
           `;
 
-            // Ad banner
             let adBanner = '';
             if (state.showAd && !adsDisabled) {
                 adBanner = `
@@ -1358,7 +1330,6 @@
             `;
             }
 
-            // Toasts
             let toastHTML = '';
             if (state.toasts.length) {
                 toastHTML = `<div class="fixed top-3 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 w-[92%] max-w-md pointer-events-none">
@@ -1375,7 +1346,6 @@
             </div>`;
             }
 
-            // Tab content
             let tabContent = '';
             switch (state.tab) {
                 case 'home':
@@ -1406,7 +1376,6 @@
                     tabContent = renderHome();
             }
 
-            // Bottom nav
             const nav = `
           <div class="fixed bottom-0 left-0 right-0 bg-stone-950 border-t border-stone-800 z-30">
             <div class="max-w-md mx-auto grid grid-cols-7 text-[8px] font-mono">
@@ -1421,13 +1390,11 @@
           </div>
           `;
 
-            // Modal
             let modalHTML = '';
             const bp = getSelectedBp();
             if (bp) {
                 const risk = RISK_META[bp.risk] || RISK_META.none;
                 const needsConfirm = bp.risk === 'high' && !state.confirmedAdult[bp.id];
-                const meta = CATEGORY_META[bp.category] || { icon: 'file', color: 'text-stone-400' };
                 let modalBody = '';
                 if (needsConfirm) {
                     modalBody = `
@@ -1470,7 +1437,6 @@
             `;
             }
 
-            // Assemble full HTML
             const fullHTML = `
           ${topBar}
           ${adBanner}
@@ -1484,53 +1450,46 @@
 
             root.innerHTML = fullHTML;
 
-            // Recreate lucide icons
             if (typeof lucide !== 'undefined' && lucide.createIcons) {
                 lucide.createIcons();
-            } else {
-                console.warn('lucide not loaded');
             }
         }
 
         // ============================================================
-        //  EVENT DELEGATION (attached once)
+        //  EVENT DELEGATION
         // ============================================================
 
         function setupEventDelegation() {
             const root = document.getElementById('root');
             root.addEventListener('click', function(e) {
-                const target = e.target.closest('[data-tab], [data-add], [data-autowalk], [data-start-challenge], [data-challenge-click], [data-select], [data-close-modal], [data-confirm-adult], [data-start-raid], [data-run-tap], [data-puzzle], [data-buy-item], [data-buy-pack], [data-upgrade-clan], [data-toggle], [data-close-ad], [data-psub], [data-reset]');
+                const target = e.target.closest('[data-tab], [data-add], [data-start-challenge], [data-challenge-click], [data-select], [data-close-modal], [data-confirm-adult], [data-start-raid], [data-run-tap], [data-puzzle], [data-buy-item], [data-buy-pack], [data-upgrade-clan], [data-toggle], [data-close-ad], [data-psub], [data-reset]');
                 if (!target) return;
 
-                // Tab navigation
                 if (target.hasAttribute('data-tab')) {
                     e.preventDefault();
                     setTab(target.getAttribute('data-tab'));
                     return;
                 }
 
-                // Auto-walk toggle
-                if (target.hasAttribute('data-autowalk')) {
+                if (target.hasAttribute('data-add')) {
                     e.preventDefault();
-                    setAutoWalk(!state.autoWalk);
+                    const n = parseInt(target.getAttribute('data-add'), 10);
+                    addSteps(n);
                     return;
                 }
 
-                // Start challenge
                 if (target.hasAttribute('data-start-challenge')) {
                     e.preventDefault();
                     startChallenge();
                     return;
                 }
 
-                // Challenge click
                 if (target.hasAttribute('data-challenge-click')) {
                     e.preventDefault();
                     challengeClick();
                     return;
                 }
 
-                // Select blueprint/recipe
                 if (target.hasAttribute('data-select')) {
                     e.preventDefault();
                     const id = target.getAttribute('data-select');
@@ -1540,14 +1499,12 @@
                     return;
                 }
 
-                // Close modal
                 if (target.hasAttribute('data-close-modal')) {
                     e.preventDefault();
                     closeModal();
                     return;
                 }
 
-                // Confirm adult
                 if (target.hasAttribute('data-confirm-adult')) {
                     e.preventDefault();
                     const id = target.getAttribute('data-confirm-adult');
@@ -1555,21 +1512,18 @@
                     return;
                 }
 
-                // Start raid
                 if (target.hasAttribute('data-start-raid')) {
                     e.preventDefault();
                     startRaid();
                     return;
                 }
 
-                // Run tap
                 if (target.hasAttribute('data-run-tap')) {
                     e.preventDefault();
                     runTap();
                     return;
                 }
 
-                // Puzzle answer
                 if (target.hasAttribute('data-puzzle')) {
                     e.preventDefault();
                     const idx = parseInt(target.getAttribute('data-puzzle'), 10);
@@ -1577,7 +1531,6 @@
                     return;
                 }
 
-                // Buy item
                 if (target.hasAttribute('data-buy-item')) {
                     e.preventDefault();
                     const id = target.getAttribute('data-buy-item');
@@ -1586,7 +1539,6 @@
                     return;
                 }
 
-                // Buy pack
                 if (target.hasAttribute('data-buy-pack')) {
                     e.preventDefault();
                     const id = target.getAttribute('data-buy-pack');
@@ -1595,14 +1547,12 @@
                     return;
                 }
 
-                // Upgrade clan
                 if (target.hasAttribute('data-upgrade-clan')) {
                     e.preventDefault();
                     upgradeClan();
                     return;
                 }
 
-                // Toggle notification
                 if (target.hasAttribute('data-toggle')) {
                     e.preventDefault();
                     const id = target.getAttribute('data-toggle');
@@ -1610,14 +1560,12 @@
                     return;
                 }
 
-                // Close ad
                 if (target.hasAttribute('data-close-ad')) {
                     e.preventDefault();
                     closeAd();
                     return;
                 }
 
-                // Portfolio sub-tab
                 if (target.hasAttribute('data-psub')) {
                     e.preventDefault();
                     const sub = target.getAttribute('data-psub');
@@ -1626,7 +1574,6 @@
                     return;
                 }
 
-                // Reset progress
                 if (target.hasAttribute('data-reset')) {
                     e.preventDefault();
                     if (confirm('Сбросить весь прогресс? Это действие необратимо.')) {
@@ -1649,13 +1596,8 @@
                             prevLevel: 1,
                             _portfolioSub: 'achievements',
                         });
-                        if (state.autoWalkInterval) {
-                            clearInterval(state.autoWalkInterval);
-                            state.autoWalkInterval = null;
-                        }
-                        state.autoWalk = false;
                         if (state.challengeTimer) {
-                            clearInterval(state.challengeTimer);
+                            clearTimeout(state.challengeTimer);
                             state.challengeTimer = null;
                         }
                         render();
