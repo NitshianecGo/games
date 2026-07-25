@@ -1,0 +1,1607 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Протокол Пустошь</title>
+    <script src="https://cdn.tailwindcss.com">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js">
+    </script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            background: #0c0a09;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1c1917;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #44403c;
+            border-radius: 2px;
+        }
+        .toast-container {
+            pointer-events: none;
+        }
+        .toast-container>* {
+            pointer-events: auto;
+        }
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-16px) scale(0.97);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        .toast-enter {
+            animation: slideDown 0.28s ease-out forwards;
+        }
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(2px);
+        }
+        .modal-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: #44403c transparent;
+        }
+        .modal-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .modal-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .modal-scroll::-webkit-scrollbar-thumb {
+            background: #44403c;
+            border-radius: 2px;
+        }
+        .hazard-stripe {
+            height: 6px;
+            background: repeating-linear-gradient(135deg, #d97706 0 10px, #1c1917 10px 20px);
+            opacity: 0.5;
+        }
+        .sys-window {
+            position: relative;
+            border: 1px solid #44403c;
+            background: #1c1917;
+            border-radius: 2px;
+        }
+        .sys-window .sys-tag {
+            position: absolute;
+            top: -10px;
+            left: 12px;
+            background: #0c0a09;
+            padding: 0 8px;
+            font-size: 10px;
+            font-family: monospace;
+            letter-spacing: 0.15em;
+            color: #d97706;
+            border: 1px solid #44403c;
+            border-radius: 2px;
+            opacity: 0.8;
+        }
+        .sys-window .sys-body {
+            padding: 12px 14px;
+            padding-top: 16px;
+        }
+        .nav-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            padding: 8px 0 6px;
+            font-size: 8px;
+            font-family: monospace;
+            letter-spacing: 0.05em;
+            background: transparent;
+            border: none;
+            color: #78716c;
+            cursor: pointer;
+            transition: color 0.15s;
+        }
+        .nav-btn.active {
+            color: #f59e0b;
+        }
+        .nav-btn:hover {
+            color: #d6d3d1;
+        }
+        .nav-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+        .stat-bar-bg {
+            background: #292524;
+            border-radius: 999px;
+            overflow: hidden;
+            height: 6px;
+            border: 1px solid #44403c;
+        }
+        .stat-bar-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+            border-radius: 999px;
+        }
+        .tab-btn {
+            flex: 1;
+            text-align: center;
+            padding: 6px 0;
+            font-size: 11px;
+            font-family: monospace;
+            background: transparent;
+            border: none;
+            color: #78716c;
+            border-radius: 2px;
+            cursor: pointer;
+            transition: all 0.12s;
+        }
+        .tab-btn.active {
+            background: #f59e0b;
+            color: #0c0a09;
+            font-weight: 700;
+        }
+        .tab-btn:hover:not(.active) {
+            color: #d6d3d1;
+        }
+        .toggle-track {
+            width: 40px;
+            height: 22px;
+            border-radius: 999px;
+            background: #44403c;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+        .toggle-track.active {
+            background: #f59e0b;
+        }
+        .toggle-thumb {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 16px;
+            height: 16px;
+            border-radius: 999px;
+            background: #0c0a09;
+            transition: transform 0.2s;
+        }
+        .toggle-track.active .toggle-thumb {
+            transform: translateX(18px);
+        }
+        .shop-item {
+            border: 1px solid #44403c;
+            border-radius: 2px;
+            padding: 10px 12px;
+            background: #1c1917;
+        }
+        .shop-item .price-tag {
+            background: #f59e0b;
+            color: #0c0a09;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 2px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .shop-item .price-tag:disabled {
+            background: #44403c;
+            color: #78716c;
+            cursor: default;
+        }
+        .shop-item .owned-badge {
+            color: #34d399;
+            font-size: 11px;
+            font-family: monospace;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .raid-boss-svg {
+            width: 100%;
+            max-height: 100px;
+        }
+        .clan-banner-svg {
+            width: 40px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+        .hero-avatar-svg {
+            width: 100px;
+            height: 100px;
+            flex-shrink: 0;
+        }
+        @media (max-width: 480px) {
+            .sys-window .sys-body {
+                padding: 10px 12px;
+                padding-top: 16px;
+            }
+            .nav-btn svg {
+                width: 16px;
+                height: 16px;
+            }
+            .nav-btn {
+                font-size: 7px;
+                padding: 6px 0 4px;
+            }
+            .hero-avatar-svg {
+                width: 72px;
+                height: 72px;
+            }
+        }
+        .text-xxs {
+            font-size: 9px;
+        }
+        .tracking-wider {
+            letter-spacing: 0.15em;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script>
+        // ============================================================
+        //  DATA
+        // ============================================================
+
+        const CATEGORY_META = {
+            medical: { label: "Первая помощь", icon: "heart-pulse", color: "text-rose-400" },
+            home: { label: "Быт и дом", icon: "wrench", color: "text-amber-400" },
+            cooking: { label: "Готовка", icon: "chef-hat", color: "text-emerald-400" },
+            fitness: { label: "Фитнес", icon: "dumbbell", color: "text-sky-400" },
+        };
+
+        const BLUEPRINTS = [
+            { id: "bp1", category: "medical", name: "Наложение бинта", threshold: 3000, risk: "none",
+                short: "Как зафиксировать бинт на небольшой ране.",
+                steps: ["Вымой руки или используй антисептик.", "Очисти рану чистой салфеткой от края к центру.",
+                    "Наложи стерильную марлевую подушечку на рану.",
+                    "Бинтуй по кругу снизу вверх с нахлёстом в половину ширины бинта.",
+                    "Зафиксируй конец — палец должен просовываться под повязку.",
+                    "Проверь, не немеют ли пальцы ниже повязки."
+                ],
+                escalation: "Кровь не останавливается 10 минут — звони в скорую.",
+                videoQuery: "как наложить бинт первая помощь обучение"
+            },
+            { id: "bp2", category: "medical", name: "Обработка пореза", threshold: 8000, risk: "none",
+                short: "Первые действия при небольшом порезе.",
+                steps: ["Прижми чистой тканью на 3-5 минут.", "Промой порез под проточной водой.",
+                    "Обработай края антисептиком.", "Наложи пластырь, если порез неглубокий.",
+                    "Меняй повязку раз в день, следи за покраснением."
+                ],
+                escalation: "Порез глубокий или кровь не останавливается — звони в скорую или к взрослому.",
+                videoQuery: "первая помощь при порезе"
+            },
+            { id: "bp3", category: "medical", name: "Первая помощь при ожогах", threshold: 14000, risk: "low",
+                short: "Что делать в первые минуты после бытового ожога.",
+                steps: ["Убери источник тепла немедленно.", "Охлаждай прохладной проточной водой 10-15 минут.",
+                    "Не прокалывай волдыри.", "Накрой чистой сухой тканью.",
+                    "Не наноси масло/пасту — это ухудшает ожог."
+                ],
+                escalation: "Ожог больше ладони, на лице, волдыри повреждены — звони в скорую.",
+                videoQuery: "первая помощь при ожоге в быту"
+            },
+            { id: "bp4", category: "medical", name: "Носовое кровотечение", threshold: 20000, risk: "none",
+                short: "Как остановить обычное носовое кровотечение.",
+                steps: ["Сядь, слегка наклони голову вперёд (не назад).",
+                    "Зажми мягкую часть носа пальцами на 10 минут.", "Дыши через рот.",
+                    "Не сморкайся ближайший час после остановки."
+                ],
+                escalation: "Кровь не останавливается 20+ минут — обращайся к врачу.",
+                videoQuery: "как остановить кровотечение из носа"
+            },
+            { id: "bp5", category: "medical", name: "Растяжение: первые часы", threshold: 28000, risk: "low",
+                short: "Базовый протокол при растяжении связок.",
+                steps: ["Покой — прекрати нагрузку на конечность.", "Холод — приложи через ткань на 15-20 минут.",
+                    "Компрессия — эластичный бинт, не туго.",
+                    "Возвышенное положение — подними конечность выше уровня сердца."
+                ],
+                escalation: "Сильный отёк, невозможно опереться — к травматологу.",
+                videoQuery: "первая помощь при растяжении связок"
+            },
+            { id: "bp6", category: "medical", name: "Основы СЛР: когда и как", threshold: 100000, risk: "medium",
+                short: "Что важно знать в теории — перед сертифицированным курсом.",
+                steps: ["Сначала всегда звони 103/112 или проси кого-то это сделать.",
+                    "Проверь реакцию и дыхание человека.",
+                    "Если дыхания нет — нужны компрессии грудной клетки, этому обучают на практике с манекеном.",
+                    "Это описание не заменяет практический курс — просто теория, чтобы не растеряться."
+                ],
+                escalation: "Это не инструкция для реального применения — только сертифицированный курс с практикой даёт нужный навык.",
+                videoQuery: "базовый курс первой помощи СЛР сертифицированный"
+            },
+            { id: "bp7", category: "fitness", name: "Базовая разминка", threshold: 5000, risk: "none",
+                short: "5-минутный комплекс перед активностью.",
+                steps: ["Круговые движения плечами — 10 раз в каждую сторону.", "Наклоны корпуса в стороны — по 8 раз.",
+                    "Вращения тазом — 10 раз в каждую сторону.", "Приседания без веса — 10-15 раз.",
+                    "Лёгкий бег на месте — 60 секунд."
+                ],
+                escalation: "Резкая боль — остановись.", videoQuery: "разминка перед тренировкой для новичков"
+            },
+            { id: "bp8", category: "fitness", name: "Техника отжиманий", threshold: 12000, risk: "low",
+                short: "Как отжиматься без вреда для запястий и спины.",
+                steps: ["Руки чуть шире плеч, ладони под плечами.", "Тело — прямая линия от головы до пяток.",
+                    "Опускайся, сгибая локти под 45° к корпусу.", "Не роняй таз и не задирай его вверх.",
+                    "Начни с отжиманий с колен, если обычные пока тяжело."
+                ],
+                escalation: "Боль в запястье — переходи на упор на кулаки или снижай нагрузку.",
+                videoQuery: "правильная техника отжиманий для начинающих"
+            },
+            { id: "bp9", category: "fitness", name: "Правильная планка", threshold: 18000, risk: "none",
+                short: "Базовое упражнение на мышцы кора.",
+                steps: ["Упор на предплечья и носки стоп.", "Тело — прямая линия, не прогибайся в пояснице.",
+                    "Напряги живот и ягодицы.", "Начни с 20-30 секунд, увеличивай постепенно."
+                ],
+                escalation: null, videoQuery: "как правильно делать планку техника"
+            },
+            { id: "bp10", category: "fitness", name: "Растяжка после тренировки", threshold: 24000, risk: "none",
+                short: "Базовый комплекс заминки.",
+                steps: ["Растяжка задней поверхности бедра — 30 секунд на каждую ногу.",
+                    "Растяжка квадрицепса стоя — 30 секунд на каждую ногу.", "Растяжка плеч и рук.",
+                    "Дыши глубоко и ровно, без рывков."
+                ],
+                escalation: null, videoQuery: "растяжка после тренировки для новичков"
+            },
+            { id: "bp11", category: "fitness", name: "Дыхание при беге", threshold: 32000, risk: "none",
+                short: "Как дышать, чтобы не сбивалось дыхание.",
+                steps: ["Дыши одновременно носом и ртом на средней нагрузке.", "Держи ритм — например, 3 шага вдох, 2 шага выдох.",
+                    "Дыши животом, а не только грудью.", "Если задыхаешься — снизь темп, не останавливайся резко."
+                ],
+                escalation: null, videoQuery: "правильное дыхание во время бега"
+            },
+            { id: "bp12", category: "home", name: "Замена лампочки безопасно", threshold: 6000, risk: "low",
+                short: "Базовое бытовое действие с минимальным риском.",
+                steps: ["Выключи выключатель этого светильника.", "Дай лампочке остыть, если она недавно горела.",
+                    "Придерживай патрон рукой, откручивай лампочку против часовой стрелки.",
+                    "Вкручивай новую лампочку без сильного усилия.", "Включи свет и проверь работу."
+                ],
+                escalation: "Патрон шатается или искрит — не трогай, зови взрослого/электрика.",
+                videoQuery: "как поменять лампочку безопасно"
+            },
+            { id: "bp13", category: "home", name: "Электробезопасность: теория", threshold: 40000, risk: "medium",
+                short: "База знаний перед любой работой с электричеством.",
+                steps: ["Найди щиток и разберись, какой автомат за какую комнату отвечает.",
+                    "Автомат отключает питание, но всегда дополнительно проверяй индикатором.",
+                    "Индикатор отсутствия напряжения показывает, есть ли ток в проводе.",
+                    "Никогда не работай с проводкой во влажном помещении или мокрыми руками.",
+                    "Сомневаешься — это сигнал позвать взрослого, а не прекратить чтение."
+                ],
+                escalation: "Не уверен, что автомат отключил нужную цепь — зови взрослого или электрика.",
+                videoQuery: "основы электробезопасности в быту"
+            },
+            { id: "bp14", category: "home", name: "Мелкий ремонт крана", threshold: 50000, risk: "low",
+                short: "Что делать при небольшой протечке крана.",
+                steps: ["Перекрой воду на кран (вентиль под раковиной).",
+                    "Открой кран, чтобы слить остаток воды из трубы.",
+                    "Обычно причина течи — износ прокладки или картриджа.",
+                    "Сфотографируй разборку перед откручиванием деталей.",
+                    "Если не уверен в модели крана — лучше вызвать сантехника."
+                ],
+                escalation: "Течь не останавливается или появилась в стене — вызывай сантехника, не разбирай дальше.",
+                videoQuery: "как починить протекающий кран самостоятельно"
+            },
+            { id: "bp15", category: "home", name: "Тушение возгорания на кухне", threshold: 60000, risk: "medium",
+                short: "Базовые действия при небольшом возгорании на плите.",
+                steps: ["Если горит масло — НИКОГДА не заливай водой, это усилит пожар.",
+                    "Накрой сковороду крышкой или влажным полотенцем, перекрой доступ воздуха.",
+                    "Выключи конфорку, если это безопасно сделать.",
+                    "Если пламя не гаснет за секунды — уходи и звони 101/112."
+                ],
+                escalation: "Огонь распространяется дальше сковороды — немедленно покинь помещение и звони 101.",
+                videoQuery: "что делать при возгорании масла на кухне"
+            },
+            { id: "bp16", category: "home", name: "Замена розетки", threshold: 70000, risk: "high",
+                short: "Полная замена бытовой розетки — после теории электробезопасности.",
+                steps: ["Инструменты: индикаторная отвёртка, крестовая/плоская отвёртка, новая розетка.",
+                    "Шаг 1. Найди щиток, определи автомат нужной комнаты.",
+                    "Шаг 2. Отключи именно этот автомат.",
+                    "Шаг 3. Проверь индикаторной отвёрткой оба контакта старой розетки.",
+                    "Шаг 4. Только после подтверждения «напряжения нет» — откручивай крышку.",
+                    "Шаг 5. Сфотографируй расположение проводов перед отсоединением.",
+                    "Шаг 6. Подключи провода к новой розетке в том же порядке.",
+                    "Шаг 7. Закрепи розетку в подрозетнике, закрути крышку.",
+                    "Шаг 8. Включи автомат и проверь розетку индикатором."
+                ],
+                escalation: "Провода старые, оплавлены, или их больше трёх — останавливайся и зови электрика.",
+                videoQuery: "как заменить розетку своими руками пошагово"
+            },
+            { id: "bp17", category: "home", name: "Фильтр для воды из подручных средств", threshold: 90000, risk: "low",
+                short: "Survival-навык: механическая фильтрация мутной воды.",
+                steps: ["Возьми пластиковую бутылку, отрежь дно.",
+                    "Переверни горлышком вниз: ткань, песок, мелкий гравий, крупный гравий — слоями.",
+                    "Пропусти мутную воду через слои.",
+                    "Обязательно прокипяти воду после фильтрации перед употреблением."
+                ],
+                escalation: "Этот фильтр не обеззараживает воду — без кипячения пить нельзя.",
+                videoQuery: "как сделать фильтр для воды своими руками survival"
+            },
+            { id: "bp18", category: "home", name: "Базовые узлы для survival", threshold: 120000, risk: "none",
+                short: "Простые узлы, которые реально пригождаются в быту и походах.",
+                steps: ["Прямой узел — для связывания двух верёвок одной толщины.",
+                    "Восьмёрка — для страховки и надёжной петли.",
+                    "Удавка — для быстрой временной фиксации груза.",
+                    "Тренируйся на любой верёвке дома, пока не сможешь завязать не глядя."
+                ],
+                escalation: null, videoQuery: "базовые туристические узлы для начинающих"
+            },
+        ];
+
+        const RECIPES = [
+            { id: "r1", category: "cooking", name: "Яичница", threshold: 4000, risk: "low",
+                short: "Базовое блюдо для старта на кухне.",
+                steps: ["Разогрей сковороду на среднем огне 1-2 минуты.", "Добавь масло.",
+                    "Разбей яйцо о плоскую поверхность, вылей на сковороду.", "Посоли через минуту.",
+                    "Готовь 3-4 минуты по вкусу.", "Сними лопаткой, дай сковороде остыть."
+                ],
+                escalation: "Масло задымилось — выключи конфорку и проветри кухню.",
+                videoQuery: "как приготовить яичницу рецепт"
+            },
+            { id: "r2", category: "cooking", name: "Бутерброд с авокадо", threshold: 9000, risk: "none",
+                short: "Быстрый и полезный перекус.",
+                steps: ["Разрежь авокадо пополам, убери косточку.", "Разомни мякоть вилкой в миске.",
+                    "Добавь щепотку соли и немного лимонного сока.", "Намажь на подсушенный хлеб.",
+                    "По желанию — посыпь семечками или перцем."
+                ],
+                escalation: null, videoQuery: "тост с авокадо простой рецепт"
+            },
+            { id: "r3", category: "cooking", name: "Овсянка на молоке или воде", threshold: 15000, risk: "low",
+                short: "Простой сытный завтрак.",
+                steps: ["Налей молоко или воду в кастрюлю (примерно вдвое больше объёма хлопьев).",
+                    "Доведи до кипения на среднем огне.", "Всыпь овсяные хлопья, убавь огонь.",
+                    "Вари 3-5 минут, помешивая.", "Добавь мёд, фрукты или орехи по вкусу."
+                ],
+                escalation: null, videoQuery: "как варить овсянку на молоке рецепт"
+            },
+            { id: "r4", category: "cooking", name: "Паста с чесноком и маслом", threshold: 22000, risk: "low",
+                short: "Классика на 15 минут.",
+                steps: ["Отвари пасту в подсоленной воде по инструкции на упаковке.",
+                    "На сковороде разогрей оливковое масло, добавь нарезанный чеснок.",
+                    "Обжаривай чеснок 1 минуту на слабом огне, не дай подгореть.",
+                    "Слей воду с пасты, добавь пасту на сковороду.", "Перемешай, посыпь тёртым сыром или зеленью."
+                ],
+                escalation: null, videoQuery: "паста с чесноком и маслом рецепт"
+            },
+            { id: "r5", category: "cooking", name: "Салат из огурцов и помидоров", threshold: 27000, risk: "none",
+                short: "Свежий летний салат за 5 минут.",
+                steps: ["Нарежь огурцы и помидоры кубиками.", "Добавь нарезанный лук или зелень по желанию.",
+                    "Заправь оливковым маслом, солью и перцем.", "Перемешай и подавай сразу."
+                ],
+                escalation: null, videoQuery: "простой салат из огурцов и помидоров"
+            },
+            { id: "r6", category: "cooking", name: "Рис с овощами", threshold: 35000, risk: "low",
+                short: "Сытный гарнир из простых продуктов.",
+                steps: ["Промой рис до прозрачной воды.", "Свари рис по инструкции на упаковке.",
+                    "Обжарь нарезанные овощи (морковь, лук, перец) 5-7 минут.",
+                    "Смешай готовый рис с овощами.", "Посоли, добавь специи по вкусу."
+                ],
+                escalation: null, videoQuery: "рис с овощами простой рецепт"
+            },
+            { id: "r7", category: "cooking", name: "Печёный картофель в духовке", threshold: 45000, risk: "low",
+                short: "Простое блюдо с минимумом усилий.",
+                steps: ["Разогрей духовку до 200°C.", "Нарежь картофель дольками, не срезая кожуру.",
+                    "Смешай с маслом, солью и специями в миске.", "Выложи на противень в один слой.",
+                    "Запекай 25-30 минут до золотистой корочки."
+                ],
+                escalation: "Работа с духовкой — используй прихватки, не касайся горячих стенок.",
+                videoQuery: "печёный картофель в духовке рецепт"
+            },
+            { id: "r8", category: "cooking", name: "Смузи из банана и ягод", threshold: 55000, risk: "none",
+                short: "Быстрый напиток-перекус.",
+                steps: ["Положи банан и горсть ягод (свежих или замороженных) в блендер.",
+                    "Добавь молоко, йогурт или воду по вкусу.", "Взбей до однородности 30-60 секунд.",
+                    "При желании подсласти мёдом."
+                ],
+                escalation: null, videoQuery: "смузи банан ягоды рецепт"
+            },
+            { id: "r9", category: "cooking", name: "Омлет с сыром", threshold: 65000, risk: "low",
+                short: "Сытный завтрак на 10 минут.",
+                steps: ["Взбей 2-3 яйца с щепоткой соли и ложкой молока.",
+                    "Разогрей сковороду со сливочным маслом на среднем огне.",
+                    "Вылей смесь, готовь на среднем огне 2-3 минуты.", "Посыпь тёртым сыром, сложи омлет пополам.",
+                    "Готовь ещё минуту под крышкой до расплавления сыра."
+                ],
+                escalation: null, videoQuery: "омлет с сыром рецепт"
+            },
+            { id: "r10", category: "cooking", name: "Суп на скорую руку", threshold: 80000, risk: "low",
+                short: "Простой суп из базового набора продуктов.",
+                steps: ["Обжарь нарезанный лук и морковь 3-4 минуты.",
+                    "Добавь нарезанный картофель, залей водой, доведи до кипения.",
+                    "Убавь огонь, вари 15-20 минут.", "Посоли, добавь специи за 5 минут до готовности.",
+                    "Дай супу настояться 5-10 минут перед подачей."
+                ],
+                escalation: null, videoQuery: "простой суп на скорую руку рецепт"
+            },
+        ];
+
+        const ALL_LEARNABLE = [...BLUEPRINTS, ...RECIPES];
+
+        const ACHIEVEMENTS = [
+            { id: "a1", name: "Первые шаги", threshold: 1000, desc: "Начало пути." },
+            { id: "a2", name: "На своих двоих", threshold: 25000, desc: "Первая серьёзная дистанция." },
+            { id: "a3", name: "Не сдаюсь", threshold: 75000, desc: "Стабильная активность." },
+            { id: "a4", name: "Мастер быта", threshold: 150000, desc: "Освоен навык повышенного риска." },
+            { id: "a5", name: "Выживший", threshold: 500000, desc: "Полмиллиона шагов за плечами." },
+            { id: "a6", name: "Легенда системы", threshold: 1000000, desc: "Миллион шагов. Реклама отключена навсегда." },
+        ];
+
+        const RISK_META = {
+            none: { label: "Безопасно", color: "text-emerald-400" },
+            low: { label: "Низкий риск", color: "text-amber-300" },
+            medium: { label: "Требует внимания", color: "text-amber-400" },
+            high: { label: "Повышенный риск", color: "text-rose-400" },
+        };
+
+        const CLAN_TIERS = [
+            { label: "Группа · Ур.1", cap: 10, cost: 0 },
+            { label: "Группа · Ур.2", cap: 20, cost: 300 },
+            { label: "Группа · Ур.3", cap: 30, cost: 700 },
+            { label: "Клан · Ур.1", cap: 100, cost: 1500 },
+            { label: "Клан · Ур.2", cap: 150, cost: 3000 },
+            { label: "Клан · Ур.3", cap: 200, cost: 5000 },
+        ];
+
+        const CLAN_MEMBERS = [
+            { name: "Тень Пустоши", leader: true, level: 14, info: "Основатель клана" },
+            { name: "Ржавый", leader: false, level: 9, info: "Специалист по крафту" },
+            { name: "Кора", leader: false, level: 11, info: "Разведчик" },
+            { name: "Пепел", leader: false, level: 7, info: "Новичок группы" },
+        ];
+
+        const SHOP_ITEMS = [
+            { id: "s1", name: "Скин «Бродяга пустошей»", category: "hero", price: 320 },
+            { id: "s2", name: "Рамка аватара «Ветеран рейдов»", category: "hero", price: 180 },
+            { id: "s3", name: "Буст опыта x2 на 1 час", category: "hero", price: 150 },
+            { id: "s4", name: "Знамя клана", category: "clan", price: 400 },
+            { id: "s5", name: "Ускоренный сбор чертежей на 24ч (для группы)", category: "clan", price: 500 },
+        ];
+
+        const CRYSTAL_PACKS = [
+            { id: "c1", amount: 300, priceNow: 2, priceLater: 2.8 },
+            { id: "c2", amount: 800, priceNow: 5, priceLater: 7 },
+            { id: "c3", amount: 1400, priceNow: 8, priceLater: 11 },
+        ];
+
+        const NOTIF_CATEGORIES = [
+            { id: "progress", label: "Личный прогресс и напоминания о шагах" },
+            { id: "raid", label: "Рейд-боссы и события с таймером" },
+            { id: "clan", label: "Клановая активность" },
+            { id: "offers", label: "Акции и предложения в магазине" },
+        ];
+
+        const PUZZLES = [
+            { q: "Сколько будет 8 + 15?", options: ["21", "23", "25", "19"], answer: 1 },
+            { q: "Выбери самое большое число:", options: ["47", "74", "51", "68"], answer: 1 },
+            { q: "Какой из этих узлов используют для страховки?", options: ["Восьмёрка", "Прямой", "Удавка", "Простой"],
+                answer: 0 },
+            { q: "Сколько сторон у шестиугольника?", options: ["5", "6", "7", "8"], answer: 1 },
+            { q: "Что нельзя делать при горящем масле?", options: ["Накрыть крышкой", "Залить водой",
+                    "Выключить конфорку", "Уйти и позвать на помощь"
+                ], answer: 1 },
+        ];
+
+        const RAID_STAGES = ["run", "puzzle", "run", "puzzle", "puzzle"];
+
+        // ============================================================
+        //  UTILITY
+        // ============================================================
+
+        function levelInfo(steps) {
+            let level = 1;
+            while (500 * level * level <= steps) level++;
+            const prevReq = 500 * (level - 1) * (level - 1);
+            const nextReq = 500 * level * level;
+            const progress = Math.min(1, (steps - prevReq) / (nextReq - prevReq));
+            return { level, prevReq, nextReq, progress };
+        }
+
+        function fmt(n) {
+            return Math.round(n).toLocaleString("ru-RU");
+        }
+
+        function youtubeSearchUrl(q) {
+            return `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`;
+        }
+
+        function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
+
+        function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+        // ============================================================
+        //  STATE
+        // ============================================================
+
+        const state = {
+            steps: 0,
+            tab: 'home',
+            autoWalk: false,
+            toasts: [],
+            unlocked: [],
+            unlockedAch: [],
+            selectedItem: null,
+            confirmedAdult: {},
+            crystalsSpent: 0,
+            crystalsBought: 0,
+            owned: [],
+            notifSettings: { progress: true, raid: true, clan: true, offers: true },
+            lastAdMilestone: 0,
+            showAd: false,
+            clanTier: 0,
+            challenge: { active: false, timeLeft: 15, clicks: 0, result: null },
+            raid: { stage: 'idle', stageIndex: 0, meters: 0, target: 0, combo: 0, puzzle: null, result: null },
+            prevLevel: 1,
+            challengeTimer: null,
+            autoWalkInterval: null,
+            _portfolioSub: 'achievements',
+        };
+
+        // ============================================================
+        //  COMPUTED
+        // ============================================================
+
+        function getCrystals() {
+            const fromSteps = Math.floor(state.steps / 10000) * 5;
+            return fromSteps + state.crystalsBought - state.crystalsSpent;
+        }
+
+        function getLevelInfo() { return levelInfo(state.steps); }
+
+        function getDistance() { return state.steps * 0.0008; }
+
+        function getActiveMinutes() { return Math.floor(state.steps / 130); }
+
+        function getStatPoints() { return Math.floor(getDistance() / 0.5); }
+
+        function getEndurance() { return 5 + Math.round(getStatPoints() * 0.4); }
+
+        function getStrength() { return 5 + Math.round(getStatPoints() * 0.35); }
+
+        function getAgility() { return 5 + Math.round(getStatPoints() * 0.25); }
+
+        function getHeroTier() {
+            const lv = getLevelInfo().level;
+            return lv >= 12 ? 4 : lv >= 8 ? 3 : lv >= 4 ? 2 : 1;
+        }
+
+        function getAdsDisabled() { return state.steps >= 500000; }
+
+        function getClanTierObj() { return CLAN_TIERS[state.clanTier] || CLAN_TIERS[0]; }
+
+        function getSelectedBp() {
+            if (!state.selectedItem) return null;
+            return ALL_LEARNABLE.find(b => b.id === state.selectedItem) || null;
+        }
+
+        // ============================================================
+        //  TOASTS
+        // ============================================================
+
+        let toastIdCounter = 0;
+
+        function pushToast(text, type = 'info') {
+            const id = ++toastIdCounter;
+            state.toasts.push({ id, text, type });
+            render();
+            setTimeout(() => {
+                state.toasts = state.toasts.filter(t => t.id !== id);
+                render();
+            }, 4200);
+        }
+
+        // ============================================================
+        //  EFFECTS (replaces useEffect)
+        // ============================================================
+
+        function runEffects() {
+            const li = getLevelInfo();
+            // unlock blueprints & recipes
+            ALL_LEARNABLE.forEach(bp => {
+                if (state.steps >= bp.threshold && !state.unlocked.includes(bp.id)) {
+                    state.unlocked.push(bp.id);
+                    pushToast(`Открыто: «${bp.name}»`, 'blueprint');
+                }
+            });
+            ACHIEVEMENTS.forEach(a => {
+                if (state.steps >= a.threshold && !state.unlockedAch.includes(a.id)) {
+                    state.unlockedAch.push(a.id);
+                    pushToast(`Достижение получено: «${a.name}»`, 'achievement');
+                }
+            });
+            if (li.level > state.prevLevel) {
+                pushToast(`Новый уровень: ${li.level}`, 'level');
+                state.prevLevel = li.level;
+            }
+            const milestone = Math.floor(state.steps / 30000);
+            if (milestone > state.lastAdMilestone && state.steps < 500000 && !getAdsDisabled()) {
+                state.showAd = true;
+            }
+            // auto-walk interval
+            if (state.autoWalk && !state.autoWalkInterval) {
+                state.autoWalkInterval = setInterval(() => {
+                    state.steps += 150 + Math.floor(Math.random() * 250);
+                    render();
+                }, 600);
+            }
+            if (!state.autoWalk && state.autoWalkInterval) {
+                clearInterval(state.autoWalkInterval);
+                state.autoWalkInterval = null;
+            }
+            // challenge timer
+            if (state.challenge.active) {
+                if (state.challenge.timeLeft <= 0) {
+                    const success = state.challenge.clicks >= 18;
+                    state.challenge.active = false;
+                    state.challenge.result = success ? 'win' : 'lose';
+                    if (success) {
+                        state.steps += 2000;
+                        pushToast('Локация пройдена: бонус за скорость получен', 'success');
+                    } else {
+                        pushToast('Время вышло — бонус не выдан', 'warn');
+                    }
+                    render();
+                    return;
+                }
+                if (!state.challengeTimer) {
+                    state.challengeTimer = setTimeout(() => {
+                        state.challenge.timeLeft -= 1;
+                        state.challengeTimer = null;
+                        render();
+                    }, 1000);
+                }
+            } else {
+                if (state.challengeTimer) {
+                    clearTimeout(state.challengeTimer);
+                    state.challengeTimer = null;
+                }
+            }
+        }
+
+        // ============================================================
+        //  ACTIONS
+        // ============================================================
+
+        function setTab(tab) { state.tab = tab;
+            render(); }
+
+        function setAutoWalk(val) {
+            state.autoWalk = val;
+            if (!val && state.autoWalkInterval) {
+                clearInterval(state.autoWalkInterval);
+                state.autoWalkInterval = null;
+            }
+            render();
+        }
+
+        function addSteps(n) {
+            state.steps += n;
+            render();
+        }
+
+        function startChallenge() {
+            state.challenge = { active: true, timeLeft: 15, clicks: 0, result: null };
+            state.challengeTimer = null;
+            render();
+        }
+
+        function challengeClick() {
+            if (!state.challenge.active) return;
+            state.challenge.clicks += 1;
+            render();
+        }
+
+        function startRaid() {
+            state.raid = {
+                stage: 'run',
+                stageIndex: 0,
+                meters: 0,
+                target: 200 + Math.floor(Math.random() * 100),
+                combo: 0,
+                puzzle: null,
+                result: null,
+            };
+            render();
+        }
+
+        function advanceRaidStage(r) {
+            const nextIndex = r.stageIndex + 1;
+            if (nextIndex >= RAID_STAGES.length) {
+                pushToast('Рейд завершён — награда получена', 'success');
+                state.steps += 3000 + r.combo * 500;
+                const newRaid = { ...r, stage: 'result', result: 'win', stageIndex: nextIndex };
+                state.raid = newRaid;
+                render();
+                return;
+            }
+            const stage = RAID_STAGES[nextIndex];
+            if (stage === 'run') {
+                state.raid = {
+                    ...r,
+                    stage: 'run',
+                    stageIndex: nextIndex,
+                    meters: 0,
+                    target: 250 + Math.floor(Math.random() * 150),
+                };
+            } else {
+                const puzzle = pick(PUZZLES);
+                state.raid = { ...r, stage: 'puzzle', stageIndex: nextIndex, puzzle };
+            }
+            render();
+        }
+
+        function runTap() {
+            const r = state.raid;
+            if (r.stage !== 'run') return;
+            const meters = r.meters + 15 + Math.floor(Math.random() * 15);
+            if (meters >= r.target) {
+                advanceRaidStage({ ...r, meters: r.target });
+            } else {
+                state.raid = { ...r, meters };
+                render();
+            }
+        }
+
+        function answerPuzzle(idx) {
+            const r = state.raid;
+            if (r.stage !== 'puzzle' || !r.puzzle) return;
+            const correct = idx === r.puzzle.answer;
+            if (correct) {
+                pushToast('Верно! Комбо +1', 'success');
+                advanceRaidStage({ ...r, combo: r.combo + 1 });
+            } else {
+                pushToast('Неверно, но группа продолжает вместе', 'warn');
+                advanceRaidStage({ ...r });
+            }
+        }
+
+        function buyItem(item) {
+            const crystals = getCrystals();
+            if (crystals < item.price) { pushToast('Недостаточно кристаллов', 'warn'); return; }
+            state.crystalsSpent += item.price;
+            state.owned.push(item.id);
+            pushToast(`Куплено: ${item.name}`, 'success');
+            render();
+        }
+
+        function buyPack(pack) {
+            state.crystalsBought += pack.amount;
+            pushToast(`+${pack.amount} кристаллов зачислено (демо-покупка)`, 'success');
+            render();
+        }
+
+        function upgradeClan() {
+            const next = CLAN_TIERS[state.clanTier + 1];
+            if (!next) return;
+            const crystals = getCrystals();
+            if (crystals < next.cost) { pushToast('Недостаточно кристаллов для улучшения', 'warn'); return; }
+            state.crystalsSpent += next.cost;
+            state.clanTier += 1;
+            pushToast(`Клан улучшен: ${next.label}`, 'success');
+            render();
+        }
+
+        function toggleNotif(id) {
+            state.notifSettings[id] = !state.notifSettings[id];
+            render();
+        }
+
+        function closeAd() {
+            state.showAd = false;
+            state.lastAdMilestone = Math.floor(state.steps / 30000);
+            render();
+        }
+
+        function closeModal() { state.selectedItem = null;
+            render(); }
+
+        function confirmAdult(id) {
+            state.confirmedAdult[id] = true;
+            render();
+        }
+
+        function setSelectedItem(id) { state.selectedItem = id;
+            render(); }
+
+        // ============================================================
+        //  RENDER — SVG HELPERS
+        // ============================================================
+
+        function heroAvatarSVG(tier) {
+            const gearColor = tier >= 3 ? '#f59e0b' : '#78716c';
+            return `<svg viewBox="0 0 160 160" class="w-28 h-28 shrink-0">
+            <circle cx="80" cy="80" r="76" fill="#1c1917" stroke="#44403c" stroke-width="2"/>
+            <circle cx="80" cy="58" r="26" fill="#a8a29e"/>
+            <path d="M54 56 q26 -22 52 0 l-4 -18 q-22 -14 -44 0 z" fill="#3f3f46"/>
+            <rect x="48" y="90" width="64" height="52" rx="10" fill="${gearColor}"/>
+            <rect x="60" y="90" width="40" height="10" fill="#292524" opacity="0.5"/>
+            ${tier >= 2 ? `<circle cx="80" cy="112" r="8" fill="#0c0a09" stroke="#f59e0b" stroke-width="2"/>` : ''}
+            ${tier >= 4 ? `<path d="M40 96 L26 140 L54 130 Z" fill="#57534e"/><path d="M120 96 L134 140 L106 130 Z" fill="#57534e"/>` : ''}
+          </svg>`;
+        }
+
+        function raidBossSVG() {
+            return `<svg viewBox="0 0 200 140" class="w-full h-24">
+            <ellipse cx="100" cy="120" rx="90" ry="14" fill="#0c0a09" opacity="0.6"/>
+            <path d="M40 120 L55 40 Q100 10 145 40 L160 120 Z" fill="#3f2d20" stroke="#7c2d12" stroke-width="2"/>
+            <circle cx="80" cy="55" r="7" fill="#f59e0b"/>
+            <circle cx="120" cy="55" r="7" fill="#f59e0b"/>
+            <path d="M70 85 L130 85 L120 100 L80 100 Z" fill="#1c1917"/>
+            <path d="M40 120 L20 100 M160 120 L180 100" stroke="#57534e" stroke-width="6" stroke-linecap="round"/>
+          </svg>`;
+        }
+
+        function clanBannerSVG() {
+            return `<svg viewBox="0 0 100 60" class="w-10 h-6 shrink-0">
+            <rect x="10" y="4" width="4" height="52" fill="#78716c"/>
+            <path d="M14 6 L80 6 L68 20 L80 34 L14 34 Z" fill="#d97706"/>
+          </svg>`;
+        }
+
+        // ============================================================
+        //  RENDER — COMPONENTS
+        // ============================================================
+
+        function sysWindow(tag, bodyHTML, extraClass = '') {
+            return `<div class="sys-window ${extraClass}">
+            ${tag ? `<div class="sys-tag">${tag}</div>` : ''}
+            <div class="sys-body">${bodyHTML}</div>
+          </div>`;
+        }
+
+        function navBtn(tabId, icon, label) {
+            const active = state.tab === tabId;
+            return `<button class="nav-btn ${active ? 'active' : ''}" data-tab="${tabId}">
+            <i data-lucide="${icon}" class="w-4 h-4"></i>
+            <span>${label}</span>
+          </button>`;
+        }
+
+        function statRow(icon, label, value, color) {
+            const pct = Math.min(100, value);
+            const bgColor = color.replace('text-', 'bg-');
+            return `<div class="flex items-center justify-between py-1.5">
+            <div class="flex items-center gap-2 text-sm text-stone-300">
+              <i data-lucide="${icon}" class="w-4 h-4 ${color}"></i>
+              ${label}
+            </div>
+            <div class="w-32 h-2 bg-stone-800 rounded-full overflow-hidden ring-1 ring-stone-700 mx-3">
+              <div class="h-full ${bgColor}" style="width:${pct}%"></div>
+            </div>
+            <div class="text-xs font-mono text-stone-400 w-6 text-right">${value}</div>
+          </div>`;
+        }
+
+        // ============================================================
+        //  RENDER — TABS
+        // ============================================================
+
+        function renderHome() {
+            const li = getLevelInfo();
+            const dist = getDistance();
+            const mins = getActiveMinutes();
+            return `
+          ${sysWindow('ЖУРНАЛ АКТИВНОСТИ', `
+            <div class="grid grid-cols-3 gap-2 text-center mb-3">
+              <div><div class="text-xl font-black text-stone-100">${fmt(state.steps)}</div><div class="text-[10px] font-mono text-stone-500">шагов</div></div>
+              <div><div class="text-xl font-black text-stone-100">${dist.toFixed(2)}</div><div class="text-[10px] font-mono text-stone-500">км</div></div>
+              <div><div class="text-xl font-black text-stone-100">${mins}</div><div class="text-[10px] font-mono text-stone-500">мин активности</div></div>
+            </div>
+            <p class="text-xs text-stone-400 leading-relaxed">Система пробудилась вместе с тобой в первый день Пустоши. Каждый шаг здесь — ещё и шаг к настоящему навыку в реальном мире.</p>
+          `)}
+          ${sysWindow('ДЕМО-УПРАВЛЕНИЕ ШАГАМИ', `
+            <div class="text-[10px] font-mono text-stone-500 mb-2">Для теста без реального шагомера — используй кнопки ниже.</div>
+            <div class="grid grid-cols-3 gap-2 mb-2">
+              <button class="bg-stone-800 hover:bg-stone-700 border border-stone-700 rounded-sm py-2 text-xs font-mono text-amber-300" data-add="100">+${fmt(100)}</button>
+              <button class="bg-stone-800 hover:bg-stone-700 border border-stone-700 rounded-sm py-2 text-xs font-mono text-amber-300" data-add="1000">+${fmt(1000)}</button>
+              <button class="bg-stone-800 hover:bg-stone-700 border border-stone-700 rounded-sm py-2 text-xs font-mono text-amber-300" data-add="10000">+${fmt(10000)}</button>
+            </div>
+            <button class="w-full flex items-center justify-center gap-2 rounded-sm py-2.5 text-xs font-bold uppercase tracking-wide border ${state.autoWalk ? 'bg-rose-950/50 border-rose-700 text-rose-300' : 'bg-amber-500 border-amber-400 text-stone-950'}" data-autowalk>
+              ${state.autoWalk ? '<i data-lucide="pause" class="w-4 h-4"></i> Остановить автопрогулку' : '<i data-lucide="play" class="w-4 h-4"></i> Автопрогулка (симуляция)'}
+            </button>
+          `)}
+          `;
+        }
+
+        function renderQuests() {
+            const c = state.challenge;
+            return `
+          ${sysWindow('ЕЖЕДНЕВНОЕ ЗАДАНИЕ', `
+            <div class="flex items-start justify-between">
+              <div><div class="font-bold text-stone-100 text-sm">Пройди 3 000 шагов сегодня</div><div class="text-xs text-stone-500 mt-1">Награда: 20 кристаллов, опыт</div></div>
+              <i data-lucide="footprints" class="w-5 h-5 text-amber-400 mt-1"></i>
+            </div>
+          `)}
+          ${sysWindow('ОФЛАЙН-ЛОКАЦИЯ · БЕЗ СЕТИ', `
+            <div class="font-bold text-stone-100 text-sm mb-1">Заброшенный склад</div>
+            <p class="text-xs text-stone-400 mb-3">Локация без интернета. Пройди её как можно быстрее — награда зависит от скорости. Цель: 18+ действий за 15 секунд.</p>
+            ${!c.active && c.result === null ? `
+              <button class="w-full bg-amber-500 text-stone-950 font-bold uppercase text-xs tracking-wide rounded-sm py-2.5" data-start-challenge>Начать вылазку</button>
+            ` : ''}
+            ${c.active ? `
+              <div>
+                <div class="flex justify-between text-xs font-mono text-stone-400 mb-2"><span>Осталось: ${c.timeLeft}с</span><span>Действий: ${c.clicks} / 18</span></div>
+                <button class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold uppercase text-xs tracking-wide rounded-sm py-4" data-challenge-click>Действовать!</button>
+              </div>
+            ` : ''}
+            ${!c.active && c.result ? `
+              <div class="text-xs font-mono flex items-center justify-between ${c.result === 'win' ? 'text-emerald-400' : 'text-rose-400'}">
+                <span>${c.result === 'win' ? 'Успех — бонус получен' : 'Не успел — бонус не выдан'}</span>
+                <button class="underline" data-start-challenge>ещё раз</button>
+              </div>
+            ` : ''}
+          `)}
+          `;
+        }
+
+        function renderPortfolio() {
+            const sub = state._portfolioSub || 'achievements';
+            const setSub = (s) => { state._portfolioSub = s;
+                render(); };
+            let content = '';
+            if (sub === 'achievements') {
+                content = ACHIEVEMENTS.map(a => {
+                    const unlocked = state.unlockedAch.includes(a.id);
+                    return `<div class="sys-window ${!unlocked ? 'opacity-50' : ''}">
+                <div class="sys-body">
+                  <div class="flex items-center gap-3">
+                    ${unlocked ? '<i data-lucide="trophy" class="w-5 h-5 text-amber-400 shrink-0"></i>' : '<i data-lucide="lock" class="w-5 h-5 text-stone-600 shrink-0"></i>'}
+                    <div><div class="text-sm font-bold text-stone-100">${a.name}</div><div class="text-[11px] text-stone-500">${a.desc} · ${fmt(a.threshold)} шагов</div></div>
+                  </div>
+                </div>
+              </div>`;
+                }).join('');
+            } else {
+                const list = sub === 'blueprints' ? BLUEPRINTS : RECIPES;
+                content = list.map(bp => {
+                    const unlocked = state.unlocked.includes(bp.id);
+                    const meta = CATEGORY_META[bp.category] || { icon: 'file', color: 'text-stone-400' };
+                    return `<button class="w-full text-left border border-stone-800 rounded-sm p-3 flex items-center gap-3 ${unlocked ? 'bg-stone-900 hover:bg-stone-800' : 'bg-stone-900/40 opacity-50'}" data-select="${bp.id}" ${!unlocked ? 'disabled' : ''}>
+                ${unlocked ? `<i data-lucide="${meta.icon}" class="w-5 h-5 shrink-0 ${meta.color}"></i>` : '<i data-lucide="lock" class="w-5 h-5 text-stone-600 shrink-0"></i>'}
+                <div class="flex-1">
+                  <div class="text-sm font-bold text-stone-100">${bp.name}</div>
+                  <div class="text-[11px] text-stone-500">${unlocked ? bp.short : `Откроется на ${fmt(bp.threshold)} шагов`}</div>
+                </div>
+                ${unlocked ? '<i data-lucide="chevron-right" class="w-4 h-4 text-stone-600"></i>' : ''}
+              </button>`;
+                }).join('');
+            }
+            const tabs = [
+                { id: 'achievements', label: 'Ачивки' },
+                { id: 'blueprints', label: 'Чертежи' },
+                { id: 'recipes', label: 'Рецепты' },
+            ];
+            const tabHTML = `<div class="flex gap-1 bg-stone-900 border border-stone-800 rounded-sm p-1">
+            ${tabs.map(t => `<button class="tab-btn ${sub === t.id ? 'active' : ''}" data-psub="${t.id}">${t.label}</button>`).join('')}
+          </div>`;
+            return tabHTML + `<div class="mt-3 space-y-2">${content}</div>`;
+        }
+
+        function renderHero() {
+            const li = getLevelInfo();
+            const tier = getHeroTier();
+            const dist = getDistance();
+            const end = getEndurance();
+            const str = getStrength();
+            const agi = getAgility();
+            const heroItems = SHOP_ITEMS.filter(i => i.category === 'hero' && state.owned.includes(i.id));
+            return `
+          ${sysWindow('ПРОФИЛЬ ВЫЖИВШЕГО', `
+            <div class="flex items-center gap-4">
+              ${heroAvatarSVG(tier)}
+              <div>
+                <div class="text-sm font-extrabold text-stone-100">Выживший · Ур. ${li.level}</div>
+                <div class="text-[11px] text-stone-500 mt-1">Пройдено: ${dist.toFixed(1)} км</div>
+                <div class="text-[11px] text-stone-500">Характеристики растут каждые 500 м</div>
+              </div>
+            </div>
+          `)}
+          ${sysWindow('ХАРАКТЕРИСТИКИ', `
+            ${statRow('shield', 'Выносливость', end, 'text-emerald-400')}
+            ${statRow('flame', 'Сила', str, 'text-rose-400')}
+            ${statRow('wind', 'Ловкость', agi, 'text-sky-400')}
+          `)}
+          ${sysWindow('ЭКИПИРОВКА', `
+            ${heroItems.length === 0 ? '<div class="text-xs text-stone-500">Пока ничего не куплено в магазине для героя.</div>' :
+              heroItems.map(i => `<div class="flex items-center gap-2 text-sm text-stone-300"><i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>${i.name}</div>`).join('')}
+          `)}
+          `;
+        }
+
+        function renderClan() {
+            const tier = getClanTierObj();
+            const next = CLAN_TIERS[state.clanTier + 1];
+            const crystals = getCrystals();
+            const sorted = [...CLAN_MEMBERS].sort((a, b) => (b.leader ? 1 : 0) - (a.leader ? 1 : 0));
+            return `
+          ${sysWindow('КЛАН · ПУСТОШЬ-7', `
+            <div class="flex items-center gap-2 mb-2">${clanBannerSVG()}<div class="text-sm font-bold text-stone-100">${tier.label}</div></div>
+            <div class="text-[11px] font-mono text-stone-500 mb-3">Вместимость: ${CLAN_MEMBERS.length} / ${tier.cap} участников</div>
+            ${next ? `<button class="w-full flex items-center justify-center gap-2 bg-amber-500 ${crystals < next.cost ? 'disabled:bg-stone-700 disabled:text-stone-500' : ''} text-stone-950 font-bold uppercase text-xs tracking-wide rounded-sm py-2.5" data-upgrade-clan ${crystals < next.cost ? 'disabled' : ''}>
+              <i data-lucide="chevron-up" class="w-4 h-4"></i> Улучшить до «${next.label}» — ${fmt(next.cost)} кристаллов
+            </button>` : `<div class="text-xs font-mono text-emerald-400 text-center">Максимальный уровень клана достигнут</div>`}
+          `)}
+          ${sysWindow('УЧАСТНИКИ', `
+            <div class="space-y-2">
+              ${sorted.map(m => `
+                <div class="flex items-center gap-3">
+                  ${m.leader ? '<i data-lucide="crown" class="w-4 h-4 text-amber-400 shrink-0"></i>' : '<i data-lucide="user" class="w-4 h-4 text-stone-500 shrink-0"></i>'}
+                  <div class="flex-1">
+                    <div class="text-sm ${m.leader ? 'text-amber-300 font-bold' : 'text-stone-300'}">${m.name}</div>
+                    <div class="text-[11px] text-stone-500">${m.info} · Ур. ${m.level}</div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+            <div class="text-[11px] text-stone-500 mt-3">Демо-состав. Дальше — приглашения, роли (лидер/офицер/участник), рост до 200 человек по мере улучшения клана.</div>
+          `)}
+          `;
+        }
+
+        function renderRaid() {
+            const r = state.raid;
+            let body = '';
+            if (r.stage === 'idle') {
+                body = `
+              <p class="text-xs text-stone-400 my-3">Активируй рейд: пробеги локацию, реши пару логических задач по пути — и доберись до босса вместе с группой.</p>
+              <button class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold uppercase text-xs tracking-wide rounded-sm py-2.5" data-start-raid>Активировать рейд</button>
+            `;
+            } else if (r.stage === 'run') {
+                const pct = Math.min(100, (r.meters / r.target) * 100);
+                body = `
+              <div class="mt-3">
+                <div class="text-xs font-mono text-stone-400 mb-2">Бег: ${Math.round(r.meters)} / ${r.target} м</div>
+                <div class="w-full h-3 bg-stone-800 rounded-full overflow-hidden ring-1 ring-stone-700 mb-3"><div class="h-full bg-amber-500 transition-all duration-200" style="width:${pct}%"></div></div>
+                <button class="w-full bg-amber-500 text-stone-950 font-bold uppercase text-xs tracking-wide rounded-sm py-4" data-run-tap>Бежать!</button>
+              </div>
+            `;
+            } else if (r.stage === 'puzzle' && r.puzzle) {
+                body = `
+              <div class="mt-3">
+                <div class="text-xs font-mono text-amber-300 mb-1">Комбо: ${r.combo}</div>
+                <div class="text-sm font-bold text-stone-100 mb-2">${r.puzzle.q}</div>
+                <div class="grid grid-cols-2 gap-2">
+                  ${r.puzzle.options.map((o, i) => `<button class="bg-stone-800 hover:bg-stone-700 border border-stone-700 rounded-sm py-2 text-xs font-mono text-stone-200" data-puzzle="${i}">${o}</button>`).join('')}
+                </div>
+              </div>
+            `;
+            } else if (r.stage === 'result') {
+                body = `
+              <div class="mt-3 text-center space-y-2">
+                <div class="text-emerald-400 text-sm font-bold">Босс повержен!</div>
+                <div class="text-xs text-stone-400">Комбо: ${r.combo} · Бонус к награде: +${r.combo * 500} XP</div>
+                <button class="w-full bg-amber-500 text-stone-950 font-bold uppercase text-xs tracking-wide rounded-sm py-2.5" data-start-raid>Ещё раз</button>
+              </div>
+            `;
+            }
+            return sysWindow('РЕЙД-БОСС · ХОДЯЧИЙ КУРГАН', `
+            ${raidBossSVG()}
+            ${body}
+          `);
+        }
+
+        function renderShop() {
+            const crystals = getCrystals();
+            return `
+          ${sysWindow('КРИСТАЛЛЫ', `
+            <div class="text-[11px] font-mono text-stone-500 mb-3">Зарабатываются каждые 10 000 шагов, либо докупаются. Сейчас — стартовая цена, выгоднее чем будет позже. Демо: платёж симулируется.</div>
+            <div class="space-y-2">
+              ${CRYSTAL_PACKS.map(p => `
+                <div class="flex items-center justify-between border border-stone-800 rounded-sm p-2.5">
+                  <div class="flex items-center gap-2"><i data-lucide="gem" class="w-4 h-4 text-emerald-400"></i><span class="text-sm text-stone-200">${fmt(p.amount)} кристаллов</span></div>
+                  <div class="text-right">
+                    <div class="text-[10px] text-stone-600 line-through">$${p.priceLater}</div>
+                    <button class="bg-amber-500 text-stone-950 text-xs font-bold uppercase rounded-sm px-3 py-1.5" data-buy-pack="${p.id}">$${p.priceNow}</button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `)}
+          <div class="text-[11px] font-mono text-stone-500 px-1 mt-2">Плюшки для героя и для клана — за кристаллы.</div>
+          ${SHOP_ITEMS.map(item => `
+            <div class="shop-item mt-2">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-sm font-bold text-stone-100">${item.name}</div>
+                  <div class="text-[11px] font-mono text-stone-500">${item.category === 'hero' ? 'для героя' : 'для клана'}</div>
+                </div>
+                ${state.owned.includes(item.id) ? `
+                  <span class="owned-badge"><i data-lucide="check" class="w-4 h-4"></i>куплено</span>
+                ` : `
+                  <button class="price-tag" data-buy-item="${item.id}" ${crystals < item.price ? 'disabled' : ''}>
+                    <i data-lucide="gem" class="w-3 h-3"></i>${item.price}
+                  </button>
+                `}
+              </div>
+            </div>
+          `).join('')}
+          `;
+        }
+
+        function renderSettings() {
+            const s = state.notifSettings;
+            return sysWindow('УВЕДОМЛЕНИЯ', `
+            <div class="space-y-3">
+              ${NOTIF_CATEGORIES.map(c => `
+                <label class="flex items-center justify-between gap-3 cursor-pointer">
+                  <span class="text-sm text-stone-300">${c.label}</span>
+                  <div class="toggle-track ${s[c.id] ? 'active' : ''}" data-toggle="${c.id}">
+                    <div class="toggle-thumb"></div>
+                  </div>
+                </label>
+              `).join('')}
+            </div>
+          `);
+        }
+
+        // ============================================================
+        //  RENDER — MAIN
+        // ============================================================
+
+        function render() {
+            // run effects
+            runEffects();
+
+            const root = document.getElementById('root');
+            const li = getLevelInfo();
+            const crystals = getCrystals();
+            const adsDisabled = getAdsDisabled();
+            const progressPct = li.progress * 100;
+
+            // Build top bar
+            let topBar = `
+          <div class="hazard-stripe"></div>
+          <div class="sticky top-0 z-30 bg-stone-950/95 backdrop-blur border-b border-stone-800">
+            <div class="max-w-md mx-auto px-4 pt-4 pb-3">
+              <div class="flex items-center justify-between mb-2">
+                <div>
+                  <div class="text-[10px] font-mono tracking-[0.2em] text-amber-500/70">СИСТЕМА · АКТИВНА</div>
+                  <h1 class="text-lg font-extrabold uppercase tracking-wide text-stone-100">Протокол Пустошь</h1>
+                </div>
+                <div class="flex items-center gap-3">
+                  <div class="text-right">
+                    <div class="text-[10px] font-mono text-stone-500">УРОВЕНЬ</div>
+                    <div class="text-2xl font-black text-amber-400 leading-none">${li.level}</div>
+                  </div>
+                  <button class="p-2 rounded-sm border ${state.tab === 'settings' ? 'border-amber-500 text-amber-400' : 'border-stone-700 text-stone-400'}" data-tab="settings">
+                    <i data-lucide="settings" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="w-full h-2 bg-stone-800 rounded-full overflow-hidden ring-1 ring-stone-700">
+                <div class="h-full bg-amber-500 transition-all duration-500" style="width:${progressPct}%"></div>
+              </div>
+              <div class="flex justify-between text-[10px] font-mono text-stone-500 mt-1">
+                <span>${fmt(state.steps - li.prevReq)} / ${fmt(li.nextReq - li.prevReq)} XP</span>
+                <span class="flex items-center gap-1"><i data-lucide="gem" class="w-3 h-3 text-emerald-400"></i>${fmt(crystals)}</span>
+              </div>
+            </div>
+          </div>
+          `;
+
+            // Ad banner
+            let adBanner = '';
+            if (state.showAd && !adsDisabled) {
+                adBanner = `
+              <div class="max-w-md mx-auto px-4 mt-3">
+                <div class="flex items-center justify-between bg-stone-800 border border-stone-700 rounded-sm px-3 py-2 text-xs">
+                  <span class="text-stone-400 font-mono">[РЕКЛАМА] Поддержи разработчиков · каждые 30 000 шагов</span>
+                  <button class="text-stone-500 hover:text-stone-200" data-close-ad><i data-lucide="x" class="w-4 h-4"></i></button>
+                </div>
+              </div>
+            `;
+            } else if (adsDisabled) {
+                adBanner = `
+              <div class="max-w-md mx-auto px-4 mt-3">
+                <div class="text-center text-[10px] font-mono text-emerald-500/80">Реклама отключена навсегда — 500 000+ шагов пройдено</div>
+              </div>
+            `;
+            }
+
+            // Toasts
+            let toastHTML = '';
+            if (state.toasts.length) {
+                toastHTML = `<div class="fixed top-3 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 w-[92%] max-w-md pointer-events-none">
+              ${state.toasts.map(t => `
+                <div class="border rounded-sm px-3 py-2 text-xs font-mono shadow-lg backdrop-blur bg-stone-900/95 pointer-events-auto toast-enter ${
+                  t.type === 'success' ? 'border-emerald-700 text-emerald-300' :
+                  t.type === 'warn' ? 'border-rose-700 text-rose-300' :
+                  t.type === 'level' || t.type === 'achievement' ? 'border-amber-600 text-amber-300' :
+                  'border-stone-700 text-stone-300'
+                }">
+                  <span class="opacity-60 mr-1">[SYSTEM]</span>${t.text}
+                </div>
+              `).join('')}
+            </div>`;
+            }
+
+            // Tab content
+            let tabContent = '';
+            switch (state.tab) {
+                case 'home':
+                    tabContent = renderHome();
+                    break;
+                case 'quests':
+                    tabContent = renderQuests();
+                    break;
+                case 'portfolio':
+                    tabContent = renderPortfolio();
+                    break;
+                case 'hero':
+                    tabContent = renderHero();
+                    break;
+                case 'clan':
+                    tabContent = renderClan();
+                    break;
+                case 'raid':
+                    tabContent = renderRaid();
+                    break;
+                case 'shop':
+                    tabContent = renderShop();
+                    break;
+                case 'settings':
+                    tabContent = renderSettings();
+                    break;
+                default:
+                    tabContent = renderHome();
+            }
+
+            // Bottom nav
+            const nav = `
+          <div class="fixed bottom-0 left-0 right-0 bg-stone-950 border-t border-stone-800 z-30">
+            <div class="max-w-md mx-auto grid grid-cols-7 text-[8px] font-mono">
+              ${navBtn('home', 'home', 'Дом')}
+              ${navBtn('quests', 'scroll-text', 'Квесты')}
+              ${navBtn('portfolio', 'trophy', 'Портф.')}
+              ${navBtn('hero', 'user', 'Герой')}
+              ${navBtn('clan', 'users', 'Клан')}
+              ${navBtn('raid', 'swords', 'Рейд')}
+              ${navBtn('shop', 'shopping-bag', 'Магаз.')}
+            </div>
+          </div>
+          `;
+
+            // Modal
+            let modalHTML = '';
+            const bp = getSelectedBp();
+            if (bp) {
+                const risk = RISK_META[bp.risk] || RISK_META.none;
+                const needsConfirm = bp.risk === 'high' && !state.confirmedAdult[bp.id];
+                const meta = CATEGORY_META[bp.category] || { icon: 'file', color: 'text-stone-400' };
+                let modalBody = '';
+                if (needsConfirm) {
+                    modalBody = `
+                <div class="border border-rose-800 bg-rose-950/30 rounded-sm p-3 space-y-3">
+                  <div class="flex gap-2 text-rose-300 text-xs"><i data-lucide="alert-triangle" class="w-4 h-4 shrink-0 mt-0.5"></i><span>Это задача повышенного риска. Инструкция раскроется после подтверждения — рекомендуем делать это со взрослым или специалистом рядом.</span></div>
+                  <button class="w-full bg-rose-600 text-white text-xs font-bold uppercase tracking-wide rounded-sm py-2.5" data-confirm-adult="${bp.id}">Понимаю риски — показать инструкцию</button>
+                </div>
+              `;
+                } else {
+                    modalBody = `
+                <div>
+                  <div class="text-[10px] font-mono text-stone-500 mb-2">ПОШАГОВАЯ ИНСТРУКЦИЯ</div>
+                  <ol class="space-y-2">
+                    ${bp.steps.map((s, i) => `<li class="flex gap-2 text-sm text-stone-300"><span class="text-amber-500 font-mono text-xs shrink-0 mt-0.5">${i+1}.</span><span>${s}</span></li>`).join('')}
+                  </ol>
+                </div>
+                <a href="${youtubeSearchUrl(bp.videoQuery)}" target="_blank" rel="noreferrer" class="flex items-center justify-center gap-2 w-full border border-stone-700 rounded-sm py-2.5 text-xs font-bold uppercase tracking-wide text-stone-300 hover:bg-stone-900 mt-3">
+                  <i data-lucide="youtube" class="w-4 h-4 text-rose-500"></i> Смотреть видео на YouTube
+                </a>
+                ${bp.escalation ? `<div class="border border-amber-800/60 bg-amber-950/20 rounded-sm p-3 flex gap-2 mt-3"><i data-lucide="phone" class="w-4 h-4 text-amber-400 shrink-0 mt-0.5"></i><span class="text-xs text-amber-200">${bp.escalation}</span></div>` : ''}
+                <div class="text-[10px] text-stone-600 font-mono mt-3">Общеобразовательная информация. Не заменяет консультацию врача/специалиста. Не уверен — позови взрослого или позвони в службу спасения.</div>
+              `;
+                }
+                modalHTML = `
+              <div class="fixed inset-0 bg-black/70 z-40 flex items-end sm:items-center justify-center p-0 sm:p-4 modal-overlay">
+                <div class="bg-stone-950 border border-stone-700 rounded-t-lg sm:rounded-lg w-full max-w-md max-h-[85vh] overflow-y-auto modal-scroll">
+                  <div class="sticky top-0 bg-stone-950 border-b border-stone-800 px-4 py-3 flex items-center justify-between">
+                    <div>
+                      <div class="text-[10px] font-mono tracking-widest text-amber-500/70">${bp.category === 'cooking' ? 'РЕЦЕПТ' : 'ЧЕРТЁЖ'}</div>
+                      <div class="font-extrabold text-stone-100">${bp.name}</div>
+                    </div>
+                    <button class="text-stone-500" data-close-modal><i data-lucide="x" class="w-5 h-5"></i></button>
+                  </div>
+                  <div class="p-4 space-y-3">
+                    <div class="text-xs font-mono ${risk.color}">${risk.label}</div>
+                    ${modalBody}
+                  </div>
+                </div>
+              </div>
+            `;
+            }
+
+            // Assemble full HTML
+            const fullHTML = `
+          ${topBar}
+          ${adBanner}
+          ${toastHTML}
+          <div class="max-w-md mx-auto px-4 mt-4 space-y-4 pb-24">
+            ${tabContent}
+          </div>
+          ${nav}
+          ${modalHTML}
+          `;
+
+            root.innerHTML = fullHTML;
+
+            // Recreate lucide icons
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                lucide.createIcons();
+            } else {
+                console.warn('lucide not loaded');
+            }
+        }
+
+        // ============================================================
+        //  EVENT DELEGATION (attached once)
+        // ============================================================
+
+        function setupEventDelegation() {
+            const root = document.getElementById('root');
+            root.addEventListener('click', function(e) {
+                const target = e.target.closest('[data-tab], [data-add], [data-autowalk], [data-start-challenge], [data-challenge-click], [data-select], [data-close-modal], [data-confirm-adult], [data-start-raid], [data-run-tap], [data-puzzle], [data-buy-item], [data-buy-pack], [data-upgrade-clan], [data-toggle], [data-close-ad], [data-psub]');
+                if (!target) return;
+
+                // Tab navigation
+                if (target.hasAttribute('data-tab')) {
+                    e.preventDefault();
+                    setTab(target.getAttribute('data-tab'));
+                    return;
+                }
+
+                // Add steps
+                if (target.hasAttribute('data-add')) {
+                    e.preventDefault();
+                    const n = parseInt(target.getAttribute('data-add'), 10);
+                    addSteps(n);
+                    return;
+                }
+
+                // Auto-walk toggle
+                if (target.hasAttribute('data-autowalk')) {
+                    e.preventDefault();
+                    setAutoWalk(!state.autoWalk);
+                    return;
+                }
+
+                // Start challenge
+                if (target.hasAttribute('data-start-challenge')) {
+                    e.preventDefault();
+                    startChallenge();
+                    return;
+                }
+
+                // Challenge click
+                if (target.hasAttribute('data-challenge-click')) {
+                    e.preventDefault();
+                    challengeClick();
+                    return;
+                }
+
+                // Select blueprint/recipe
+                if (target.hasAttribute('data-select')) {
+                    e.preventDefault();
+                    const id = target.getAttribute('data-select');
+                    if (state.unlocked.includes(id)) {
+                        setSelectedItem(id);
+                    }
+                    return;
+                }
+
+                // Close modal
+                if (target.hasAttribute('data-close-modal')) {
+                    e.preventDefault();
+                    closeModal();
+                    return;
+                }
+
+                // Confirm adult
+                if (target.hasAttribute('data-confirm-adult')) {
+                    e.preventDefault();
+                    const id = target.getAttribute('data-confirm-adult');
+                    confirmAdult(id);
+                    return;
+                }
+
+                // Start raid
+                if (target.hasAttribute('data-start-raid')) {
+                    e.preventDefault();
+                    startRaid();
+                    return;
+                }
+
+                // Run tap
+                if (target.hasAttribute('data-run-tap')) {
+                    e.preventDefault();
+                    runTap();
+                    return;
+                }
+
+                // Puzzle answer
+                if (target.hasAttribute('data-puzzle')) {
+                    e.preventDefault();
+                    const idx = parseInt(target.getAttribute('data-puzzle'), 10);
+                    answerPuzzle(idx);
+                    return;
+                }
+
+                // Buy item
+                if (target.hasAttribute('data-buy-item')) {
+                    e.preventDefault();
+                    const id = target.getAttribute('data-buy-item');
+                    const item = SHOP_ITEMS.find(i => i.id === id);
+                    if (item) buyItem(item);
+                    return;
+                }
+
+                // Buy pack
+                if (target.hasAttribute('data-buy-pack')) {
+                    e.preventDefault();
+                    const id = target.getAttribute('data-buy-pack');
+                    const pack = CRYSTAL_PACKS.find(p => p.id === id);
+                    if (pack) buyPack(pack);
+                    return;
+                }
+
+                // Upgrade clan
+                if (target.hasAttribute('data-upgrade-clan')) {
+                    e.preventDefault();
+                    upgradeClan();
+                    return;
+                }
+
+                // Toggle notification
+                if (target.hasAttribute('data-toggle')) {
+                    e.preventDefault();
+                    const id = target.getAttribute('data-toggle');
+                    toggleNotif(id);
+                    return;
+                }
+
+                // Close ad
+                if (target.hasAttribute('data-close-ad')) {
+                    e.preventDefault();
+                    closeAd();
+                    return;
+                }
+
+                // Portfolio sub-tab
+                if (target.hasAttribute('data-psub')) {
+                    e.preventDefault();
+                    const sub = target.getAttribute('data-psub');
+                    state._portfolioSub = sub;
+                    render();
+                    return;
+                }
+            });
+        }
+
+        // ============================================================
+        //  BOOT
+        // ============================================================
+
+        // Initial render
+        render();
+
+        // Setup event delegation once
+        setupEventDelegation();
+
+        console.log('Протокол Пустошь загружен.');
+    </script>
+
+</body>
+</html>
