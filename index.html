@@ -9,6 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js">
     </script>
     <style>
+        /* ===== ОБЩИЕ СТИЛИ ===== */
         * {
             box-sizing: border-box;
         }
@@ -252,11 +253,110 @@
             opacity: 0.5;
             cursor: not-allowed;
         }
+
+        /* ===== ЭКРАН ЗАГРУЗКИ ===== */
+        #loading-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: #0a0806;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Courier New', monospace;
+            color: #d4a373;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+        }
+        #loading-screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        #loading-screen .logo {
+            font-size: 3rem;
+            font-weight: 900;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            background: linear-gradient(45deg, #d97706, #f59e0b, #d97706);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 2s ease-in-out infinite alternate;
+        }
+        #loading-screen .sub {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            letter-spacing: 0.5em;
+            opacity: 0.7;
+            color: #a87c4b;
+        }
+        #loading-screen .loader {
+            margin-top: 2rem;
+            width: 200px;
+            height: 4px;
+            background: #2a1f14;
+            border-radius: 2px;
+            overflow: hidden;
+            border: 1px solid #5a3f2b;
+        }
+        #loading-screen .loader-bar {
+            height: 100%;
+            width: 0%;
+            background: #d97706;
+            animation: loadProgress 2.5s ease-in-out forwards;
+        }
+        #loading-screen .status {
+            margin-top: 0.8rem;
+            font-size: 0.7rem;
+            font-family: monospace;
+            color: #7a5f3b;
+            letter-spacing: 0.2em;
+            animation: pulseText 1.5s ease-in-out infinite;
+        }
+        @keyframes shimmer {
+            0% {
+                background-position: 0% 50%;
+            }
+            100% {
+                background-position: 100% 50%;
+            }
+        }
+        @keyframes loadProgress {
+            0% {
+                width: 0%;
+            }
+            100% {
+                width: 100%;
+            }
+        }
+        @keyframes pulseText {
+            0%,
+            100% {
+                opacity: 0.4;
+            }
+            50% {
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 <body>
+
+    <!-- ===== ЭКРАН ЗАГРУЗКИ ===== -->
+    <div id="loading-screen">
+        <div class="logo">Протокол Пустошь</div>
+        <div class="sub">ВЫЖИВАНИЕ · АКТИВАЦИЯ</div>
+        <div class="loader">
+            <div class="loader-bar"></div>
+        </div>
+        <div class="status">ЗАГРУЗКА СИСТЕМЫ...</div>
+    </div>
+
+    <!-- ===== КОРНЕВОЙ КОНТЕЙНЕР ===== -->
     <div id="root"></div>
 
+    <!-- ===== ОСНОВНОЙ СКРИПТ ===== -->
     <script>
         // ============================================================
         //  DATA
@@ -687,7 +787,7 @@
         }
 
         // ============================================================
-        //  TOASTS (now without auto-render)
+        //  TOASTS
         // ============================================================
 
         let toastIdCounter = 0;
@@ -695,7 +795,7 @@
         function pushToast(text, type = 'info') {
             const id = ++toastIdCounter;
             state.toasts.push({ id, text, type });
-            // render will be called by update()
+            scheduleUpdate();
         }
 
         // ============================================================
@@ -763,11 +863,10 @@
             if (milestone > state.lastAdMilestone && state.steps < 500000 && !getAdsDisabled()) {
                 state.showAd = true;
             }
-            // challenge timer (will be handled in update loop)
         }
 
         // ============================================================
-        //  ACTIONS
+        //  UPDATE LOOP (requestAnimationFrame based)
         // ============================================================
 
         let updateScheduled = false;
@@ -777,25 +876,23 @@
                 updateScheduled = true;
                 requestAnimationFrame(() => {
                     updateScheduled = false;
-                    update();
+                    fullUpdate();
                 });
             }
         }
 
-        function update() {
-            // Run effects to update state (toasts, unlocks, etc.)
+        function fullUpdate() {
+            // 1. Run effects (may push toasts, which call scheduleUpdate again, but we guard with flag)
             runEffects();
-            // Handle challenge timer separately (it's asynchronous)
-            // But we handle it in the render loop via setTimeout in runEffects? 
-            // Actually we moved timer logic to runEffects, but it uses setTimeout which calls render.
-            // We'll keep timer handling separate.
+            // 2. Handle challenge timer
             handleChallengeTimer();
-            // Save and render
+            // 3. Save state
             saveState();
+            // 4. Render
             render();
         }
 
-        // Challenge timer logic (to avoid recursion)
+        // Challenge timer logic (uses setTimeout, but does NOT cause recursive render)
         function handleChallengeTimer() {
             if (state.challenge.active) {
                 if (state.challenge.timeLeft <= 0) {
@@ -808,7 +905,8 @@
                     } else {
                         pushToast('Время вышло — бонус не выдан', 'warn');
                     }
-                    // after finishing, schedule update
+                    // after finishing, we schedule update but it's already in progress
+                    // Just trigger render again
                     scheduleUpdate();
                     return;
                 }
@@ -827,6 +925,10 @@
                 }
             }
         }
+
+        // ============================================================
+        //  ACTIONS
+        // ============================================================
 
         function setTab(tab) { state.tab = tab;
             scheduleUpdate(); }
@@ -1634,10 +1736,21 @@
         //  BOOT
         // ============================================================
 
+        // Скрыть экран загрузки после загрузки страницы
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                document.getElementById('loading-screen').classList.add('hidden');
+            }, 1000);
+        });
+
+        // Загрузить сохранённое состояние
         loadState();
         state.prevLevel = getLevelInfo().level;
-        // initial render
+
+        // Первый рендер
         scheduleUpdate();
+
+        // Навесить события
         setupEventDelegation();
 
         console.log('Протокол Пустошь загружен.');
