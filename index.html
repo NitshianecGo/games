@@ -424,7 +424,6 @@
         //  ДАННЫЕ (расширенные)
         // ============================================================
 
-        // --- Категории ---
         const CATEGORY_META = {
             medical: { label: "Первая помощь", icon: "heart-pulse", color: "text-rose-400" },
             home: { label: "Быт и дом", icon: "wrench", color: "text-amber-400" },
@@ -907,6 +906,7 @@
                 timeLeft: 0,
                 totalTime: 0,
                 timer: null,
+                speed: 0, // метров в секунду
             },
             prevLevel: 1,
             challengeTimer: null,
@@ -1064,8 +1064,7 @@
                     pushToast(`Квест выполнен: ${q.desc} (+${crystalsReward} кристаллов)`, 'success');
                 }
             });
-            // Кристаллы за шаги (доп. бонус)
-            // уже учтено в getCrystals
+            // Кристаллы за шаги (уже учтено в getCrystals)
         }
 
         // ============================================================
@@ -1093,39 +1092,53 @@
         }
 
         // ============================================================
-        //  RAID TIMER (новый механик)
+        //  RAID TIMER (автоматическое движение, без кнопки)
         // ============================================================
 
         function handleRaidTimer() {
             const r = state.raid;
-            if (r.stage === 'idle' || r.stage === 'result' || r.stage === 'puzzle') return;
+            if (r.stage === 'idle' || r.stage === 'result' || r.stage === 'puzzle') {
+                // Если рейд в пазле, таймер не двигает метры
+                return;
+            }
             if (r.stage === 'run') {
+                // Проверяем, не истекло ли время
                 if (r.timeLeft <= 0) {
                     // время вышло, рейд провален
+                    if (r.timer) {
+                        clearTimeout(r.timer);
+                        r.timer = null;
+                    }
                     state.raid.stage = 'result';
                     state.raid.result = 'lose';
                     pushToast('Время вышло! Рейд провален.', 'warn');
                     scheduleUpdate();
                     return;
                 }
+
+                // Если ещё нет таймера, запускаем его
                 if (!r.timer) {
                     r.timer = setTimeout(() => {
+                        // Уменьшаем время
                         r.timeLeft -= 1;
-                        if (r.timeLeft < 0) r.timeLeft = 0;
-                        // проверяем, не достиг ли дистанции
+                        // Добавляем метры пропорционально скорости
+                        r.meters += r.speed || 1.5; // если speed не задана, используем базовую
+
+                        // Проверяем, не достиг ли дистанции
                         if (r.meters >= r.target) {
-                            // успех
+                            // Успех!
                             clearTimeout(r.timer);
                             r.timer = null;
                             state.raid.stage = 'result';
                             state.raid.result = 'win';
-                            const bonus = r.combo * 500 + 1000;
+                            const bonus = Math.floor(r.combo * 500 + 1000);
                             state.steps += bonus;
                             pushToast(`Рейд пройден! +${bonus} шагов`, 'success');
                             scheduleUpdate();
                             return;
                         }
-                        // если время истекло, то проигрыш
+
+                        // Если время истекло, то проигрыш
                         if (r.timeLeft <= 0) {
                             clearTimeout(r.timer);
                             r.timer = null;
@@ -1135,7 +1148,11 @@
                             scheduleUpdate();
                             return;
                         }
+
+                        // Обновляем UI
                         scheduleUpdate();
+                        // Продолжаем таймер
+                        r.timer = setTimeout(arguments.callee, 1000);
                     }, 1000);
                 }
             }
@@ -1143,11 +1160,17 @@
 
         function startRaid() {
             // Определяем дистанцию и время
-            const baseDist = 200 + Math.floor(Math.random() * 300);
             const level = getLevelInfo().level;
-            const speed = 1.4 + level * 0.05; // м/с
-            const timeNeeded = baseDist / speed + 60; // секунд
-            const timeLimit = Math.floor(timeNeeded);
+            const baseDist = 200 + Math.floor(Math.random() * 300); // 200-500 м
+            const baseSpeed = 1.4; // м/с (спокойный шаг)
+            // Скорость зависит от уровня: чем выше уровень, тем быстрее бег
+            // Формула: speed = 1.2 + level * 0.3
+            const speed = 1.2 + level * 0.3;
+            // Время, необходимое для прохождения дистанции с этой скоростью
+            const timeNeeded = baseDist / speed;
+            // Добавляем 60 секунд запаса
+            const timeLimit = Math.ceil(timeNeeded) + 60;
+            // Устанавливаем рейд
             state.raid = {
                 stage: 'run',
                 stageIndex: 0,
@@ -1159,39 +1182,13 @@
                 timeLeft: timeLimit,
                 totalTime: timeLimit,
                 timer: null,
+                speed: speed,
             };
-            pushToast(`Рейд начат! Дистанция ${baseDist}м, время ${timeLimit}с`, 'info');
+            pushToast(`Рейд начат! Дистанция ${baseDist}м, время ${timeLimit}с. Скорость ${speed.toFixed(1)} м/с`, 'info');
             scheduleUpdate();
         }
 
-        function runTap() {
-            const r = state.raid;
-            if (r.stage !== 'run') return;
-            // При нажатии добавляем метры (симулируем бег)
-            const addMeters = 5 + Math.floor(Math.random() * 15);
-            r.meters = Math.min(r.meters + addMeters, r.target);
-            if (r.meters >= r.target) {
-                // успех, завершаем рейд
-                if (r.timer) {
-                    clearTimeout(r.timer);
-                    r.timer = null;
-                }
-                state.raid.stage = 'result';
-                state.raid.result = 'win';
-                const bonus = r.combo * 500 + 1000;
-                state.steps += bonus;
-                pushToast(`Рейд пройден! +${bonus} шагов`, 'success');
-                scheduleUpdate();
-            } else {
-                // добавляем очко комбо за каждый клик
-                r.combo += 1;
-                scheduleUpdate();
-            }
-        }
-
-        // Переопределяем advanceRaidStage для совместимости (уже не используется, оставим заглушку)
-        function advanceRaidStage(r) { /* не используется */ }
-
+        // Функция для пазлов (оставляем)
         function answerPuzzle(idx) {
             const r = state.raid;
             if (r.stage !== 'puzzle' || !r.puzzle) return;
@@ -1339,7 +1336,7 @@
                 clanTier: 0,
                 challenge: { active: false, timeLeft: 15, clicks: 0, result: null },
                 raid: { stage: 'idle', stageIndex: 0, meters: 0, target: 0, combo: 0, puzzle: null, result: null,
-                    timeLeft: 0, totalTime: 0, timer: null },
+                    timeLeft: 0, totalTime: 0, timer: null, speed: 0 },
                 prevLevel: 1,
                 _portfolioSub: 'achievements',
                 avatar: { head: "none", top: "none", bottom: "none", shoes: "none" },
@@ -1607,12 +1604,13 @@
             let body = '';
             if (r.stage === 'idle') {
                 body = `
-              <p class="text-xs text-stone-400 my-3">Активируй рейд: беги и уложись во время. Чем выше уровень, тем быстрее нужно бежать.</p>
+              <p class="text-xs text-stone-400 my-3">Активируй рейд: нужно пробежать дистанцию за отведённое время. Уровень влияет на скорость бега. Время даётся с запасом 60 секунд.</p>
               <button class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold uppercase text-xs tracking-wide rounded-sm py-2.5" data-start-raid>Активировать рейд</button>
             `;
             } else if (r.stage === 'run') {
                 const pct = Math.min(100, (r.meters / r.target) * 100);
                 const timeLeft = r.timeLeft;
+                const speed = r.speed || 1.5;
                 body = `
               <div class="mt-3">
                 <div class="flex justify-between text-xs font-mono text-stone-400 mb-1">
@@ -1622,8 +1620,8 @@
                 <div class="w-full h-3 bg-stone-800 rounded-full overflow-hidden ring-1 ring-stone-700 mb-3">
                   <div class="h-full bg-amber-500 transition-all duration-200" style="width:${pct}%"></div>
                 </div>
-                <button class="w-full bg-amber-500 text-stone-950 font-bold uppercase text-xs tracking-wide rounded-sm py-4" data-run-tap>🏃 Бежать!</button>
-                <div class="text-xs text-stone-500 mt-2 text-center">Комбо: ${r.combo}</div>
+                <div class="text-xs text-stone-400 text-center">Скорость: ${speed.toFixed(1)} м/с (уровень ${getLevelInfo().level})</div>
+                <div class="text-xs text-stone-500 mt-2 text-center">Автоматическое движение... жди.</div>
               </div>
             `;
             } else if (r.stage === 'puzzle' && r.puzzle) {
@@ -1640,7 +1638,7 @@
                 body = `
               <div class="mt-3 text-center space-y-2">
                 <div class="text-${r.result === 'win' ? 'emerald' : 'rose'}-400 text-sm font-bold">${r.result === 'win' ? 'Босс повержен!' : 'Рейд провален'}</div>
-                ${r.result === 'win' ? `<div class="text-xs text-stone-400">Комбо: ${r.combo} · Бонус к награде: +${r.combo * 500 + 1000} XP</div>` : ''}
+                ${r.result === 'win' ? `<div class="text-xs text-stone-400">Комбо: ${r.combo} · Бонус к награде: +${Math.floor(r.combo * 500 + 1000)} XP</div>` : ''}
                 <button class="w-full bg-amber-500 text-stone-950 font-bold uppercase text-xs tracking-wide rounded-sm py-2.5" data-start-raid>Ещё раз</button>
               </div>
             `;
@@ -1851,10 +1849,10 @@
                     tabContent = renderHome();
             }
 
-            // Навигация теперь 9 вкладок (добавлены avatar, lore, map)
+            // Навигация теперь 10 вкладок (добавлены avatar, lore, map)
             const nav = `
           <div class="fixed bottom-0 left-0 right-0 bg-stone-950 border-t border-stone-800 z-30">
-            <div class="max-w-md mx-auto grid grid-cols-9 text-[8px] font-mono">
+            <div class="max-w-md mx-auto grid grid-cols-10 text-[8px] font-mono">
               ${navBtn('home', 'home', 'Дом')}
               ${navBtn('quests', 'scroll-text', 'Квесты')}
               ${navBtn('portfolio', 'trophy', 'Портф.')}
@@ -1941,7 +1939,7 @@
         function setupEventDelegation() {
             const root = document.getElementById('root');
             root.addEventListener('click', function(e) {
-                const target = e.target.closest('[data-tab], [data-add], [data-start-challenge], [data-challenge-click], [data-select], [data-close-modal], [data-confirm-adult], [data-start-raid], [data-run-tap], [data-puzzle], [data-buy-item], [data-buy-pack], [data-upgrade-clan], [data-toggle], [data-close-ad], [data-psub], [data-reset], [data-avatar]');
+                const target = e.target.closest('[data-tab], [data-add], [data-start-challenge], [data-challenge-click], [data-select], [data-close-modal], [data-confirm-adult], [data-start-raid], [data-puzzle], [data-buy-item], [data-buy-pack], [data-upgrade-clan], [data-toggle], [data-close-ad], [data-psub], [data-reset], [data-avatar]');
                 if (!target) return;
 
                 // Tab
@@ -1998,11 +1996,6 @@
                 if (target.hasAttribute('data-start-raid')) {
                     e.preventDefault();
                     startRaid();
-                    return;
-                }
-                if (target.hasAttribute('data-run-tap')) {
-                    e.preventDefault();
-                    runTap();
                     return;
                 }
                 if (target.hasAttribute('data-puzzle')) {
