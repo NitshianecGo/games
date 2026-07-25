@@ -705,6 +705,51 @@
         }
 
         // ============================================================
+        //  SAVE / LOAD
+        // ============================================================
+
+        function saveState() {
+            try {
+                const data = {
+                    steps: state.steps,
+                    unlocked: state.unlocked,
+                    unlockedAch: state.unlockedAch,
+                    confirmedAdult: state.confirmedAdult,
+                    crystalsSpent: state.crystalsSpent,
+                    crystalsBought: state.crystalsBought,
+                    owned: state.owned,
+                    notifSettings: state.notifSettings,
+                    lastAdMilestone: state.lastAdMilestone,
+                    clanTier: state.clanTier,
+                    _portfolioSub: state._portfolioSub,
+                };
+                localStorage.setItem('wasteland_protocol', JSON.stringify(data));
+            } catch (e) {
+                // ignore
+            }
+        }
+
+        function loadState() {
+            try {
+                const raw = localStorage.getItem('wasteland_protocol');
+                if (!raw) return;
+                const data = JSON.parse(raw);
+                Object.assign(state, data);
+                // re-init computed fields
+                state.prevLevel = getLevelInfo().level;
+                // ensure arrays are arrays
+                state.unlocked = state.unlocked || [];
+                state.unlockedAch = state.unlockedAch || [];
+                state.owned = state.owned || [];
+                state.confirmedAdult = state.confirmedAdult || {};
+                state.notifSettings = state.notifSettings || { progress: true, raid: true, clan: true, offers: true };
+                state._portfolioSub = state._portfolioSub || 'achievements';
+            } catch (e) {
+                // ignore
+            }
+        }
+
+        // ============================================================
         //  EFFECTS (replaces useEffect)
         // ============================================================
 
@@ -770,6 +815,8 @@
                     state.challengeTimer = null;
                 }
             }
+            // save after changes
+            saveState();
         }
 
         // ============================================================
@@ -1003,15 +1050,10 @@
             </div>
             <p class="text-xs text-stone-400 leading-relaxed">Система пробудилась вместе с тобой в первый день Пустоши. Каждый шаг здесь — ещё и шаг к настоящему навыку в реальном мире.</p>
           `)}
-          ${sysWindow('ДЕМО-УПРАВЛЕНИЕ ШАГАМИ', `
-            <div class="text-[10px] font-mono text-stone-500 mb-2">Для теста без реального шагомера — используй кнопки ниже.</div>
-            <div class="grid grid-cols-3 gap-2 mb-2">
-              <button class="bg-stone-800 hover:bg-stone-700 border border-stone-700 rounded-sm py-2 text-xs font-mono text-amber-300" data-add="100">+${fmt(100)}</button>
-              <button class="bg-stone-800 hover:bg-stone-700 border border-stone-700 rounded-sm py-2 text-xs font-mono text-amber-300" data-add="1000">+${fmt(1000)}</button>
-              <button class="bg-stone-800 hover:bg-stone-700 border border-stone-700 rounded-sm py-2 text-xs font-mono text-amber-300" data-add="10000">+${fmt(10000)}</button>
-            </div>
+          ${sysWindow('СИМУЛЯЦИЯ ШАГОМЕРА', `
+            <div class="text-[11px] text-stone-400 mb-3">Включи автопрогулку, чтобы наблюдать, как шаги накапливаются в реальном времени. Это демонстрация механики — в реальном приложении данные будут поступать с шагомера.</div>
             <button class="w-full flex items-center justify-center gap-2 rounded-sm py-2.5 text-xs font-bold uppercase tracking-wide border ${state.autoWalk ? 'bg-rose-950/50 border-rose-700 text-rose-300' : 'bg-amber-500 border-amber-400 text-stone-950'}" data-autowalk>
-              ${state.autoWalk ? '<i data-lucide="pause" class="w-4 h-4"></i> Остановить автопрогулку' : '<i data-lucide="play" class="w-4 h-4"></i> Автопрогулка (симуляция)'}
+              ${state.autoWalk ? '<i data-lucide="pause" class="w-4 h-4"></i> Остановить автопрогулку' : '<i data-lucide="play" class="w-4 h-4"></i> Запустить автопрогулку'}
             </button>
           `)}
           `;
@@ -1234,6 +1276,7 @@
 
         function renderSettings() {
             const s = state.notifSettings;
+            // Добавим кнопку сброса
             return sysWindow('УВЕДОМЛЕНИЯ', `
             <div class="space-y-3">
               ${NOTIF_CATEGORIES.map(c => `
@@ -1244,6 +1287,9 @@
                   </div>
                 </label>
               `).join('')}
+            </div>
+            <div class="mt-6 pt-4 border-t border-stone-800">
+              <button class="w-full bg-rose-900/50 hover:bg-rose-800/50 text-rose-300 border border-rose-800 rounded-sm py-2 text-xs font-mono uppercase tracking-wide" data-reset>Сбросить прогресс</button>
             </div>
           `);
         }
@@ -1453,21 +1499,13 @@
         function setupEventDelegation() {
             const root = document.getElementById('root');
             root.addEventListener('click', function(e) {
-                const target = e.target.closest('[data-tab], [data-add], [data-autowalk], [data-start-challenge], [data-challenge-click], [data-select], [data-close-modal], [data-confirm-adult], [data-start-raid], [data-run-tap], [data-puzzle], [data-buy-item], [data-buy-pack], [data-upgrade-clan], [data-toggle], [data-close-ad], [data-psub]');
+                const target = e.target.closest('[data-tab], [data-add], [data-autowalk], [data-start-challenge], [data-challenge-click], [data-select], [data-close-modal], [data-confirm-adult], [data-start-raid], [data-run-tap], [data-puzzle], [data-buy-item], [data-buy-pack], [data-upgrade-clan], [data-toggle], [data-close-ad], [data-psub], [data-reset]');
                 if (!target) return;
 
                 // Tab navigation
                 if (target.hasAttribute('data-tab')) {
                     e.preventDefault();
                     setTab(target.getAttribute('data-tab'));
-                    return;
-                }
-
-                // Add steps
-                if (target.hasAttribute('data-add')) {
-                    e.preventDefault();
-                    const n = parseInt(target.getAttribute('data-add'), 10);
-                    addSteps(n);
                     return;
                 }
 
@@ -1587,6 +1625,44 @@
                     render();
                     return;
                 }
+
+                // Reset progress
+                if (target.hasAttribute('data-reset')) {
+                    e.preventDefault();
+                    if (confirm('Сбросить весь прогресс? Это действие необратимо.')) {
+                        localStorage.removeItem('wasteland_protocol');
+                        Object.assign(state, {
+                            steps: 0,
+                            unlocked: [],
+                            unlockedAch: [],
+                            confirmedAdult: {},
+                            crystalsSpent: 0,
+                            crystalsBought: 0,
+                            owned: [],
+                            notifSettings: { progress: true, raid: true, clan: true, offers: true },
+                            lastAdMilestone: 0,
+                            showAd: false,
+                            clanTier: 0,
+                            challenge: { active: false, timeLeft: 15, clicks: 0, result: null },
+                            raid: { stage: 'idle', stageIndex: 0, meters: 0, target: 0, combo: 0, puzzle: null,
+                                result: null },
+                            prevLevel: 1,
+                            _portfolioSub: 'achievements',
+                        });
+                        if (state.autoWalkInterval) {
+                            clearInterval(state.autoWalkInterval);
+                            state.autoWalkInterval = null;
+                        }
+                        state.autoWalk = false;
+                        if (state.challengeTimer) {
+                            clearInterval(state.challengeTimer);
+                            state.challengeTimer = null;
+                        }
+                        render();
+                        pushToast('Прогресс сброшен', 'warn');
+                    }
+                    return;
+                }
             });
         }
 
@@ -1594,14 +1670,12 @@
         //  BOOT
         // ============================================================
 
-        // Initial render
+        loadState();
+        state.prevLevel = getLevelInfo().level;
         render();
-
-        // Setup event delegation once
         setupEventDelegation();
 
         console.log('Протокол Пустошь загружен.');
     </script>
-
 </body>
 </html>
