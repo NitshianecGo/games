@@ -95,7 +95,6 @@
             padding: 12px 14px;
             padding-top: 16px;
         }
-        /* Увеличенные кнопки навигации */
         .nav-btn {
             display: flex;
             flex-direction: column;
@@ -120,39 +119,6 @@
         .nav-btn svg {
             width: 22px;
             height: 22px;
-        }
-        .stat-bar-bg {
-            background: #292524;
-            border-radius: 999px;
-            overflow: hidden;
-            height: 6px;
-            border: 1px solid #44403c;
-        }
-        .stat-bar-fill {
-            height: 100%;
-            transition: width 0.3s ease;
-            border-radius: 999px;
-        }
-        .tab-btn {
-            flex: 1;
-            text-align: center;
-            padding: 6px 0;
-            font-size: 11px;
-            font-family: monospace;
-            background: transparent;
-            border: none;
-            color: #78716c;
-            border-radius: 2px;
-            cursor: pointer;
-            transition: all 0.12s;
-        }
-        .tab-btn.active {
-            background: #f59e0b;
-            color: #0c0a09;
-            font-weight: 700;
-        }
-        .tab-btn:hover:not(.active) {
-            color: #d6d3d1;
         }
         .toggle-track {
             width: 40px;
@@ -244,42 +210,162 @@
                 height: 72px;
             }
         }
-        .text-xxs {
-            font-size: 9px;
+        .toast-close {
+            margin-left: 8px;
+            cursor: pointer;
+            color: #78716c;
+            transition: color 0.15s;
         }
-        .tracking-wider {
-            letter-spacing: 0.15em;
+        .toast-close:hover {
+            color: #d6d3d1;
         }
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        /* Стили для карты */
-        .map-container {
-            position: relative;
+        .toast-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             width: 100%;
-            height: 200px;
-            background: #1a1614;
+        }
+
+        /* ===== КАРТА ===== */
+        #mapCanvas {
+            width: 100%;
+            height: 280px;
             border-radius: 4px;
-            overflow: hidden;
             border: 1px solid #3d352e;
+            background: #1a1614;
+            cursor: pointer;
+            display: block;
         }
-        .map-scroll {
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            width: 200%;
-            background: repeating-linear-gradient(90deg, #2a241f 0px, #3d352e 10px, #2a241f 20px);
-            transition: transform 0.3s ease;
+        .map-legend {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            font-size: 10px;
+            color: #a87c4b;
+            padding: 6px 0;
         }
-        .map-human {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 28px;
-            transition: left 0.3s ease;
+        .map-legend span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .map-legend .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        /* ===== МУЗЫКАЛЬНЫЙ ПЛЕЕР ===== */
+        .music-player {
+            position: fixed;
+            bottom: 80px;
+            right: 12px;
+            z-index: 40;
+            background: #1c1917;
+            border: 1px solid #44403c;
+            border-radius: 8px;
+            padding: 10px 14px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: opacity 0.3s;
+            max-width: 180px;
+        }
+        .music-player .controls {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .music-player button {
+            background: transparent;
+            border: none;
+            color: #d6d3d1;
+            cursor: pointer;
+            padding: 2px 4px;
+            font-size: 18px;
+            transition: color 0.15s;
+        }
+        .music-player button:hover {
+            color: #f59e0b;
+        }
+        .music-player .track-name {
+            font-size: 9px;
+            color: #78716c;
+            font-family: monospace;
+            max-width: 80px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .music-player .volume-slider {
+            width: 40px;
+            accent-color: #f59e0b;
+            background: #44403c;
+            height: 3px;
+            border-radius: 2px;
+        }
+        .music-player .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #f59e0b;
+            cursor: pointer;
+        }
+        @media (max-width: 480px) {
+            .music-player {
+                bottom: 72px;
+                right: 6px;
+                padding: 6px 10px;
+                max-width: 140px;
+            }
+            .music-player .track-name {
+                max-width: 50px;
+                font-size: 8px;
+            }
+        }
+
+        /* ===== АВАТАР ДРОПДАУН ===== */
+        .avatar-select {
+            background: #292524;
+            border: 1px solid #44403c;
+            color: #d6d3d1;
+            padding: 4px 8px;
+            border-radius: 2px;
+            font-size: 12px;
+            cursor: pointer;
+            width: 100%;
+            max-width: 140px;
+        }
+        .avatar-select:focus {
+            outline: none;
+            border-color: #f59e0b;
+        }
+
+        /* ===== ВКЛАДКИ ПОРТФОЛИО (Ачивки, Чертежи, Рецепты) ===== */
+        .tab-btn {
+            flex: 1;
+            text-align: center;
+            padding: 6px 0;
+            font-size: 11px;
+            font-family: monospace;
+            background: transparent;
+            border: none;
+            color: #78716c;
+            border-radius: 2px;
+            cursor: pointer;
+            transition: all 0.12s;
+        }
+        .tab-btn.active {
+            background: #f59e0b;
+            color: #0c0a09;
+            font-weight: 700;
+        }
+        .tab-btn:hover:not(.active) {
+            color: #d6d3d1;
         }
 
         /* Экран загрузки */
@@ -367,40 +453,6 @@
                 opacity: 1;
             }
         }
-        /* Аватар-конструктор */
-        .avatar-part {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-bottom: 8px;
-        }
-        .avatar-part button {
-            background: #292524;
-            border: 1px solid #44403c;
-            color: #d6d3d1;
-            padding: 4px 12px;
-            border-radius: 2px;
-            font-size: 12px;
-            cursor: pointer;
-            transition: 0.1s;
-        }
-        .avatar-part button.active {
-            background: #f59e0b;
-            color: #0c0a09;
-            border-color: #f59e0b;
-            font-weight: 700;
-        }
-        .avatar-preview {
-            display: flex;
-            justify-content: center;
-            font-size: 48px;
-            gap: 8px;
-            background: #1c1917;
-            padding: 16px;
-            border-radius: 4px;
-            border: 1px solid #44403c;
-            margin-bottom: 12px;
-        }
     </style>
 </head>
 <body>
@@ -418,8 +470,188 @@
     <!-- ===== КОРНЕВОЙ КОНТЕЙНЕР ===== -->
     <div id="root"></div>
 
-    <!-- ===== ОСНОВНОЙ СКРИПТ ===== -->
+    <!-- ===== МУЗЫКАЛЬНЫЙ ПЛЕЕР ===== -->
+    <div class="music-player" id="musicPlayer" style="display:none;">
+        <div class="controls">
+            <button id="musicToggle" title="Вкл/Выкл">🔊</button>
+            <button id="musicPrev" title="Предыдущий">⏮</button>
+            <button id="musicNext" title="Следующий">⏭</button>
+        </div>
+        <div class="track-name" id="trackName">8-bit 1</div>
+        <input type="range" class="volume-slider" id="musicVolume" min="0" max="100" value="30" />
+    </div>
+
     <script>
+        // ============================================================
+        //  МУЗЫКА (8-Bit синтезатор)
+        // ============================================================
+        const Music = {
+            ctx: null,
+            isPlaying: false,
+            currentTrack: 0,
+            volume: 0.3,
+            interval: null,
+            tracks: [
+                { name: "Пустошь", notes: [
+                        ['C4', 4],
+                        ['E4', 4],
+                        ['G4', 4],
+                        ['C5', 4],
+                        ['G4', 4],
+                        ['E4', 4],
+                        ['C4', 4],
+                        ['E4', 4],
+                        ['G4', 4],
+                        ['C5', 4],
+                        ['G4', 4],
+                        ['E4', 4]
+                    ] },
+                { name: "Ветер", notes: [
+                        ['D4', 2],
+                        ['F#4', 2],
+                        ['A4', 2],
+                        ['D5', 2],
+                        ['A4', 2],
+                        ['F#4', 2],
+                        ['D4', 2],
+                        ['F#4', 2],
+                        ['A4', 2],
+                        ['D5', 2],
+                        ['A4', 2],
+                        ['F#4', 2]
+                    ] },
+                { name: "Тишина", notes: [
+                        ['E4', 3],
+                        ['G4', 3],
+                        ['B4', 3],
+                        ['E5', 3],
+                        ['B4', 3],
+                        ['G4', 3],
+                        ['E4', 3],
+                        ['G4', 3],
+                        ['B4', 3],
+                        ['E5', 3],
+                        ['B4', 3],
+                        ['G4', 3]
+                    ] },
+            ],
+            init() {
+                try {
+                    this.ctx = new(window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {
+                    console.warn('Web Audio не поддерживается');
+                    return;
+                }
+                document.getElementById('musicToggle').addEventListener('click', () => this.toggle());
+                document.getElementById('musicPrev').addEventListener('click', () => this.prev());
+                document.getElementById('musicNext').addEventListener('click', () => this.next());
+                document.getElementById('musicVolume').addEventListener('input', (e) => {
+                    this.volume = parseFloat(e.target.value) / 100;
+                });
+                document.getElementById('musicPlayer').style.display = 'flex';
+            },
+            toggle() {
+                if (this.isPlaying) this.stop();
+                else this.start();
+            },
+            start() {
+                if (!this.ctx) return;
+                if (this.isPlaying) return;
+                this.isPlaying = true;
+                document.getElementById('musicToggle').textContent = '🔇';
+                this.playTrack(this.currentTrack);
+            },
+            stop() {
+                this.isPlaying = false;
+                document.getElementById('musicToggle').textContent = '🔊';
+                if (this.interval) {
+                    clearInterval(this.interval);
+                    this.interval = null;
+                }
+                if (this.ctx) {
+                    this.ctx.close();
+                    this.ctx = new(window.AudioContext || window.webkitAudioContext)();
+                }
+            },
+            playTrack(index) {
+                if (!this.isPlaying) return;
+                const track = this.tracks[index];
+                document.getElementById('trackName').textContent = track.name;
+                let noteIndex = 0;
+                const playNext = () => {
+                    if (!this.isPlaying) return;
+                    if (noteIndex >= track.notes.length) {
+                        this.next();
+                        return;
+                    }
+                    const [noteName, duration] = track.notes[noteIndex];
+                    this.playNote(noteName, duration);
+                    noteIndex++;
+                    this.interval = setTimeout(playNext, duration * 180);
+                };
+                playNext();
+            },
+            playNote(noteName, duration) {
+                if (!this.ctx) return;
+                const freq = this.noteToFreq(noteName);
+                if (!freq) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.value = freq;
+                gain.gain.value = this.volume * 0.25;
+                gain.gain.setValueAtTime(0, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(this.volume * 0.25, this.ctx.currentTime + 0.02);
+                gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + duration * 0.17);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration * 0.18);
+            },
+            noteToFreq(note) {
+                const map = {
+                    'C4': 261.63,
+                    'D4': 293.66,
+                    'E4': 329.63,
+                    'F4': 349.23,
+                    'G4': 392.00,
+                    'A4': 440.00,
+                    'B4': 493.88,
+                    'C5': 523.25,
+                    'D5': 587.33,
+                    'E5': 659.25,
+                    'F5': 698.46,
+                    'G5': 783.99,
+                    'A5': 880.00,
+                    'B5': 987.77,
+                    'F#4': 369.99,
+                    'G#4': 415.30,
+                    'A#4': 466.16,
+                    'C#4': 277.18,
+                    'D#4': 311.13,
+                };
+                return map[note] || 440;
+            },
+            next() {
+                if (!this.isPlaying) return;
+                this.currentTrack = (this.currentTrack + 1) % this.tracks.length;
+                if (this.interval) {
+                    clearTimeout(this.interval);
+                    this.interval = null;
+                }
+                this.playTrack(this.currentTrack);
+            },
+            prev() {
+                if (!this.isPlaying) return;
+                this.currentTrack = (this.currentTrack - 1 + this.tracks.length) % this.tracks.length;
+                if (this.interval) {
+                    clearTimeout(this.interval);
+                    this.interval = null;
+                }
+                this.playTrack(this.currentTrack);
+            }
+        };
+
         // ============================================================
         //  ДАННЫЕ (расширенные)
         // ============================================================
@@ -432,10 +664,163 @@
             survival: { label: "Выживание", icon: "compass", color: "text-indigo-400" },
         };
 
-        // --- Чертежи (18 + 15 = 33) ---
+        // --- Чертежи (43 шт) ---
         const BLUEPRINTS = [
-            // существующие 18 (bp1-bp18) оставляем без изменений, они уже есть
-            // добавим ещё 15 новых (bp19-bp33)
+            // первые 33 уже есть, добавим еще 10 (всего 43)
+            { id: "bp1", category: "medical", name: "Наложение бинта", threshold: 3000, risk: "none",
+                short: "Как зафиксировать бинт на небольшой ране.",
+                steps: ["Вымой руки или используй антисептик.", "Очисти рану чистой салфеткой от края к центру.",
+                    "Наложи стерильную марлевую подушечку на рану.",
+                    "Бинтуй по кругу снизу вверх с нахлёстом в половину ширины бинта.",
+                    "Зафиксируй конец — палец должен просовываться под повязку.",
+                    "Проверь, не немеют ли пальцы ниже повязки."
+                ],
+                escalation: "Кровь не останавливается 10 минут — звони в скорую.",
+                videoQuery: "как наложить бинт первая помощь обучение" },
+            { id: "bp2", category: "medical", name: "Обработка пореза", threshold: 8000, risk: "none",
+                short: "Первые действия при небольшом порезе.",
+                steps: ["Прижми чистой тканью на 3-5 минут.", "Промой порез под проточной водой.",
+                    "Обработай края антисептиком.", "Наложи пластырь, если порез неглубокий.",
+                    "Меняй повязку раз в день, следи за покраснением."
+                ],
+                escalation: "Порез глубокий или кровь не останавливается — звони в скорую или к взрослому.",
+                videoQuery: "первая помощь при порезе" },
+            { id: "bp3", category: "medical", name: "Первая помощь при ожогах", threshold: 14000, risk: "low",
+                short: "Что делать в первые минуты после бытового ожога.",
+                steps: ["Убери источник тепла немедленно.", "Охлаждай прохладной проточной водой 10-15 минут.",
+                    "Не прокалывай волдыри.", "Накрой чистой сухой тканью.",
+                    "Не наноси масло/пасту — это ухудшает ожог."
+                ],
+                escalation: "Ожог больше ладони, на лице, волдыри повреждены — звони в скорую.",
+                videoQuery: "первая помощь при ожоге в быту" },
+            { id: "bp4", category: "medical", name: "Носовое кровотечение", threshold: 20000, risk: "none",
+                short: "Как остановить обычное носовое кровотечение.",
+                steps: ["Сядь, слегка наклони голову вперёд (не назад).",
+                    "Зажми мягкую часть носа пальцами на 10 минут.", "Дыши через рот.",
+                    "Не сморкайся ближайший час после остановки."
+                ],
+                escalation: "Кровь не останавливается 20+ минут — обращайся к врачу.",
+                videoQuery: "как остановить кровотечение из носа" },
+            { id: "bp5", category: "medical", name: "Растяжение: первые часы", threshold: 28000, risk: "low",
+                short: "Базовый протокол при растяжении связок.",
+                steps: ["Покой — прекрати нагрузку на конечность.", "Холод — приложи через ткань на 15-20 минут.",
+                    "Компрессия — эластичный бинт, не туго.",
+                    "Возвышенное положение — подними конечность выше уровня сердца."
+                ],
+                escalation: "Сильный отёк, невозможно опереться — к травматологу.",
+                videoQuery: "первая помощь при растяжении связок" },
+            { id: "bp6", category: "medical", name: "Основы СЛР: когда и как", threshold: 100000, risk: "medium",
+                short: "Что важно знать в теории — перед сертифицированным курсом.",
+                steps: ["Сначала всегда звони 103/112 или проси кого-то это сделать.",
+                    "Проверь реакцию и дыхание человека.",
+                    "Если дыхания нет — нужны компрессии грудной клетки, этому обучают на практике с манекеном.",
+                    "Это описание не заменяет практический курс — просто теория, чтобы не растеряться."
+                ],
+                escalation: "Это не инструкция для реального применения — только сертифицированный курс с практикой даёт нужный навык.",
+                videoQuery: "базовый курс первой помощи СЛР сертифицированный" },
+            { id: "bp7", category: "fitness", name: "Базовая разминка", threshold: 5000, risk: "none",
+                short: "5-минутный комплекс перед активностью.",
+                steps: ["Круговые движения плечами — 10 раз в каждую сторону.", "Наклоны корпуса в стороны — по 8 раз.",
+                    "Вращения тазом — 10 раз в каждую сторону.", "Приседания без веса — 10-15 раз.",
+                    "Лёгкий бег на месте — 60 секунд."
+                ],
+                escalation: "Резкая боль — остановись.", videoQuery: "разминка перед тренировкой для новичков" },
+            { id: "bp8", category: "fitness", name: "Техника отжиманий", threshold: 12000, risk: "low",
+                short: "Как отжиматься без вреда для запястий и спины.",
+                steps: ["Руки чуть шире плеч, ладони под плечами.", "Тело — прямая линия от головы до пяток.",
+                    "Опускайся, сгибая локти под 45° к корпусу.", "Не роняй таз и не задирай его вверх.",
+                    "Начни с отжиманий с колен, если обычные пока тяжело."
+                ],
+                escalation: "Боль в запястье — переходи на упор на кулаки или снижай нагрузку.",
+                videoQuery: "правильная техника отжиманий для начинающих" },
+            { id: "bp9", category: "fitness", name: "Правильная планка", threshold: 18000, risk: "none",
+                short: "Базовое упражнение на мышцы кора.",
+                steps: ["Упор на предплечья и носки стоп.", "Тело — прямая линия, не прогибайся в пояснице.",
+                    "Напряги живот и ягодицы.", "Начни с 20-30 секунд, увеличивай постепенно."
+                ],
+                escalation: null, videoQuery: "как правильно делать планку техника" },
+            { id: "bp10", category: "fitness", name: "Растяжка после тренировки", threshold: 24000, risk: "none",
+                short: "Базовый комплекс заминки.",
+                steps: ["Растяжка задней поверхности бедра — 30 секунд на каждую ногу.",
+                    "Растяжка квадрицепса стоя — 30 секунд на каждую ногу.", "Растяжка плеч и рук.",
+                    "Дыши глубоко и ровно, без рывков."
+                ],
+                escalation: null, videoQuery: "растяжка после тренировки для новичков" },
+            { id: "bp11", category: "fitness", name: "Дыхание при беге", threshold: 32000, risk: "none",
+                short: "Как дышать, чтобы не сбивалось дыхание.",
+                steps: ["Дыши одновременно носом и ртом на средней нагрузке.", "Держи ритм — например, 3 шага вдох, 2 шага выдох.",
+                    "Дыши животом, а не только грудью.", "Если задыхаешься — снизь темп, не останавливайся резко."
+                ],
+                escalation: null, videoQuery: "правильное дыхание во время бега" },
+            { id: "bp12", category: "home", name: "Замена лампочки безопасно", threshold: 6000, risk: "low",
+                short: "Базовое бытовое действие с минимальным риском.",
+                steps: ["Выключи выключатель этого светильника.", "Дай лампочке остыть, если она недавно горела.",
+                    "Придерживай патрон рукой, откручивай лампочку против часовой стрелки.",
+                    "Вкручивай новую лампочку без сильного усилия.", "Включи свет и проверь работу."
+                ],
+                escalation: "Патрон шатается или искрит — не трогай, зови взрослого/электрика.",
+                videoQuery: "как поменять лампочку безопасно" },
+            { id: "bp13", category: "home", name: "Электробезопасность: теория", threshold: 40000, risk: "medium",
+                short: "База знаний перед любой работой с электричеством.",
+                steps: ["Найди щиток и разберись, какой автомат за какую комнату отвечает.",
+                    "Автомат отключает питание, но всегда дополнительно проверяй индикатором.",
+                    "Индикатор отсутствия напряжения показывает, есть ли ток в проводе.",
+                    "Никогда не работай с проводкой во влажном помещении или мокрыми руками.",
+                    "Сомневаешься — это сигнал позвать взрослого, а не прекратить чтение."
+                ],
+                escalation: "Не уверен, что автомат отключил нужную цепь — зови взрослого или электрика.",
+                videoQuery: "основы электробезопасности в быту" },
+            { id: "bp14", category: "home", name: "Мелкий ремонт крана", threshold: 50000, risk: "low",
+                short: "Что делать при небольшой протечке крана.",
+                steps: ["Перекрой воду на кран (вентиль под раковиной).",
+                    "Открой кран, чтобы слить остаток воды из трубы.",
+                    "Обычно причина течи — износ прокладки или картриджа.",
+                    "Сфотографируй разборку перед откручиванием деталей.",
+                    "Если не уверен в модели крана — лучше вызвать сантехника."
+                ],
+                escalation: "Течь не останавливается или появилась в стене — вызывай сантехника, не разбирай дальше.",
+                videoQuery: "как починить протекающий кран самостоятельно" },
+            { id: "bp15", category: "home", name: "Тушение возгорания на кухне", threshold: 60000, risk: "medium",
+                short: "Базовые действия при небольшом возгорании на плите.",
+                steps: ["Если горит масло — НИКОГДА не заливай водой, это усилит пожар.",
+                    "Накрой сковороду крышкой или влажным полотенцем, перекрой доступ воздуха.",
+                    "Выключи конфорку, если это безопасно сделать.",
+                    "Если пламя не гаснет за секунды — уходи и звони 101/112."
+                ],
+                escalation: "Огонь распространяется дальше сковороды — немедленно покинь помещение и звони 101.",
+                videoQuery: "что делать при возгорании масла на кухне" },
+            { id: "bp16", category: "home", name: "Замена розетки", threshold: 70000, risk: "high",
+                short: "Полная замена бытовой розетки — после теории электробезопасности.",
+                steps: ["Инструменты: индикаторная отвёртка, крестовая/плоская отвёртка, новая розетка.",
+                    "Шаг 1. Найди щиток, определи автомат нужной комнаты.",
+                    "Шаг 2. Отключи именно этот автомат.",
+                    "Шаг 3. Проверь индикаторной отвёрткой оба контакта старой розетки.",
+                    "Шаг 4. Только после подтверждения «напряжения нет» — откручивай крышку.",
+                    "Шаг 5. Сфотографируй расположение проводов перед отсоединением.",
+                    "Шаг 6. Подключи провода к новой розетке в том же порядке.",
+                    "Шаг 7. Закрепи розетку в подрозетнике, закрути крышку.",
+                    "Шаг 8. Включи автомат и проверь розетку индикатором."
+                ],
+                escalation: "Провода старые, оплавлены, или их больше трёх — останавливайся и зови электрика.",
+                videoQuery: "как заменить розетку своими руками пошагово" },
+            { id: "bp17", category: "home", name: "Фильтр для воды из подручных средств", threshold: 90000, risk: "low",
+                short: "Survival-навык: механическая фильтрация мутной воды.",
+                steps: ["Возьми пластиковую бутылку, отрежь дно.",
+                    "Переверни горлышком вниз: ткань, песок, мелкий гравий, крупный гравий — слоями.",
+                    "Пропусти мутную воду через слои.",
+                    "Обязательно прокипяти воду после фильтрации перед употреблением."
+                ],
+                escalation: "Этот фильтр не обеззараживает воду — без кипячения пить нельзя.",
+                videoQuery: "как сделать фильтр для воды своими руками survival" },
+            { id: "bp18", category: "home", name: "Базовые узлы для survival", threshold: 120000, risk: "none",
+                short: "Простые узлы, которые реально пригождаются в быту и походах.",
+                steps: ["Прямой узел — для связывания двух верёвок одной толщины.",
+                    "Восьмёрка — для страховки и надёжной петли.",
+                    "Удавка — для быстрой временной фиксации груза.",
+                    "Тренируйся на любой верёвке дома, пока не сможешь завязать не глядя."
+                ],
+                escalation: null, videoQuery: "базовые туристические узлы для начинающих" },
+            // новые 25 (bp19-bp43) – уже добавлены ранее, но для полноты приведем их коротко
             { id: "bp19", category: "survival", name: "Разведение костра", threshold: 30000, risk: "low",
                 short: "Как разжечь костёр в сырую погоду.",
                 steps: ["Собери сухой мох, бересту, мелкие ветки.", "Сложи пирамидкой, оставь отверстие для воздуха.",
@@ -551,129 +936,288 @@
                     "Посоли, добавь специи по вкусу."
                 ],
                 escalation: null, videoQuery: "гречка с мясом" },
+            // добавляем еще 10 (bp34-bp43)
+            { id: "bp34", category: "survival", name: "Сбор дождевой воды", threshold: 5000, risk: "none",
+                short: "Как собрать и очистить дождевую воду.",
+                steps: ["Расстели чистую ткань или плёнку для сбора.", "Собирай воду в чистую ёмкость.",
+                    "Пропусти через фильтр из песка и угля.", "Прокипяти перед употреблением."
+                ], escalation: null, videoQuery: "сбор дождевой воды" },
+            { id: "bp35", category: "survival", name: "Сигнальный костёр", threshold: 12000, risk: "low",
+                short: "Как разжечь костёр для подачи сигнала.",
+                steps: ["Найди возвышенное место.", "Сложи костёр пирамидой, добавь сырые ветки для дыма.",
+                    "Накрой сверху травой или листьями для густого дыма.",
+                    "Подавай сигнал три коротких костра."],
+                escalation: "Следи за пожарной безопасностью.", videoQuery: "сигнальный костер" },
+            { id: "bp36", category: "medical", name: "Укусы насекомых", threshold: 8000, risk: "none",
+                short: "Первая помощь при укусах пчёл, ос и комаров.",
+                steps: ["Удали жало, если оно осталось.", "Приложи холод к месту укуса.",
+                    "Используй антигистаминную мазь.", "При аллергии — срочно к врачу."],
+                escalation: "При отёке горла или затруднении дыхания — звони в скорую.",
+                videoQuery: "первая помощь при укусах насекомых" },
+            { id: "bp37", category: "home", name: "Сушка фруктов", threshold: 15000, risk: "none",
+                short: "Как правильно сушить фрукты в домашних условиях.",
+                steps: ["Нарежь фрукты тонкими ломтиками.",
+                    "Разложи на решётке или противне в один слой.",
+                    "Суши в духовке при 50-60°C с открытой дверцей.",
+                    "Храни в стеклянной банке с крышкой."],
+                escalation: null, videoQuery: "сушка фруктов в духовке" },
+            { id: "bp38", category: "fitness", name: "Бёрпи", threshold: 10000, risk: "low",
+                short: "Техника выполнения бёрпи.",
+                steps: ["Из положения стоя присядь, упёршись руками в пол.",
+                    "Отпрыгни ногами назад в планку.", "Сделай отжимание.",
+                    "Подпрыгни, выпрямляясь, и хлопни в ладоши."],
+                escalation: "При болях в спине — делай без отжимания.",
+                videoQuery: "техника бёрпи" },
+            { id: "bp39", category: "cooking", name: "Завтрак в кружке", threshold: 7000, risk: "none",
+                short: "Быстрый завтрак в микроволновке.",
+                steps: ["В кружку разбей яйцо, добавь молоко, сыр, зелень.",
+                    "Перемешай и отправь в микроволновку на 1-2 минуты.",
+                    "Достань и дай остыть.", "Ешь прямо из кружки."],
+                escalation: null, videoQuery: "завтрак в кружке" },
+            { id: "bp40", category: "survival", name: "Самооборона: базовая стойка", threshold: 18000, risk: "low",
+                short: "Базовая защитная стойка.",
+                steps: ["Встань вполоборота к противнику.", "Согни колени, приподними пятки.",
+                    "Руки держи перед собой, кулаки у подбородка.",
+                    "Следи за глазами и плечами противника."],
+                escalation: "Лучшая защита — избегать конфликта.", videoQuery: "базовая стойка самообороны" },
+            { id: "bp41", category: "home", name: "Чистка микроволновки", threshold: 20000, risk: "none",
+                short: "Как быстро очистить микроволновку.",
+                steps: ["Налей воду в миску, добавь лимонный сок.",
+                    "Поставь в микроволновку на 5 минут.",
+                    "Пар размягчит грязь — протри влажной губкой.",
+                    "Вытри насухо."],
+                escalation: null, videoQuery: "чистка микроволновки" },
+            { id: "bp42", category: "fitness", name: "Растяжка спины", threshold: 22000, risk: "none",
+                short: "Упражнения для здоровой спины.",
+                steps: ["Кошка-корова: выгибай и прогибай спину.",
+                    "Наклоны вперёд сидя с прямыми ногами.",
+                    "Скручивания корпуса лёжа.", "Мост на плечах."],
+                escalation: "При острой боли — прекрати.", videoQuery: "растяжка спины" },
+            { id: "bp43", category: "cooking", name: "Чайный гриб", threshold: 25000, risk: "none",
+                short: "Как вырастить чайный гриб с нуля.",
+                steps: ["Приготовь сладкий чай (1 л воды, 3 ст.л. сахара, 2 пакетика).",
+                    "Добавь готовый гриб или стартовую жидкость.",
+                    "Накрой марлей, оставь на 7-10 дней.",
+                    "Сливайте напиток каждые 5-7 дней."],
+                escalation: null, videoQuery: "чайный гриб выращивание" },
         ];
 
-        // --- Рецепты (10 + 15 = 25) ---
+        // --- Рецепты (35 шт) ---
         const RECIPES = [
-            // существующие 10 (r1-r10) оставляем
-            // добавим ещё 15 (r11-r25)
+            // первые 25 (r1-r25) уже были, добавим еще 10 (r26-r35)
+            { id: "r1", category: "cooking", name: "Яичница", threshold: 4000, risk: "low",
+                short: "Базовое блюдо для старта на кухне.",
+                steps: ["Разогрей сковороду на среднем огне 1-2 минуты.", "Добавь масло.",
+                    "Разбей яйцо о плоскую поверхность, вылей на сковороду.", "Посоли через минуту.",
+                    "Готовь 3-4 минуты по вкусу.", "Сними лопаткой, дай сковороде остыть."
+                ],
+                escalation: "Масло задымилось — выключи конфорку и проветри кухню.",
+                videoQuery: "как приготовить яичницу рецепт" },
+            { id: "r2", category: "cooking", name: "Бутерброд с авокадо", threshold: 9000, risk: "none",
+                short: "Быстрый и полезный перекус.",
+                steps: ["Разрежь авокадо пополам, убери косточку.", "Разомни мякоть вилкой в миске.",
+                    "Добавь щепотку соли и немного лимонного сока.", "Намажь на подсушенный хлеб.",
+                    "По желанию — посыпь семечками или перцем."
+                ],
+                escalation: null, videoQuery: "тост с авокадо простой рецепт" },
+            { id: "r3", category: "cooking", name: "Овсянка на молоке или воде", threshold: 15000, risk: "low",
+                short: "Простой сытный завтрак.",
+                steps: ["Налей молоко или воду в кастрюлю (примерно вдвое больше объёма хлопьев).",
+                    "Доведи до кипения на среднем огне.", "Всыпь овсяные хлопья, убавь огонь.",
+                    "Вари 3-5 минут, помешивая.", "Добавь мёд, фрукты или орехи по вкусу."
+                ],
+                escalation: null, videoQuery: "как варить овсянку на молоке рецепт" },
+            { id: "r4", category: "cooking", name: "Паста с чесноком и маслом", threshold: 22000, risk: "low",
+                short: "Классика на 15 минут.",
+                steps: ["Отвари пасту в подсоленной воде по инструкции на упаковке.",
+                    "На сковороде разогрей оливковое масло, добавь нарезанный чеснок.",
+                    "Обжаривай чеснок 1 минуту на слабом огне, не дай подгореть.",
+                    "Слей воду с пасты, добавь пасту на сковороду.", "Перемешай, посыпь тёртым сыром или зеленью."
+                ],
+                escalation: null, videoQuery: "паста с чесноком и маслом рецепт" },
+            { id: "r5", category: "cooking", name: "Салат из огурцов и помидоров", threshold: 27000, risk: "none",
+                short: "Свежий летний салат за 5 минут.",
+                steps: ["Нарежь огурцы и помидоры кубиками.", "Добавь нарезанный лук или зелень по желанию.",
+                    "Заправь оливковым маслом, солью и перцем.", "Перемешай и подавай сразу."
+                ],
+                escalation: null, videoQuery: "простой салат из огурцов и помидоров" },
+            { id: "r6", category: "cooking", name: "Рис с овощами", threshold: 35000, risk: "low",
+                short: "Сытный гарнир из простых продуктов.",
+                steps: ["Промой рис до прозрачной воды.", "Свари рис по инструкции на упаковке.",
+                    "Обжарь нарезанные овощи (морковь, лук, перец) 5-7 минут.",
+                    "Смешай готовый рис с овощами.", "Посоли, добавь специи по вкусу."
+                ],
+                escalation: null, videoQuery: "рис с овощами простой рецепт" },
+            { id: "r7", category: "cooking", name: "Печёный картофель в духовке", threshold: 45000, risk: "low",
+                short: "Простое блюдо с минимумом усилий.",
+                steps: ["Разогрей духовку до 200°C.", "Нарежь картофель дольками, не срезая кожуру.",
+                    "Смешай с маслом, солью и специями в миске.", "Выложи на противень в один слой.",
+                    "Запекай 25-30 минут до золотистой корочки."
+                ],
+                escalation: "Работа с духовкой — используй прихватки, не касайся горячих стенок.",
+                videoQuery: "печёный картофель в духовке рецепт" },
+            { id: "r8", category: "cooking", name: "Смузи из банана и ягод", threshold: 55000, risk: "none",
+                short: "Быстрый напиток-перекус.",
+                steps: ["Положи банан и горсть ягод (свежих или замороженных) в блендер.",
+                    "Добавь молоко, йогурт или воду по вкусу.", "Взбей до однородности 30-60 секунд.",
+                    "При желании подсласти мёдом."
+                ],
+                escalation: null, videoQuery: "смузи банан ягоды рецепт" },
+            { id: "r9", category: "cooking", name: "Омлет с сыром", threshold: 65000, risk: "low",
+                short: "Сытный завтрак на 10 минут.",
+                steps: ["Взбей 2-3 яйца с щепоткой соли и ложкой молока.",
+                    "Разогрей сковороду со сливочным маслом на среднем огне.",
+                    "Вылей смесь, готовь на среднем огне 2-3 минуты.", "Посыпь тёртым сыром, сложи омлет пополам.",
+                    "Готовь ещё минуту под крышкой до расплавления сыра."
+                ],
+                escalation: null, videoQuery: "омлет с сыром рецепт" },
+            { id: "r10", category: "cooking", name: "Суп на скорую руку", threshold: 80000, risk: "low",
+                short: "Простой суп из базового набора продуктов.",
+                steps: ["Обжарь нарезанный лук и морковь 3-4 минуты.",
+                    "Добавь нарезанный картофель, залей водой, доведи до кипения.",
+                    "Убавь огонь, вари 15-20 минут.", "Посоли, добавь специи за 5 минут до готовности.",
+                    "Дай супу настояться 5-10 минут перед подачей."
+                ],
+                escalation: null, videoQuery: "простой суп на скорую руку рецепт" },
+            // добавляем 15 новых (r11-r25)
             { id: "r11", category: "cooking", name: "Борщ", threshold: 30000, risk: "low",
                 short: "Классический украинский борщ.",
-                steps: ["Свари бульон на говядине.",
-                    "Добавь нарезанную свеклу, морковь, лук, капусту.",
-                    "Вари до готовности овощей.",
-                    "Заправь сметаной и зеленью."],
+                steps: ["Свари бульон на говядине.", "Добавь нарезанную свеклу, морковь, лук, капусту.",
+                    "Вари до готовности овощей.", "Заправь сметаной и зеленью."],
                 escalation: null, videoQuery: "борщ классический" },
             { id: "r12", category: "cooking", name: "Плов", threshold: 50000, risk: "low",
                 short: "Плов с бараниной или курицей.",
-                steps: ["Обжарь мясо с луком и морковью.",
-                    "Добавь рис, залей водой (2:1).",
-                    "Туши под крышкой 20-25 минут.",
-                    "Добавь зиру, барбарис."],
+                steps: ["Обжарь мясо с луком и морковью.", "Добавь рис, залей водой (2:1).",
+                    "Туши под крышкой 20-25 минут.", "Добавь зиру, барбарис."],
                 escalation: null, videoQuery: "плов с курицей" },
             { id: "r13", category: "cooking", name: "Овощное рагу", threshold: 70000, risk: "low",
                 short: "Лёгкое вегетарианское рагу.",
-                steps: ["Нарежь кабачки, баклажаны, перец, помидоры.",
-                    "Обжарь лук, добавь овощи.",
-                    "Туши 15-20 минут, добавь чеснок и зелень.",
-                    "Подавай горячим."],
+                steps: ["Нарежь кабачки, баклажаны, перец, помидоры.", "Обжарь лук, добавь овощи.",
+                    "Туши 15-20 минут, добавь чеснок и зелень.", "Подавай горячим."],
                 escalation: null, videoQuery: "овощное рагу" },
             { id: "r14", category: "cooking", name: "Сырники", threshold: 90000, risk: "low",
                 short: "Нежные сырники из творога.",
-                steps: ["Смешай творог, яйца, сахар, муку.",
-                    "Сформируй лепёшки, обваляй в муке.",
-                    "Обжарь на сковороде с маслом до золотистого цвета.",
-                    "Подавай со сметаной."],
+                steps: ["Смешай творог, яйца, сахар, муку.", "Сформируй лепёшки, обваляй в муке.",
+                    "Обжарь на сковороде с маслом до золотистого цвета.", "Подавай со сметаной."],
                 escalation: null, videoQuery: "сырники творожные" },
             { id: "r15", category: "cooking", name: "Шарлотка с яблоками", threshold: 110000, risk: "low",
                 short: "Быстрый яблочный пирог.",
-                steps: ["Взбей яйца с сахаром, добавь муку, разрыхлитель.",
-                    "Добавь нарезанные яблоки, перемешай.",
-                    "Вылей в форму, выпекай при 180°C 25-30 минут.",
-                    "Посыпь сахарной пудрой."],
+                steps: ["Взбей яйца с сахаром, добавь муку, разрыхлитель.", "Добавь нарезанные яблоки, перемешай.",
+                    "Вылей в форму, выпекай при 180°C 25-30 минут.", "Посыпь сахарной пудрой."],
                 escalation: null, videoQuery: "шарлотка с яблоками" },
             { id: "r16", category: "cooking", name: "Салат «Цезарь»", threshold: 130000, risk: "none",
                 short: "Классический салат.",
-                steps: ["Нарежь салат романо, добавь куриное филе.",
-                    "Добавь сухарики и пармезан.",
-                    "Заправь соусом Цезарь.",
-                    "Перемешай перед подачей."],
+                steps: ["Нарежь салат романо, добавь куриное филе.", "Добавь сухарики и пармезан.",
+                    "Заправь соусом Цезарь.", "Перемешай перед подачей."],
                 escalation: null, videoQuery: "салат Цезарь" },
             { id: "r17", category: "cooking", name: "Уха из рыбы", threshold: 150000, risk: "low",
                 short: "Рыбный суп на костре.",
-                steps: ["Свари бульон из головы и хвоста рыбы.",
-                    "Добавь картофель, лук, морковь.",
-                    "Добавь кусочки рыбы, вари 10 минут.",
-                    "Посоли, добавь перец и зелень."],
+                steps: ["Свари бульон из головы и хвоста рыбы.", "Добавь картофель, лук, морковь.",
+                    "Добавь кусочки рыбы, вари 10 минут.", "Посоли, добавь перец и зелень."],
                 escalation: null, videoQuery: "уха из рыбы" },
             { id: "r18", category: "cooking", name: "Рисовая каша с тыквой", threshold: 170000, risk: "none",
                 short: "Полезная каша в мультиварке.",
-                steps: ["Залей рис молоком, добавь кусочки тыквы.",
-                    "Добавь сахар, соль, сливочное масло.",
-                    "Вари в мультиварке 30 минут.",
-                    "Подавай тёплой."],
+                steps: ["Залей рис молоком, добавь кусочки тыквы.", "Добавь сахар, соль, сливочное масло.",
+                    "Вари в мультиварке 30 минут.", "Подавай тёплой."],
                 escalation: null, videoQuery: "рисовая каша с тыквой" },
             { id: "r19", category: "cooking", name: "Домашние пельмени", threshold: 190000, risk: "low",
                 short: "Самые вкусные пельмени.",
-                steps: ["Замеси тесто из муки, яйца, воды.",
-                    "Сделай фарш из мяса с луком.",
-                    "Слепи пельмени, заморозь.",
-                    "Вари в кипящей воде 5-7 минут."],
+                steps: ["Замеси тесто из муки, яйца, воды.", "Сделай фарш из мяса с луком.",
+                    "Слепи пельмени, заморозь.", "Вари в кипящей воде 5-7 минут."],
                 escalation: null, videoQuery: "домашние пельмени" },
             { id: "r20", category: "cooking", name: "Грибной крем-суп", threshold: 210000, risk: "low",
                 short: "Нежный крем-суп из шампиньонов.",
-                steps: ["Обжарь лук, грибы, картофель.",
-                    "Залей бульоном, вари 20 минут.",
-                    "Взбей блендером до пюре.",
-                    "Добавь сливки и прогревай."],
+                steps: ["Обжарь лук, грибы, картофель.", "Залей бульоном, вари 20 минут.",
+                    "Взбей блендером до пюре.", "Добавь сливки и прогревай."],
                 escalation: null, videoQuery: "грибной крем-суп" },
             { id: "r21", category: "cooking", name: "Булочки с корицей", threshold: 230000, risk: "low",
                 short: "Ароматные булочки к чаю.",
-                steps: ["Замеси дрожжевое тесто.",
-                    "Раскатай, посыпь корицей и сахаром.",
-                    "Скрути в рулет, нарежь на кусочки.",
-                    "Выпекай при 180°C до румяности."],
+                steps: ["Замеси дрожжевое тесто.", "Раскатай, посыпь корицей и сахаром.",
+                    "Скрути в рулет, нарежь на кусочки.", "Выпекай при 180°C до румяности."],
                 escalation: null, videoQuery: "булочки с корицей" },
             { id: "r22", category: "cooking", name: "Лазанья", threshold: 250000, risk: "low",
                 short: "Итальянская лазанья с мясом.",
-                steps: ["Свари мясной соус (болоньезе).",
-                    "Сделай бешамель.",
-                    "Слой соуса, листы лазаньи, снова соус.",
-                    "Запекай с сыром."],
+                steps: ["Свари мясной соус (болоньезе).", "Сделай бешамель.",
+                    "Слой соуса, листы лазаньи, снова соус.", "Запекай с сыром."],
                 escalation: null, videoQuery: "лазанья классическая" },
             { id: "r23", category: "cooking", name: "Шашлык из свинины", threshold: 270000, risk: "low",
                 short: "Маринованный шашлык на углях.",
-                steps: ["Нарежь свинину кусками, замаринуй в луке и специях.",
-                    "Оставь на 2-4 часа.",
-                    "Нанижи на шампуры, жарь на углях 15-20 минут.",
-                    "Подавай с зеленью и соусом."],
+                steps: ["Нарежь свинину кусками, замаринуй в луке и специях.", "Оставь на 2-4 часа.",
+                    "Нанижи на шампуры, жарь на углях 15-20 минут.", "Подавай с зеленью и соусом."],
                 escalation: null, videoQuery: "шашлык из свинины" },
             { id: "r24", category: "cooking", name: "Рыба в фольге", threshold: 290000, risk: "low",
                 short: "Рыба, запечённая в фольге.",
-                steps: ["Почисти рыбу, посоли, поперчи.",
-                    "Заверни в фольгу с лимоном и зеленью.",
-                    "Запекай в духовке при 200°C 25 минут.",
-                    "Подавай с овощами."],
+                steps: ["Почисти рыбу, посоли, поперчи.", "Заверни в фольгу с лимоном и зеленью.",
+                    "Запекай в духовке при 200°C 25 минут.", "Подавай с овощами."],
                 escalation: null, videoQuery: "рыба в фольге" },
             { id: "r25", category: "cooking", name: "Фруктовый салат", threshold: 310000, risk: "none",
                 short: "Лёгкий десерт из фруктов.",
-                steps: ["Нарежь яблоки, бананы, апельсины, виноград.",
-                    "Заправь йогуртом или сметаной.",
-                    "Добавь мёд и орехи.",
-                    "Подавай охлаждённым."],
+                steps: ["Нарежь яблоки, бананы, апельсины, виноград.", "Заправь йогуртом или сметаной.",
+                    "Добавь мёд и орехи.", "Подавай охлаждённым."],
                 escalation: null, videoQuery: "фруктовый салат" },
+            // добавляем еще 10 (r26-r35)
+            { id: "r26", category: "cooking", name: "Тост с авокадо и яйцом", threshold: 5000, risk: "none",
+                short: "Полезный завтрак за 10 минут.",
+                steps: ["Поджарь хлеб в тостере.", "Разомни авокадо с солью и перцем.",
+                    "Свари яйцо пашот или жареное.", "Выложи на тост, посыпь зеленью."],
+                escalation: null, videoQuery: "тост с авокадо и яйцом" },
+            { id: "r27", category: "cooking", name: "Тыквенный суп-пюре", threshold: 12000, risk: "low",
+                short: "Нежный суп из тыквы.",
+                steps: ["Нарежь тыкву, лук, морковь.", "Обжарь лук, добавь тыкву и морковь.",
+                    "Залей бульоном, вари 20 минут.", "Взбей блендером, добавь сливки."],
+                escalation: null, videoQuery: "тыквенный суп-пюре" },
+            { id: "r28", category: "cooking", name: "Кускус с овощами", threshold: 15000, risk: "none",
+                short: "Быстрый гарнир из кускуса.",
+                steps: ["Залей кускус кипятком в пропорции 1:1.", "Накрой и дай настояться 5 минут.",
+                    "Обжарь овощи (перец, кабачок, лук).", "Смешай с кускусом, добавь специи."],
+                escalation: null, videoQuery: "кускус с овощами" },
+            { id: "r29", category: "cooking", name: "Маффины с черникой", threshold: 18000, risk: "low",
+                short: "Нежные маффины на завтрак.",
+                steps: ["Смешай муку, сахар, разрыхлитель.", "Добавь яйцо, молоко, масло.",
+                    "Аккуратно добавь чернику.", "Выпекай при 180°C 20 минут."],
+                escalation: null, videoQuery: "маффины с черникой" },
+            { id: "r30", category: "cooking", name: "Хумус", threshold: 20000, risk: "none",
+                short: "Домашний хумус из нута.",
+                steps: ["Замочи нут на ночь, свари до мягкости.", "Взбей нут с тахини, лимонным соком, чесноком.",
+                    "Добавь оливковое масло и соль.", "Подавай с лавашом или овощами."],
+                escalation: null, videoQuery: "хумус рецепт" },
+            { id: "r31", category: "cooking", name: "Рыба на пару", threshold: 22000, risk: "low",
+                short: "Полезная рыба, приготовленная на пару.",
+                steps: ["Филе рыбы посоли, поперчи, полей лимоном.", "Выложи в пароварку на 10-15 минут.",
+                    "Подавай с овощами и зеленью.", "Полить оливковым маслом."],
+                escalation: null, videoQuery: "рыба на пару" },
+            { id: "r32", category: "cooking", name: "Смузи-боул", threshold: 25000, risk: "none",
+                short: "Густой смузи в миске с топпингами.",
+                steps: ["Взбей замороженные ягоды с бананом и йогуртом.", "Перелей в миску.",
+                    "Добавь топпинги: гранолу, семена, свежие ягоды.", "Укрась мятой."],
+                escalation: null, videoQuery: "смузи-боул" },
+            { id: "r33", category: "cooking", name: "Запечённые яблоки", threshold: 28000, risk: "low",
+                short: "Яблоки, запечённые с мёдом и орехами.",
+                steps: ["Удали сердцевину у яблок.", "Внутрь положи мёд, орехи, изюм.",
+                    "Запекай при 180°C 20-25 минут.", "Подавай с шариком мороженого."],
+                escalation: null, videoQuery: "запечённые яблоки" },
+            { id: "r34", category: "cooking", name: "Картофель по-деревенски", threshold: 30000, risk: "low",
+                short: "Картофель с хрустящей корочкой.",
+                steps: ["Нарежь картофель дольками с кожурой.",
+                    "Смешай с маслом, солью, паприкой и чесноком.",
+                    "Выложи на противень в один слой.", "Запекай при 200°C 30-35 минут."],
+                escalation: null, videoQuery: "картофель по-деревенски" },
+            { id: "r35", category: "cooking", name: "Квашеная капуста", threshold: 35000, risk: "none",
+                short: "Традиционный способ квашения.",
+                steps: ["Нашинкуй капусту, добавь морковь и соль.", "Помни руками до появления сока.",
+                    "Утрамбуй в банку, оставь на 3 дня при комнатной температуре.", "Храни в холодильнике."],
+                escalation: null, videoQuery: "квашеная капуста" },
         ];
 
-        // --- Ачивки (6 + 20 = 26) ---
+        // --- Ачивки (36 шт) ---
         const ACHIEVEMENTS = [
-            // существующие 6
+            // первые 26 уже есть, добавим еще 10
             { id: "a1", name: "Первые шаги", threshold: 1000, desc: "Начало пути." },
             { id: "a2", name: "На своих двоих", threshold: 25000, desc: "Первая серьёзная дистанция." },
             { id: "a3", name: "Не сдаюсь", threshold: 75000, desc: "Стабильная активность." },
             { id: "a4", name: "Мастер быта", threshold: 150000, desc: "Освоен навык повышенного риска." },
             { id: "a5", name: "Выживший", threshold: 500000, desc: "Полмиллиона шагов за плечами." },
-            { id: "a6", name: "Легенда системы", threshold: 1000000, desc: "Миллион шагов. Реклама отключена навсегда." },
-            // новые 20
+            { id: "a6", name: "Легенда системы", threshold: 1000000, desc: "Миллион шагов." },
             { id: "a7", name: "Кулинар-любитель", threshold: 4000, desc: "Приготовил первое блюдо по рецепту." },
             { id: "a8", name: "Медик-новичок", threshold: 8000, desc: "Освоил обработку пореза." },
             { id: "a9", name: "Спортсмен", threshold: 12000, desc: "Правильно выполнил отжимания." },
@@ -694,6 +1238,17 @@
             { id: "a24", name: "Гурман", threshold: 280000, desc: "Приготовил 15 блюд." },
             { id: "a25", name: "Мастер выживания", threshold: 350000, desc: "Освоил 20 навыков." },
             { id: "a26", name: "Легенда Пустоши", threshold: 600000, desc: "600 000 шагов." },
+            // новые 10
+            { id: "a27", name: "Собиратель", threshold: 5000, desc: "Собрал 5000 шагов." },
+            { id: "a28", name: "Искатель приключений", threshold: 10000, desc: "10 000 шагов пройдено." },
+            { id: "a29", name: "Пустынный странник", threshold: 15000, desc: "15 000 шагов в пустоши." },
+            { id: "a30", name: "Мастер воды", threshold: 20000, desc: "Научился добывать воду." },
+            { id: "a31", name: "Огненный", threshold: 25000, desc: "Развёл 5 костров." },
+            { id: "a32", name: "Травник", threshold: 30000, desc: "Собрал 10 видов растений." },
+            { id: "a33", name: "Строитель", threshold: 35000, desc: "Построил укрытие." },
+            { id: "a34", name: "Проводник", threshold: 40000, desc: "Провёл 3 рейда." },
+            { id: "a35", name: "Повар-экспериментатор", threshold: 45000, desc: "Приготовил 20 блюд." },
+            { id: "a36", name: "Хранитель", threshold: 50000, desc: "Достиг 50 000 шагов." },
         ];
 
         // --- Квесты (20) ---
@@ -735,27 +1290,33 @@
                 reward: 60, desc: "Реши пример." },
         ];
 
-        // --- История мира (открывается с 500 шагов, до 15000) ---
+        // --- История мира (8 глав, точки на карте) ---
         const LORE = [
-            { threshold: 500, title: "Пробуждение", text: "Ты открываешь глаза в пустынном мире. Вокруг руины древних цивилизаций. Ты помнишь только своё имя. На руке — браслет с надписью 'Протокол Пустошь'. Похоже, это система, которая поможет тебе выжить." },
-            { threshold: 1500, title: "Первые шаги", text: "Ты начинаешь двигаться. Каждый шаг приносит опыт. Система сообщает: 'Активирован режим адаптации. Изучай мир, собирай ресурсы, становись сильнее.' Вдалеке виднеются очертания заброшенного города." },
-            { threshold: 3000, title: "Находка", text: "Ты натыкаешься на старый рюкзак. В нём — банка тушёнки, спички и карта местности. Карта указывает на водонапорную башню к северу. Похоже, там есть вода." },
-            { threshold: 5000, title: "Водонапорная башня", text: "Добравшись до башни, ты находишь небольшой запас воды и старый дневник. Из записей следует, что мир погиб в результате 'Большого Сбоя' — катастрофы, вызванной искусственным интеллектом." },
-            { threshold: 7500, title: "Сигнал", text: "Система перехватывает радиосигнал. Голос в эфире: 'Это Оазис-7, мы живы, ищем выживших. Держитесь восточного направления, там безопасная зона.' Ты решаешь двигаться на восток." },
-            { threshold: 10000, title: "Встреча с другими", text: "Ты встречаешь группу выживших. Они рассказывают, что Система — это не просто браслет, а нейросеть, которая обучает людей навыкам выживания. Но она также контролирует их, словно эксперимент." },
-            { threshold: 12000, title: "Выбор", text: "Перед тобой встаёт выбор: остаться с группой и следовать их правилам или идти в одиночку, полагаясь только на себя. Ты чувствуешь, что твой путь — это поиск правды." },
-            { threshold: 15000, title: "Врата", text: "Ты подходишь к огромным вратам, ведущим в новый сектор. На них надпись: 'Добро пожаловать в Зону 2. Уровень доступа: 15 000 шагов'. Ты проходишь через них, и перед тобой открывается новый ландшафт..." },
+            { threshold: 500, title: "Пробуждение", text: "Ты открываешь глаза в пустынном мире. Вокруг руины древних цивилизаций. Ты помнишь только своё имя. На руке — браслет с надписью 'Протокол Пустошь'. Похоже, это система, которая поможет тебе выжить.",
+                x: 5, y: 40, icon: '🏚️' },
+            { threshold: 2000, title: "Первые шаги", text: "Ты начинаешь двигаться. Каждый шаг приносит опыт. Система сообщает: 'Активирован режим адаптации. Изучай мир, собирай ресурсы, становись сильнее.' Вдалеке виднеются очертания заброшенного города.",
+                x: 15, y: 30, icon: '👣' },
+            { threshold: 4000, title: "Находка", text: "Ты натыкаешься на старый рюкзак. В нём — банка тушёнки, спички и карта местности. Карта указывает на водонапорную башню к северу. Похоже, там есть вода.",
+                x: 25, y: 55, icon: '🎒' },
+            { threshold: 7000, title: "Водонапорная башня", text: "Добравшись до башни, ты находишь небольшой запас воды и старый дневник. Из записей следует, что мир погиб в результате 'Большого Сбоя' — катастрофы, вызванной искусственным интеллектом.",
+                x: 38, y: 25, icon: '🏗️' },
+            { threshold: 10000, title: "Сигнал", text: "Система перехватывает радиосигнал. Голос в эфире: 'Это Оазис-7, мы живы, ищем выживших. Держитесь восточного направления, там безопасная зона.' Ты решаешь двигаться на восток.",
+                x: 50, y: 50, icon: '📻' },
+            { threshold: 13000, title: "Встреча с другими", text: "Ты встречаешь группу выживших. Они рассказывают, что Система — это не просто браслет, а нейросеть, которая обучает людей навыкам выживания. Но она также контролирует их, словно эксперимент.",
+                x: 62, y: 35, icon: '👥' },
+            { threshold: 16000, title: "Выбор", text: "Перед тобой встаёт выбор: остаться с группой и следовать их правилам или идти в одиночку, полагаясь только на себя. Ты чувствуешь, что твой путь — это поиск правды.",
+                x: 75, y: 60, icon: '⚖️' },
+            { threshold: 20000, title: "Врата", text: "Ты подходишь к огромным вратам, ведущим в новый сектор. На них надпись: 'Добро пожаловать в Зону 2. Уровень доступа: 20 000 шагов'. Ты проходишь через них, и перед тобой открывается новый ландшафт...",
+                x: 88, y: 45, icon: '🚪' },
         ];
 
-        // --- Предметы магазина (5 + 40 = 45) ---
+        // --- Предметы магазина (45) ---
         const SHOP_ITEMS = [
-            // существующие 5
             { id: "s1", name: "Скин «Бродяга пустошей»", category: "hero", price: 320 },
             { id: "s2", name: "Рамка аватара «Ветеран рейдов»", category: "hero", price: 180 },
             { id: "s3", name: "Буст опыта x2 на 1 час", category: "hero", price: 150 },
             { id: "s4", name: "Знамя клана", category: "clan", price: 400 },
             { id: "s5", name: "Ускоренный сбор чертежей на 24ч (для группы)", category: "clan", price: 500 },
-            // новые 40 (сгенерируем)
             { id: "s6", name: "Плащ пустыни", category: "hero", price: 120 },
             { id: "s7", name: "Кожаная сумка", category: "hero", price: 150 },
             { id: "s8", name: "Компас выжившего", category: "hero", price: 100 },
@@ -776,7 +1337,6 @@
             { id: "s23", name: "Бинокль", category: "hero", price: 190 },
             { id: "s24", name: "Свисток", category: "hero", price: 50 },
             { id: "s25", name: "Набор для чистки оружия", category: "hero", price: 170 },
-            // клановые плюшки
             { id: "s26", name: "Общий склад", category: "clan", price: 600 },
             { id: "s27", name: "Клановый герб", category: "clan", price: 450 },
             { id: "s28", name: "Бонус к опыту клана +5%", category: "clan", price: 550 },
@@ -799,7 +1359,6 @@
             { id: "s45", name: "Клановый защитный купол", category: "clan", price: 1100 },
         ];
 
-        // --- CRYSTAL_PACKS (цены в долларах до 6) ---
         const CRYSTAL_PACKS = [
             { id: "c1", amount: 100, priceNow: 1, priceLater: 1.5 },
             { id: "c2", amount: 250, priceNow: 2.5, priceLater: 3.5 },
@@ -807,7 +1366,6 @@
             { id: "c4", amount: 600, priceNow: 6, priceLater: 8.5 },
         ];
 
-        // --- Остальные данные (без изменений) ---
         const RISK_META = {
             none: { label: "Безопасно", color: "text-emerald-400" },
             low: { label: "Низкий риск", color: "text-amber-300" },
@@ -844,9 +1402,7 @@
                     "Выключить конфорку", "Уйти и позвать на помощь"
                 ], answer: 1 },
         ];
-        const RAID_STAGES = ["run", "puzzle", "run", "puzzle", "puzzle"];
 
-        // Объединяем всё в один массив для чертежей/рецептов
         const ALL_LEARNABLE = [...BLUEPRINTS, ...RECIPES];
 
         // ============================================================
@@ -870,8 +1426,6 @@
             return `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`;
         }
 
-        function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
-
         function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
         // ============================================================
@@ -894,10 +1448,8 @@
             showAd: false,
             clanTier: 0,
             challenge: { active: false, timeLeft: 15, clicks: 0, result: null },
-            // Рейд переработан
             raid: {
                 stage: 'idle',
-                stageIndex: 0,
                 meters: 0,
                 target: 0,
                 combo: 0,
@@ -905,18 +1457,16 @@
                 result: null,
                 timeLeft: 0,
                 totalTime: 0,
-                timer: null,
-                speed: 0, // метров в секунду
+                interval: null,
+                speed: 0,
             },
             prevLevel: 1,
             challengeTimer: null,
             _portfolioSub: 'achievements',
-            // Аватар
             avatar: { head: "none", top: "none", bottom: "none", shoes: "none" },
-            // Квесты
             questsCompleted: [],
-            // История
             loreUnlocked: 0,
+            mapHoverPoint: null,
         };
 
         // ============================================================
@@ -924,8 +1474,8 @@
         // ============================================================
 
         function getCrystals() {
-            const fromSteps = Math.floor(state.steps / 10000) * 5 + // базовый доход
-                Math.floor(state.steps / 30000) * 50; // дополнительный за 30k
+            const fromSteps = Math.floor(state.steps / 10000) * 5 +
+                Math.floor(state.steps / 30000) * 50;
             return fromSteps + state.crystalsBought - state.crystalsSpent;
         }
 
@@ -958,7 +1508,7 @@
         }
 
         // ============================================================
-        //  TOASTS (с автоматическим удалением)
+        //  TOASTS
         // ============================================================
 
         let toastIdCounter = 0;
@@ -967,11 +1517,14 @@
             const id = ++toastIdCounter;
             state.toasts.push({ id, text, type });
             scheduleUpdate();
-            // Удаляем через 4.5 секунды
             setTimeout(() => {
-                state.toasts = state.toasts.filter(t => t.id !== id);
-                scheduleUpdate();
-            }, 4500);
+                removeToast(id);
+            }, 5000);
+        }
+
+        function removeToast(id) {
+            state.toasts = state.toasts.filter(t => t.id !== id);
+            scheduleUpdate();
         }
 
         // ============================================================
@@ -1016,6 +1569,11 @@
                 state.avatar = state.avatar || { head: "none", top: "none", bottom: "none", shoes: "none" };
                 state.questsCompleted = state.questsCompleted || [];
                 state.loreUnlocked = state.loreUnlocked || 0;
+                if (state.raid.interval) {
+                    clearInterval(state.raid.interval);
+                    state.raid.interval = null;
+                }
+                state.raid.stage = 'idle';
             } catch (e) { /* ignore */ }
         }
 
@@ -1025,14 +1583,12 @@
 
         function runEffects() {
             const li = getLevelInfo();
-            // Открытие чертежей и рецептов
             ALL_LEARNABLE.forEach(bp => {
                 if (state.steps >= bp.threshold && !state.unlocked.includes(bp.id)) {
                     state.unlocked.push(bp.id);
                     pushToast(`Открыто: «${bp.name}»`, 'blueprint');
                 }
             });
-            // Ачивки
             ACHIEVEMENTS.forEach(a => {
                 if (state.steps >= a.threshold && !state.unlockedAch.includes(a.id)) {
                     state.unlockedAch.push(a.id);
@@ -1043,19 +1599,16 @@
                 pushToast(`Новый уровень: ${li.level}`, 'level');
                 state.prevLevel = li.level;
             }
-            // Реклама
             const milestone = Math.floor(state.steps / 30000);
             if (milestone > state.lastAdMilestone && state.steps < 500000 && !getAdsDisabled()) {
                 state.showAd = true;
             }
-            // История
             LORE.forEach((lore, index) => {
                 if (state.steps >= lore.threshold && state.loreUnlocked <= index) {
                     state.loreUnlocked = index + 1;
-                    pushToast(`Новая запись в истории: ${lore.title}`, 'info');
+                    pushToast(`📖 ${lore.title}: ${lore.text.substring(0, 60)}...`, 'info');
                 }
             });
-            // Проверка квестов (автовыполнение для шаговых)
             QUESTS.forEach(q => {
                 if (q.type === 'steps' && state.steps >= q.target && !state.questsCompleted.includes(q.id)) {
                     state.questsCompleted.push(q.id);
@@ -1064,7 +1617,6 @@
                     pushToast(`Квест выполнен: ${q.desc} (+${crystalsReward} кристаллов)`, 'success');
                 }
             });
-            // Кристаллы за шаги (уже учтено в getCrystals)
         }
 
         // ============================================================
@@ -1085,134 +1637,13 @@
 
         function fullUpdate() {
             runEffects();
-            handleRaidTimer(); // обрабатываем таймер рейда
             handleChallengeTimer();
             saveState();
             render();
         }
 
         // ============================================================
-        //  RAID TIMER (автоматическое движение, без кнопки)
-        // ============================================================
-
-        function handleRaidTimer() {
-            const r = state.raid;
-            if (r.stage === 'idle' || r.stage === 'result' || r.stage === 'puzzle') {
-                // Если рейд в пазле, таймер не двигает метры
-                return;
-            }
-            if (r.stage === 'run') {
-                // Проверяем, не истекло ли время
-                if (r.timeLeft <= 0) {
-                    // время вышло, рейд провален
-                    if (r.timer) {
-                        clearTimeout(r.timer);
-                        r.timer = null;
-                    }
-                    state.raid.stage = 'result';
-                    state.raid.result = 'lose';
-                    pushToast('Время вышло! Рейд провален.', 'warn');
-                    scheduleUpdate();
-                    return;
-                }
-
-                // Если ещё нет таймера, запускаем его
-                if (!r.timer) {
-                    r.timer = setTimeout(() => {
-                        // Уменьшаем время
-                        r.timeLeft -= 1;
-                        // Добавляем метры пропорционально скорости
-                        r.meters += r.speed || 1.5; // если speed не задана, используем базовую
-
-                        // Проверяем, не достиг ли дистанции
-                        if (r.meters >= r.target) {
-                            // Успех!
-                            clearTimeout(r.timer);
-                            r.timer = null;
-                            state.raid.stage = 'result';
-                            state.raid.result = 'win';
-                            const bonus = Math.floor(r.combo * 500 + 1000);
-                            state.steps += bonus;
-                            pushToast(`Рейд пройден! +${bonus} шагов`, 'success');
-                            scheduleUpdate();
-                            return;
-                        }
-
-                        // Если время истекло, то проигрыш
-                        if (r.timeLeft <= 0) {
-                            clearTimeout(r.timer);
-                            r.timer = null;
-                            state.raid.stage = 'result';
-                            state.raid.result = 'lose';
-                            pushToast('Время вышло! Рейд провален.', 'warn');
-                            scheduleUpdate();
-                            return;
-                        }
-
-                        // Обновляем UI
-                        scheduleUpdate();
-                        // Продолжаем таймер
-                        r.timer = setTimeout(arguments.callee, 1000);
-                    }, 1000);
-                }
-            }
-        }
-
-        function startRaid() {
-            // Определяем дистанцию и время
-            const level = getLevelInfo().level;
-            const baseDist = 200 + Math.floor(Math.random() * 300); // 200-500 м
-            const baseSpeed = 1.4; // м/с (спокойный шаг)
-            // Скорость зависит от уровня: чем выше уровень, тем быстрее бег
-            // Формула: speed = 1.2 + level * 0.3
-            const speed = 1.2 + level * 0.3;
-            // Время, необходимое для прохождения дистанции с этой скоростью
-            const timeNeeded = baseDist / speed;
-            // Добавляем 60 секунд запаса
-            const timeLimit = Math.ceil(timeNeeded) + 60;
-            // Устанавливаем рейд
-            state.raid = {
-                stage: 'run',
-                stageIndex: 0,
-                meters: 0,
-                target: baseDist,
-                combo: 0,
-                puzzle: null,
-                result: null,
-                timeLeft: timeLimit,
-                totalTime: timeLimit,
-                timer: null,
-                speed: speed,
-            };
-            pushToast(`Рейд начат! Дистанция ${baseDist}м, время ${timeLimit}с. Скорость ${speed.toFixed(1)} м/с`, 'info');
-            scheduleUpdate();
-        }
-
-        // Функция для пазлов (оставляем)
-        function answerPuzzle(idx) {
-            const r = state.raid;
-            if (r.stage !== 'puzzle' || !r.puzzle) return;
-            const correct = idx === r.puzzle.answer;
-            if (correct) {
-                pushToast('Верно! Комбо +1', 'success');
-                r.combo += 1;
-                // переходим к следующему этапу (ран)
-                state.raid.stage = 'run';
-                state.raid.puzzle = null;
-                // даём дополнительное время?
-                r.timeLeft += 30;
-                pushToast('Дополнительные 30 секунд!', 'info');
-                scheduleUpdate();
-            } else {
-                pushToast('Неверно, штраф: -10 секунд', 'warn');
-                r.timeLeft -= 10;
-                if (r.timeLeft < 0) r.timeLeft = 0;
-                scheduleUpdate();
-            }
-        }
-
-        // ============================================================
-        //  CHALLENGE TIMER (без изменений)
+        //  CHALLENGE TIMER
         // ============================================================
 
         function handleChallengeTimer() {
@@ -1242,6 +1673,103 @@
                     clearTimeout(state.challengeTimer);
                     state.challengeTimer = null;
                 }
+            }
+        }
+
+        // ============================================================
+        //  RAID
+        // ============================================================
+
+        function startRaid() {
+            if (state.raid.interval) {
+                clearInterval(state.raid.interval);
+                state.raid.interval = null;
+            }
+            const level = getLevelInfo().level;
+            const baseDist = 200 + Math.floor(Math.random() * 300);
+            const speed = 1.2 + level * 0.3;
+            const timeNeeded = baseDist / speed;
+            const timeLimit = Math.ceil(timeNeeded) + 60;
+
+            state.raid = {
+                stage: 'run',
+                meters: 0,
+                target: baseDist,
+                combo: 0,
+                puzzle: null,
+                result: null,
+                timeLeft: timeLimit,
+                totalTime: timeLimit,
+                interval: null,
+                speed: speed,
+            };
+
+            pushToast(`Рейд начат! Дистанция ${baseDist}м, время ${timeLimit}с.`, 'info');
+
+            state.raid.interval = setInterval(() => {
+                const r = state.raid;
+                if (r.stage === 'puzzle') {
+                    r.timeLeft -= 1;
+                    if (r.timeLeft <= 0) {
+                        clearInterval(r.interval);
+                        r.interval = null;
+                        r.stage = 'result';
+                        r.result = 'lose';
+                        pushToast('Время вышло! Рейд провален.', 'warn');
+                        scheduleUpdate();
+                    }
+                    scheduleUpdate();
+                    return;
+                }
+                if (r.stage !== 'run') {
+                    clearInterval(r.interval);
+                    r.interval = null;
+                    return;
+                }
+                r.timeLeft -= 1;
+                r.meters += r.speed;
+                if (r.meters >= r.target) {
+                    clearInterval(r.interval);
+                    r.interval = null;
+                    r.stage = 'result';
+                    r.result = 'win';
+                    const bonus = Math.floor(r.combo * 500 + 1000);
+                    state.steps += bonus;
+                    pushToast(`Рейд пройден! +${bonus} шагов`, 'success');
+                    scheduleUpdate();
+                    return;
+                }
+                if (r.timeLeft <= 0) {
+                    clearInterval(r.interval);
+                    r.interval = null;
+                    r.stage = 'result';
+                    r.result = 'lose';
+                    pushToast('Время вышло! Рейд провален.', 'warn');
+                    scheduleUpdate();
+                    return;
+                }
+                scheduleUpdate();
+            }, 1000);
+            scheduleUpdate();
+        }
+
+        function answerPuzzle(idx) {
+            const r = state.raid;
+            if (r.stage !== 'puzzle' || !r.puzzle) return;
+            const correct = idx === r.puzzle.answer;
+            if (correct) {
+                pushToast('Верно! Комбо +1', 'success');
+                r.combo += 1;
+                r.stage = 'run';
+                r.puzzle = null;
+                r.timeLeft += 30;
+                pushToast('Дополнительные 30 секунд!', 'info');
+                scheduleUpdate();
+            } else {
+                pushToast('Неверно, штраф: -10 секунд', 'warn');
+                r.timeLeft -= 10;
+                if (r.timeLeft < 0) r.timeLeft = 0;
+                scheduleUpdate();
             }
         }
 
@@ -1322,6 +1850,10 @@
         function resetProgress() {
             if (!confirm('Сбросить весь прогресс? Это действие необратимо.')) return;
             localStorage.removeItem('wasteland_protocol');
+            if (state.raid.interval) {
+                clearInterval(state.raid.interval);
+                state.raid.interval = null;
+            }
             Object.assign(state, {
                 steps: 0,
                 unlocked: [],
@@ -1335,8 +1867,8 @@
                 showAd: false,
                 clanTier: 0,
                 challenge: { active: false, timeLeft: 15, clicks: 0, result: null },
-                raid: { stage: 'idle', stageIndex: 0, meters: 0, target: 0, combo: 0, puzzle: null, result: null,
-                    timeLeft: 0, totalTime: 0, timer: null, speed: 0 },
+                raid: { stage: 'idle', meters: 0, target: 0, combo: 0, puzzle: null, result: null, timeLeft: 0,
+                    totalTime: 0, interval: null, speed: 0 },
                 prevLevel: 1,
                 _portfolioSub: 'achievements',
                 avatar: { head: "none", top: "none", bottom: "none", shoes: "none" },
@@ -1347,22 +1879,217 @@
                 clearTimeout(state.challengeTimer);
                 state.challengeTimer = null;
             }
-            if (state.raid.timer) {
-                clearTimeout(state.raid.timer);
-                state.raid.timer = null;
-            }
             pushToast('Прогресс сброшен', 'warn');
             scheduleUpdate();
         }
 
-        // Управление аватаром
         function setAvatarPart(part, value) {
             state.avatar[part] = value;
             scheduleUpdate();
         }
 
         // ============================================================
-        //  RENDER — SVG HELPERS (без изменений)
+        //  КАРТА (рисование на canvas) – до 100 000 шагов
+        // ============================================================
+
+        function drawMap() {
+            const canvas = document.getElementById('mapCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width = canvas.clientWidth || 600;
+            const h = canvas.height = canvas.clientHeight || 280;
+
+            // Фон
+            const grad = ctx.createLinearGradient(0, 0, 0, h);
+            grad.addColorStop(0, '#4a6a3a');
+            grad.addColorStop(0.3, '#6a8a4a');
+            grad.addColorStop(0.6, '#8a7a4a');
+            grad.addColorStop(0.85, '#6a5a3a');
+            grad.addColorStop(1, '#4a3a2a');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, w, h);
+
+            // Небо
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.3);
+            skyGrad.addColorStop(0, '#5a7a8a');
+            skyGrad.addColorStop(1, '#6a8a6a');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, w, h * 0.3);
+
+            // Облака
+            for (let i = 0; i < 6; i++) {
+                const cx = (i * 120 + 30) % w;
+                const cy = 20 + (i * 17) % 30;
+                ctx.fillStyle = 'rgba(200,210,200,0.3)';
+                ctx.beginPath();
+                ctx.ellipse(cx, cy, 50 + i * 10, 14 + i * 3, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(cx + 40, cy - 8, 35 + i * 8, 12 + i * 2, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(cx - 30, cy + 4, 30 + i * 6, 10 + i * 2, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Горы
+            const mountains = [
+                [0.05, 0.6, 0.25, 0.35],
+                [0.25, 0.55, 0.20, 0.40],
+                [0.45, 0.65, 0.30, 0.30],
+                [0.70, 0.58, 0.22, 0.38],
+                [0.88, 0.62, 0.18, 0.33]
+            ];
+            mountains.forEach(([x, y, wm, hm]) => {
+                const px = x * w,
+                    py = y * h;
+                const pw = wm * w,
+                    ph = hm * h;
+                ctx.fillStyle = '#4a5a3a';
+                ctx.beginPath();
+                ctx.moveTo(px, py + ph);
+                ctx.quadraticCurveTo(px + pw * 0.3, py - ph * 0.2, px + pw * 0.5, py);
+                ctx.quadraticCurveTo(px + pw * 0.7, py - ph * 0.15, px + pw, py + ph);
+                ctx.fill();
+                ctx.fillStyle = 'rgba(220,230,240,0.3)';
+                ctx.beginPath();
+                ctx.moveTo(px + pw * 0.3, py + ph * 0.2);
+                ctx.quadraticCurveTo(px + pw * 0.45, py - ph * 0.1, px + pw * 0.55, py + ph * 0.1);
+                ctx.fill();
+            });
+
+            // Река
+            ctx.strokeStyle = '#3a7a9a';
+            ctx.lineWidth = 8;
+            ctx.shadowColor = 'rgba(58,122,154,0.3)';
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.moveTo(w * 0.02, h * 0.7);
+            ctx.quadraticCurveTo(w * 0.15, h * 0.5, w * 0.3, h * 0.65);
+            ctx.quadraticCurveTo(w * 0.45, h * 0.8, w * 0.6, h * 0.55);
+            ctx.quadraticCurveTo(w * 0.75, h * 0.4, w * 0.9, h * 0.6);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Деревья
+            const trees = [
+                [0.08, 0.45],
+                [0.12, 0.50],
+                [0.18, 0.42],
+                [0.35, 0.55],
+                [0.42, 0.50],
+                [0.55, 0.48],
+                [0.65, 0.42],
+                [0.72, 0.50],
+                [0.82, 0.45],
+                [0.92, 0.48]
+            ];
+            trees.forEach(([x, y]) => {
+                const px = x * w,
+                    py = y * h;
+                ctx.fillStyle = '#2a4a2a';
+                ctx.beginPath();
+                ctx.arc(px, py, 10 + Math.random() * 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#1a3a1a';
+                ctx.beginPath();
+                ctx.arc(px - 4, py - 6, 8 + Math.random() * 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#3a5a3a';
+                ctx.beginPath();
+                ctx.arc(px + 5, py - 4, 7 + Math.random() * 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#4a3a2a';
+                ctx.fillRect(px - 2, py + 6, 4, 12);
+            });
+
+            // Тропа
+            ctx.setLineDash([6, 8]);
+            ctx.strokeStyle = 'rgba(200,180,150,0.5)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(w * 0.02, h * 0.75);
+            ctx.quadraticCurveTo(w * 0.12, h * 0.6, w * 0.25, h * 0.55);
+            ctx.quadraticCurveTo(w * 0.38, h * 0.45, w * 0.50, h * 0.50);
+            ctx.quadraticCurveTo(w * 0.62, h * 0.55, w * 0.75, h * 0.45);
+            ctx.quadraticCurveTo(w * 0.88, h * 0.40, w * 0.96, h * 0.50);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Точки локаций (из LORE)
+            const unlocked = state.loreUnlocked;
+            LORE.forEach((lore, idx) => {
+                const px = lore.x / 100 * w;
+                const py = lore.y / 100 * h;
+                const isUnlocked = idx < unlocked;
+                const isHover = state.mapHoverPoint === idx;
+
+                if (isUnlocked) {
+                    const glow = ctx.createRadialGradient(px, py, 2, px, py, 22);
+                    glow.addColorStop(0, 'rgba(255,215,0,0.25)');
+                    glow.addColorStop(1, 'rgba(255,215,0,0)');
+                    ctx.fillStyle = glow;
+                    ctx.beginPath();
+                    ctx.arc(px, py, 22, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.fillStyle = isUnlocked ? '#f59e0b' : '#44403c';
+                ctx.strokeStyle = isUnlocked ? '#fbbf24' : '#57534e';
+                ctx.lineWidth = isHover ? 3 : 2;
+                ctx.beginPath();
+                ctx.arc(px, py, isHover ? 14 : 10, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                if (isUnlocked) {
+                    ctx.font = '16px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(lore.icon, px, py);
+                }
+
+                if (isUnlocked && isHover) {
+                    ctx.fillStyle = 'rgba(12,10,9,0.85)';
+                    const tw = ctx.measureText(lore.title).width || 60;
+                    const tx = Math.min(Math.max(px - tw / 2 - 6, 4), w - tw - 12);
+                    const ty = py - 28;
+                    ctx.fillRect(tx, ty - 14, tw + 12, 24);
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.font = 'bold 11px sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(lore.title, tx + 4, ty + 2);
+                }
+            });
+
+            // Игрок – прогресс до 100 000 шагов
+            const maxSteps = 100000;
+            const pct = Math.min(1, state.steps / maxSteps);
+            const px = w * (0.02 + pct * 0.94);
+            const py = h * (0.75 - pct * 0.30);
+
+            const glowP = ctx.createRadialGradient(px, py, 2, px, py, 28);
+            glowP.addColorStop(0, 'rgba(255,200,100,0.3)');
+            glowP.addColorStop(1, 'rgba(255,200,100,0)');
+            ctx.fillStyle = glowP;
+            ctx.beginPath();
+            ctx.arc(px, py, 28, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.font = '28px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('🧑‍🦯', px, py);
+
+            ctx.fillStyle = 'rgba(200,180,150,0.7)';
+            ctx.font = '9px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('▶ ВЫ ЗДЕСЬ', px, py + 30);
+        }
+
+        // ============================================================
+        //  RENDER — SVG HELPERS
         // ============================================================
 
         function heroAvatarSVG(tier) {
@@ -1397,8 +2124,40 @@
         }
 
         // ============================================================
-        //  RENDER — TABS (добавлены: История, Карта, Аватар)
+        //  RENDER — TABS
         // ============================================================
+
+        function sysWindow(tag, bodyHTML, extraClass = '') {
+            return `<div class="sys-window ${extraClass}">
+            ${tag ? `<div class="sys-tag">${tag}</div>` : ''}
+            <div class="sys-body">${bodyHTML}</div>
+          </div>`;
+        }
+
+        function navBtn(tabId, icon, label) {
+            const active = state.tab === tabId;
+            return `<button class="nav-btn ${active ? 'active' : ''}" data-tab="${tabId}">
+            <i data-lucide="${icon}" class="w-4 h-4"></i>
+            <span>${label}</span>
+          </button>`;
+        }
+
+        function statRow(icon, label, value, color) {
+            const pct = Math.min(100, value);
+            const bgColor = color.replace('text-', 'bg-');
+            return `<div class="flex items-center justify-between py-1.5">
+            <div class="flex items-center gap-2 text-sm text-stone-300">
+              <i data-lucide="${icon}" class="w-4 h-4 ${color}"></i>
+              ${label}
+            </div>
+            <div class="w-32 h-2 bg-stone-800 rounded-full overflow-hidden ring-1 ring-stone-700 mx-3">
+              <div class="h-full ${bgColor}" style="width:${pct}%"></div>
+            </div>
+            <div class="text-xs font-mono text-stone-400 w-6 text-right">${value}</div>
+          </div>`;
+        }
+
+        // ----- ВКЛАДКИ -----
 
         function renderHome() {
             const li = getLevelInfo();
@@ -1411,10 +2170,10 @@
               <div><div class="text-xl font-black text-stone-100">${dist.toFixed(2)}</div><div class="text-[10px] font-mono text-stone-500">км</div></div>
               <div><div class="text-xl font-black text-stone-100">${mins}</div><div class="text-[10px] font-mono text-stone-500">мин активности</div></div>
             </div>
-            <p class="text-xs text-stone-400 leading-relaxed">Система пробудилась вместе с тобой в первый день Пустоши. Каждый шаг здесь — ещё и шаг к настоящему навыку в реальном мире.</p>
+            <p class="text-xs text-stone-400 leading-relaxed">Система пробудилась вместе с тобой в первый день Пустоши.</p>
           `)}
           ${sysWindow('СИМУЛЯЦИЯ ШАГОМЕРА', `
-            <div class="text-[11px] text-stone-400 mb-3">Нажимай кнопки, чтобы добавлять шаги и прокачивать персонажа.</div>
+            <div class="text-[11px] text-stone-400 mb-3">Нажимай кнопки, чтобы добавлять шаги.</div>
             <div class="grid grid-cols-3 gap-2">
               <button class="bg-stone-800 hover:bg-stone-700 border border-stone-700 rounded-sm py-2 text-xs font-mono text-amber-300" data-add="100">+${fmt(100)}</button>
               <button class="bg-stone-800 hover:bg-stone-700 border border-stone-700 rounded-sm py-2 text-xs font-mono text-amber-300" data-add="1000">+${fmt(1000)}</button>
@@ -1426,7 +2185,6 @@
 
         function renderQuests() {
             const c = state.challenge;
-            // Список квестов
             let questList = QUESTS.map(q => {
                 const done = state.questsCompleted.includes(q.id);
                 return `<div class="flex justify-between items-center border-b border-stone-800 py-2 text-sm">
@@ -1441,9 +2199,9 @@
               <i data-lucide="footprints" class="w-5 h-5 text-amber-400 mt-1"></i>
             </div>
           `)}
-          ${sysWindow('ОФЛАЙН-ЛОКАЦИЯ · БЕЗ СЕТИ', `
+          ${sysWindow('ОФЛАЙН-ЛОКАЦИЯ', `
             <div class="font-bold text-stone-100 text-sm mb-1">Заброшенный склад</div>
-            <p class="text-xs text-stone-400 mb-3">Локация без интернета. Пройди её как можно быстрее — награда зависит от скорости. Цель: 18+ действий за 15 секунд.</p>
+            <p class="text-xs text-stone-400 mb-3">Цель: 18+ действий за 15 секунд.</p>
             ${!c.active && c.result === null ? `
               <button class="w-full bg-amber-500 text-stone-950 font-bold uppercase text-xs tracking-wide rounded-sm py-2.5" data-start-challenge>Начать вылазку</button>
             ` : ''}
@@ -1455,7 +2213,7 @@
             ` : ''}
             ${!c.active && c.result ? `
               <div class="text-xs font-mono flex items-center justify-between ${c.result === 'win' ? 'text-emerald-400' : 'text-rose-400'}">
-                <span>${c.result === 'win' ? 'Успех — бонус получен' : 'Не успел — бонус не выдан'}</span>
+                <span>${c.result === 'win' ? 'Успех!' : 'Не успел'}</span>
                 <button class="underline" data-start-challenge>ещё раз</button>
               </div>
             ` : ''}
@@ -1466,6 +2224,7 @@
           `;
         }
 
+        // ----- ПОРТФОЛИО (Ачивки, Чертежи, Рецепты) с оранжевыми активными вкладками -----
         function renderPortfolio() {
             const sub = state._portfolioSub || 'achievements';
             let content = '';
@@ -1496,6 +2255,7 @@
               </button>`;
                 }).join('');
             }
+            // Вкладки с классом tab-btn и активной оранжевой
             const tabs = [
                 { id: 'achievements', label: 'Ачивки' },
                 { id: 'blueprints', label: 'Чертежи' },
@@ -1515,31 +2275,7 @@
             const str = getStrength();
             const agi = getAgility();
             const heroItems = SHOP_ITEMS.filter(i => i.category === 'hero' && state.owned.includes(i.id));
-            return `
-          ${sysWindow('ПРОФИЛЬ ВЫЖИВШЕГО', `
-            <div class="flex items-center gap-4">
-              ${heroAvatarSVG(tier)}
-              <div>
-                <div class="text-sm font-extrabold text-stone-100">Выживший · Ур. ${li.level}</div>
-                <div class="text-[11px] text-stone-500 mt-1">Пройдено: ${dist.toFixed(1)} км</div>
-                <div class="text-[11px] text-stone-500">Характеристики растут каждые 500 м</div>
-              </div>
-            </div>
-          `)}
-          ${sysWindow('ХАРАКТЕРИСТИКИ', `
-            ${statRow('shield', 'Выносливость', end, 'text-emerald-400')}
-            ${statRow('flame', 'Сила', str, 'text-rose-400')}
-            ${statRow('wind', 'Ловкость', agi, 'text-sky-400')}
-          `)}
-          ${sysWindow('ЭКИПИРОВКА', `
-            ${heroItems.length === 0 ? '<div class="text-xs text-stone-500">Пока ничего не куплено в магазине для героя.</div>' :
-              heroItems.map(i => `<div class="flex items-center gap-2 text-sm text-stone-300"><i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>${i.name}</div>`).join('')}
-          `)}
-          `;
-        }
 
-        function renderAvatar() {
-            const a = state.avatar;
             const parts = {
                 head: ['none', 'шляпа', 'каска', 'бандана'],
                 top: ['none', 'куртка', 'футболка', 'плащ'],
@@ -1554,19 +2290,45 @@
             };
             let preview = '';
             ['head', 'top', 'bottom', 'shoes'].forEach(p => {
-                const val = a[p] || 'none';
+                const val = state.avatar[p] || 'none';
                 preview += emojiMap[p][val] || '❓';
             });
-            let html = `<div class="avatar-preview">${preview}</div>`;
+
+            let avatarHTML = `
+            <div class="avatar-preview">${preview}</div>
+            <div class="grid grid-cols-2 gap-2">
+          `;
             Object.keys(parts).forEach(part => {
-                html += `<div class="avatar-part"><span class="text-xs text-stone-400 w-12">${part}:</span>`;
-                parts[part].forEach(opt => {
-                    const active = a[part] === opt ? 'active' : '';
-                    html += `<button class="${active}" data-avatar="${part}|${opt}">${opt}</button>`;
-                });
-                html += '</div>';
+                avatarHTML += `<div class="flex items-center gap-2">
+                <span class="text-xs text-stone-400 w-12">${part}:</span>
+                <select class="avatar-select" data-avatar-part="${part}">
+                  ${parts[part].map(opt => `<option value="${opt}" ${state.avatar[part] === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                </select>
+              </div>`;
             });
-            return sysWindow('КОНСТРУКТОР АВАТАРА', html);
+            avatarHTML += `</div>`;
+
+            return `
+          ${sysWindow('ПРОФИЛЬ ВЫЖИВШЕГО', `
+            <div class="flex items-center gap-4">
+              ${heroAvatarSVG(tier)}
+              <div>
+                <div class="text-sm font-extrabold text-stone-100">Выживший · Ур. ${li.level}</div>
+                <div class="text-[11px] text-stone-500 mt-1">Пройдено: ${dist.toFixed(1)} км</div>
+              </div>
+            </div>
+          `)}
+          ${sysWindow('ХАРАКТЕРИСТИКИ', `
+            ${statRow('shield', 'Выносливость', end, 'text-emerald-400')}
+            ${statRow('flame', 'Сила', str, 'text-rose-400')}
+            ${statRow('wind', 'Ловкость', agi, 'text-sky-400')}
+          `)}
+          ${sysWindow('АВАТАР', avatarHTML)}
+          ${sysWindow('ЭКИПИРОВКА', `
+            ${heroItems.length === 0 ? '<div class="text-xs text-stone-500">Пока ничего не куплено.</div>' :
+              heroItems.map(i => `<div class="flex items-center gap-2 text-sm text-stone-300"><i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>${i.name}</div>`).join('')}
+          `)}
+          `;
         }
 
         function renderClan() {
@@ -1574,13 +2336,23 @@
             const next = CLAN_TIERS[state.clanTier + 1];
             const crystals = getCrystals();
             const sorted = [...CLAN_MEMBERS].sort((a, b) => (b.leader ? 1 : 0) - (a.leader ? 1 : 0));
+            const clanItems = SHOP_ITEMS.filter(i => i.category === 'clan' && state.owned.includes(i.id));
+            let clanGearHTML = '';
+            if (clanItems.length === 0) {
+                clanGearHTML = '<div class="text-xs text-stone-500">Клановое снаряжение пока не куплено.</div>';
+            } else {
+                clanGearHTML = clanItems.map(i =>
+                    `<div class="flex items-center gap-2 text-sm text-stone-300"><i data-lucide="shield" class="w-4 h-4 text-amber-400"></i>${i.name}</div>`
+                ).join('');
+            }
+
             return `
           ${sysWindow('КЛАН · ПУСТОШЬ-7', `
             <div class="flex items-center gap-2 mb-2">${clanBannerSVG()}<div class="text-sm font-bold text-stone-100">${tier.label}</div></div>
-            <div class="text-[11px] font-mono text-stone-500 mb-3">Вместимость: ${CLAN_MEMBERS.length} / ${tier.cap} участников</div>
+            <div class="text-[11px] font-mono text-stone-500 mb-3">Вместимость: ${CLAN_MEMBERS.length} / ${tier.cap}</div>
             ${next ? `<button class="w-full flex items-center justify-center gap-2 bg-amber-500 ${crystals < next.cost ? 'disabled:bg-stone-700 disabled:text-stone-500' : ''} text-stone-950 font-bold uppercase text-xs tracking-wide rounded-sm py-2.5" data-upgrade-clan ${crystals < next.cost ? 'disabled' : ''}>
-              <i data-lucide="chevron-up" class="w-4 h-4"></i> Улучшить до «${next.label}» — ${fmt(next.cost)} кристаллов
-            </button>` : `<div class="text-xs font-mono text-emerald-400 text-center">Максимальный уровень клана достигнут</div>`}
+              <i data-lucide="chevron-up" class="w-4 h-4"></i> Улучшить до «${next.label}» — ${fmt(next.cost)} крист.
+            </button>` : `<div class="text-xs font-mono text-emerald-400 text-center">Макс. уровень</div>`}
           `)}
           ${sysWindow('УЧАСТНИКИ', `
             <div class="space-y-2">
@@ -1594,8 +2366,8 @@
                 </div>
               `).join('')}
             </div>
-            <div class="text-[11px] text-stone-500 mt-3">Демо-состав. Дальше — приглашения, роли (лидер/офицер/участник), рост до 200 человек по мере улучшения клана.</div>
           `)}
+          ${sysWindow('КЛАНОВОЕ СНАРЯЖЕНИЕ', clanGearHTML)}
           `;
         }
 
@@ -1604,24 +2376,22 @@
             let body = '';
             if (r.stage === 'idle') {
                 body = `
-              <p class="text-xs text-stone-400 my-3">Активируй рейд: нужно пробежать дистанцию за отведённое время. Уровень влияет на скорость бега. Время даётся с запасом 60 секунд.</p>
+              <p class="text-xs text-stone-400 my-3">Активируй рейд: пробеги дистанцию за время. Уровень влияет на скорость.</p>
               <button class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold uppercase text-xs tracking-wide rounded-sm py-2.5" data-start-raid>Активировать рейд</button>
             `;
             } else if (r.stage === 'run') {
                 const pct = Math.min(100, (r.meters / r.target) * 100);
-                const timeLeft = r.timeLeft;
-                const speed = r.speed || 1.5;
                 body = `
               <div class="mt-3">
                 <div class="flex justify-between text-xs font-mono text-stone-400 mb-1">
-                  <span>Дистанция: ${Math.round(r.meters)} / ${r.target} м</span>
-                  <span>⏱️ ${timeLeft} с</span>
+                  <span>${Math.round(r.meters)} / ${r.target} м</span>
+                  <span>⏱️ ${r.timeLeft} с</span>
                 </div>
                 <div class="w-full h-3 bg-stone-800 rounded-full overflow-hidden ring-1 ring-stone-700 mb-3">
                   <div class="h-full bg-amber-500 transition-all duration-200" style="width:${pct}%"></div>
                 </div>
-                <div class="text-xs text-stone-400 text-center">Скорость: ${speed.toFixed(1)} м/с (уровень ${getLevelInfo().level})</div>
-                <div class="text-xs text-stone-500 mt-2 text-center">Автоматическое движение... жди.</div>
+                <div class="text-xs text-stone-400 text-center">Скорость: ${r.speed.toFixed(1)} м/с</div>
+                <div class="text-xs text-stone-500 mt-2 text-center">Автоматическое движение...</div>
               </div>
             `;
             } else if (r.stage === 'puzzle' && r.puzzle) {
@@ -1637,13 +2407,13 @@
             } else if (r.stage === 'result') {
                 body = `
               <div class="mt-3 text-center space-y-2">
-                <div class="text-${r.result === 'win' ? 'emerald' : 'rose'}-400 text-sm font-bold">${r.result === 'win' ? 'Босс повержен!' : 'Рейд провален'}</div>
-                ${r.result === 'win' ? `<div class="text-xs text-stone-400">Комбо: ${r.combo} · Бонус к награде: +${Math.floor(r.combo * 500 + 1000)} XP</div>` : ''}
+                <div class="text-${r.result === 'win' ? 'emerald' : 'rose'}-400 text-sm font-bold">${r.result === 'win' ? '🏆 Босс повержен!' : '💀 Рейд провален'}</div>
+                ${r.result === 'win' ? `<div class="text-xs text-stone-400">Комбо: ${r.combo} · Бонус: +${Math.floor(r.combo * 500 + 1000)} XP</div>` : ''}
                 <button class="w-full bg-amber-500 text-stone-950 font-bold uppercase text-xs tracking-wide rounded-sm py-2.5" data-start-raid>Ещё раз</button>
               </div>
             `;
             }
-            return sysWindow('РЕЙД-БОСС · ХОДЯЧИЙ КУРГАН', `
+            return sysWindow('РЕЙД-БОСС', `
             ${raidBossSVG()}
             ${body}
           `);
@@ -1653,11 +2423,11 @@
             const crystals = getCrystals();
             return `
           ${sysWindow('КРИСТАЛЛЫ', `
-            <div class="text-[11px] font-mono text-stone-500 mb-3">Зарабатываются каждые 10 000 шагов (5 крист.) и за каждые 30 000 (50 крист.). Также за квесты и рейды. Цены до 600 кристаллов.</div>
+            <div class="text-[11px] font-mono text-stone-500 mb-3">За шаги (10k=5, 30k=50) + квесты + рейды.</div>
             <div class="space-y-2">
               ${CRYSTAL_PACKS.map(p => `
                 <div class="flex items-center justify-between border border-stone-800 rounded-sm p-2.5">
-                  <div class="flex items-center gap-2"><i data-lucide="gem" class="w-4 h-4 text-emerald-400"></i><span class="text-sm text-stone-200">${fmt(p.amount)} кристаллов</span></div>
+                  <div class="flex items-center gap-2"><i data-lucide="gem" class="w-4 h-4 text-emerald-400"></i><span class="text-sm text-stone-200">${fmt(p.amount)} крист.</span></div>
                   <div class="text-right">
                     <div class="text-[10px] text-stone-600 line-through">$${p.priceLater}</div>
                     <button class="bg-amber-500 text-stone-950 text-xs font-bold uppercase rounded-sm px-3 py-1.5" data-buy-pack="${p.id}">$${p.priceNow}</button>
@@ -1666,13 +2436,12 @@
               `).join('')}
             </div>
           `)}
-          <div class="text-[11px] font-mono text-stone-500 px-1 mt-2">Плюшки для героя и клана (всего 45 предметов).</div>
           ${SHOP_ITEMS.map(item => `
             <div class="shop-item mt-2">
               <div class="flex items-center justify-between">
                 <div>
                   <div class="text-sm font-bold text-stone-100">${item.name}</div>
-                  <div class="text-[11px] font-mono text-stone-500">${item.category === 'hero' ? 'для героя' : 'для клана'}</div>
+                  <div class="text-[11px] font-mono text-stone-500">${item.category === 'hero' ? 'герой' : 'клан'}</div>
                 </div>
                 ${state.owned.includes(item.id) ? `
                   <span class="owned-badge"><i data-lucide="check" class="w-4 h-4"></i>куплено</span>
@@ -1689,7 +2458,7 @@
 
         function renderSettings() {
             const s = state.notifSettings;
-            return sysWindow('УВЕДОМЛЕНИЯ', `
+            return sysWindow('НАСТРОЙКИ', `
             <div class="space-y-3">
               ${NOTIF_CATEGORIES.map(c => `
                 <label class="flex items-center justify-between gap-3 cursor-pointer">
@@ -1700,43 +2469,49 @@
                 </label>
               `).join('')}
             </div>
-            <div class="mt-6 pt-4 border-t border-stone-800">
+            <div class="mt-4 pt-4 border-t border-stone-800 space-y-3">
+              <button class="w-full bg-stone-800 hover:bg-stone-700 text-stone-300 border border-stone-700 rounded-sm py-2 text-xs font-mono uppercase tracking-wide" data-check-sensors>📱 Проверить шагомер и геолокацию</button>
               <button class="w-full bg-rose-900/50 hover:bg-rose-800/50 text-rose-300 border border-rose-800 rounded-sm py-2 text-xs font-mono uppercase tracking-wide" data-reset>Сбросить прогресс</button>
             </div>
           `);
         }
 
-        function renderLore() {
+        function renderWorld() {
             const unlocked = state.loreUnlocked;
             const entries = LORE.map((lore, idx) => {
                 const isUnlocked = idx < unlocked;
-                return `<div class="border-b border-stone-800 py-3 ${isUnlocked ? '' : 'opacity-40'}">
-              <div class="font-bold text-stone-100">${isUnlocked ? lore.title : '🔒 ???'}</div>
+                return `<div class="border-b border-stone-800 py-2 ${isUnlocked ? '' : 'opacity-40'}">
+              <div class="flex items-center gap-2">
+                <span>${isUnlocked ? lore.icon : '🔒'}</span>
+                <span class="font-bold text-stone-100 text-sm">${isUnlocked ? lore.title : '???'}</span>
+                <span class="text-[10px] text-stone-500 ml-auto">${isUnlocked ? fmt(lore.threshold) + ' шагов' : '🔒'}</span>
+              </div>
               <div class="text-xs text-stone-400 mt-1">${isUnlocked ? lore.text : 'Откроется на ' + lore.threshold + ' шагов'}</div>
             </div>`;
             }).join('');
-            return sysWindow('ИСТОРИЯ МИРА', `
-            <div class="text-xs text-stone-500 mb-3">С 500 шагов открываются главы истории. Ты уже прочитал ${unlocked} из ${LORE.length}.</div>
-            <div class="max-h-80 overflow-y-auto">${entries}</div>
-          `);
-        }
 
-        function renderMap() {
-            const dist = getDistance();
-            const percent = Math.min(100, (dist / 10) * 100); // 10 км = 100%
-            const leftPos = Math.min(90, percent * 0.9 + 5);
-            return sysWindow('КАРТА · БЕСКРАЙНИЙ МИР', `
-            <div class="map-container">
-              <div class="map-scroll" style="transform: translateX(-${percent}%)"></div>
-              <div class="map-human" style="left: ${leftPos}%">🧑‍🦯</div>
+            return `
+          ${sysWindow('КАРТА ПУСТОШИ', `
+            <div style="position:relative;">
+              <canvas id="mapCanvas" width="600" height="280"></canvas>
+              <div class="map-legend">
+                <span><span class="dot" style="background:#f59e0b;"></span> Открыто</span>
+                <span><span class="dot" style="background:#44403c;"></span> Не открыто</span>
+                <span>🧑‍🦯 Вы здесь</span>
+                <span>📍 Точка истории</span>
+                <span>100 000 шагов — вся карта</span>
+              </div>
             </div>
-            <div class="text-xs text-stone-400 mt-2 text-center">Пройдено ${dist.toFixed(1)} км. Иди дальше, чтобы открывать новые земли.</div>
-            <div class="text-[10px] text-stone-600 mt-1 text-center">Карта бесконечна, но ты уже видишь дальше.</div>
-          `);
+          `)}
+          ${sysWindow('ИСТОРИЯ МИРА', `
+            <div class="text-xs text-stone-500 mb-2">Прочитано ${unlocked} из ${LORE.length} глав.</div>
+            <div class="max-h-60 overflow-y-auto">${entries}</div>
+          `)}
+          `;
         }
 
         // ============================================================
-        //  RENDER — MAIN
+        //  RENDER — MAIN (без кнопки настроек внизу)
         // ============================================================
 
         function render() {
@@ -1789,7 +2564,7 @@
             } else if (adsDisabled) {
                 adBanner = `
               <div class="max-w-md mx-auto px-4 mt-3">
-                <div class="text-center text-[10px] font-mono text-emerald-500/80">Реклама отключена навсегда — 500 000+ шагов пройдено</div>
+                <div class="text-center text-[10px] font-mono text-emerald-500/80">Реклама отключена навсегда — 500 000+ шагов</div>
               </div>
             `;
             }
@@ -1804,7 +2579,10 @@
                   t.type === 'level' || t.type === 'achievement' ? 'border-amber-600 text-amber-300' :
                   'border-stone-700 text-stone-300'
                 }">
-                  <span class="opacity-60 mr-1">[SYSTEM]</span>${t.text}
+                  <div class="toast-content">
+                    <span><span class="opacity-60 mr-1">[SYSTEM]</span>${t.text}</span>
+                    <span class="toast-close" data-close-toast="${t.id}">✕</span>
+                  </div>
                 </div>
               `).join('')}
             </div>`;
@@ -1824,9 +2602,6 @@
                 case 'hero':
                     tabContent = renderHero();
                     break;
-                case 'avatar':
-                    tabContent = renderAvatar();
-                    break;
                 case 'clan':
                     tabContent = renderClan();
                     break;
@@ -1839,30 +2614,25 @@
                 case 'settings':
                     tabContent = renderSettings();
                     break;
-                case 'lore':
-                    tabContent = renderLore();
-                    break;
-                case 'map':
-                    tabContent = renderMap();
+                case 'world':
+                    tabContent = renderWorld();
                     break;
                 default:
                     tabContent = renderHome();
             }
 
-            // Навигация теперь 10 вкладок (добавлены avatar, lore, map)
+            // Нижняя навигация — 8 кнопок (без настроек)
             const nav = `
           <div class="fixed bottom-0 left-0 right-0 bg-stone-950 border-t border-stone-800 z-30">
-            <div class="max-w-md mx-auto grid grid-cols-10 text-[8px] font-mono">
+            <div class="max-w-md mx-auto grid grid-cols-8 text-[8px] font-mono">
               ${navBtn('home', 'home', 'Дом')}
               ${navBtn('quests', 'scroll-text', 'Квесты')}
               ${navBtn('portfolio', 'trophy', 'Портф.')}
               ${navBtn('hero', 'user', 'Герой')}
-              ${navBtn('avatar', 'user-circle', 'Аватар')}
               ${navBtn('clan', 'users', 'Клан')}
               ${navBtn('raid', 'swords', 'Рейд')}
               ${navBtn('shop', 'shopping-bag', 'Магаз.')}
-              ${navBtn('lore', 'book-open', 'История')}
-              ${navBtn('map', 'map', 'Карта')}
+              ${navBtn('world', 'map', 'Мир')}
             </div>
           </div>
           `;
@@ -1876,8 +2646,8 @@
                 if (needsConfirm) {
                     modalBody = `
                 <div class="border border-rose-800 bg-rose-950/30 rounded-sm p-3 space-y-3">
-                  <div class="flex gap-2 text-rose-300 text-xs"><i data-lucide="alert-triangle" class="w-4 h-4 shrink-0 mt-0.5"></i><span>Это задача повышенного риска. Инструкция раскроется после подтверждения — рекомендуем делать это со взрослым или специалистом рядом.</span></div>
-                  <button class="w-full bg-rose-600 text-white text-xs font-bold uppercase tracking-wide rounded-sm py-2.5" data-confirm-adult="${bp.id}">Понимаю риски — показать инструкцию</button>
+                  <div class="flex gap-2 text-rose-300 text-xs"><i data-lucide="alert-triangle" class="w-4 h-4 shrink-0 mt-0.5"></i><span>Задача повышенного риска. Подтверди, чтобы показать инструкцию.</span></div>
+                  <button class="w-full bg-rose-600 text-white text-xs font-bold uppercase tracking-wide rounded-sm py-2.5" data-confirm-adult="${bp.id}">Понимаю риски</button>
                 </div>
               `;
                 } else {
@@ -1889,10 +2659,10 @@
                   </ol>
                 </div>
                 <a href="${youtubeSearchUrl(bp.videoQuery)}" target="_blank" rel="noreferrer" class="flex items-center justify-center gap-2 w-full border border-stone-700 rounded-sm py-2.5 text-xs font-bold uppercase tracking-wide text-stone-300 hover:bg-stone-900 mt-3">
-                  <i data-lucide="youtube" class="w-4 h-4 text-rose-500"></i> Смотреть видео на YouTube
+                  <i data-lucide="youtube" class="w-4 h-4 text-rose-500"></i> Смотреть видео
                 </a>
                 ${bp.escalation ? `<div class="border border-amber-800/60 bg-amber-950/20 rounded-sm p-3 flex gap-2 mt-3"><i data-lucide="phone" class="w-4 h-4 text-amber-400 shrink-0 mt-0.5"></i><span class="text-xs text-amber-200">${bp.escalation}</span></div>` : ''}
-                <div class="text-[10px] text-stone-600 font-mono mt-3">Общеобразовательная информация. Не заменяет консультацию врача/специалиста. Не уверен — позови взрослого или позвони в службу спасения.</div>
+                <div class="text-[10px] text-stone-600 font-mono mt-3">Не заменяет консультацию специалиста.</div>
               `;
                 }
                 modalHTML = `
@@ -1927,37 +2697,80 @@
 
             root.innerHTML = fullHTML;
 
+            // Рисуем карту
+            if (state.tab === 'world') {
+                setTimeout(drawMap, 50);
+                const canvas = document.getElementById('mapCanvas');
+                if (canvas) {
+                    canvas.onmousemove = function(e) {
+                        const rect = canvas.getBoundingClientRect();
+                        const x = (e.clientX - rect.left) / rect.width * canvas.width;
+                        const y = (e.clientY - rect.top) / rect.height * canvas.height;
+                        let found = -1;
+                        LORE.forEach((lore, idx) => {
+                            const px = lore.x / 100 * canvas.width;
+                            const py = lore.y / 100 * canvas.height;
+                            const dist = Math.sqrt((x - px) ** 2 + (y - py) ** 2);
+                            if (dist < 25 && idx < state.loreUnlocked) {
+                                found = idx;
+                            }
+                        });
+                        state.mapHoverPoint = found;
+                        drawMap();
+                    };
+                    canvas.onmouseleave = function() {
+                        state.mapHoverPoint = null;
+                        drawMap();
+                    };
+                    canvas.onclick = function(e) {
+                        const rect = canvas.getBoundingClientRect();
+                        const x = (e.clientX - rect.left) / rect.width * canvas.width;
+                        const y = (e.clientY - rect.top) / rect.height * canvas.height;
+                        LORE.forEach((lore, idx) => {
+                            const px = lore.x / 100 * canvas.width;
+                            const py = lore.y / 100 * canvas.height;
+                            const dist = Math.sqrt((x - px) ** 2 + (y - py) ** 2);
+                            if (dist < 25 && idx < state.loreUnlocked) {
+                                pushToast(`📖 ${lore.title}: ${lore.text}`, 'info');
+                            }
+                        });
+                    };
+                }
+            }
+
+            document.querySelectorAll('[data-avatar-part]').forEach(sel => {
+                sel.onchange = function() {
+                    const part = this.getAttribute('data-avatar-part');
+                    setAvatarPart(part, this.value);
+                };
+            });
+
             if (typeof lucide !== 'undefined' && lucide.createIcons) {
                 lucide.createIcons();
             }
         }
 
         // ============================================================
-        //  EVENT DELEGATION (обновлён)
+        //  EVENT DELEGATION
         // ============================================================
 
         function setupEventDelegation() {
             const root = document.getElementById('root');
             root.addEventListener('click', function(e) {
-                const target = e.target.closest('[data-tab], [data-add], [data-start-challenge], [data-challenge-click], [data-select], [data-close-modal], [data-confirm-adult], [data-start-raid], [data-puzzle], [data-buy-item], [data-buy-pack], [data-upgrade-clan], [data-toggle], [data-close-ad], [data-psub], [data-reset], [data-avatar]');
+                const target = e.target.closest('[data-tab], [data-add], [data-start-challenge], [data-challenge-click], [data-select], [data-close-modal], [data-confirm-adult], [data-start-raid], [data-puzzle], [data-buy-item], [data-buy-pack], [data-upgrade-clan], [data-toggle], [data-close-ad], [data-psub], [data-reset], [data-close-toast], [data-check-sensors]');
                 if (!target) return;
 
-                // Tab
                 if (target.hasAttribute('data-tab')) {
                     e.preventDefault();
                     setTab(target.getAttribute('data-tab'));
                     return;
                 }
-
-                // Add steps
                 if (target.hasAttribute('data-add')) {
                     e.preventDefault();
                     const n = parseInt(target.getAttribute('data-add'), 10);
                     addSteps(n);
                     return;
                 }
-
-                // Challenge
                 if (target.hasAttribute('data-start-challenge')) {
                     e.preventDefault();
                     startChallenge();
@@ -1968,18 +2781,12 @@
                     challengeClick();
                     return;
                 }
-
-                // Select
                 if (target.hasAttribute('data-select')) {
                     e.preventDefault();
                     const id = target.getAttribute('data-select');
-                    if (state.unlocked.includes(id)) {
-                        setSelectedItem(id);
-                    }
+                    if (state.unlocked.includes(id)) setSelectedItem(id);
                     return;
                 }
-
-                // Modal
                 if (target.hasAttribute('data-close-modal')) {
                     e.preventDefault();
                     closeModal();
@@ -1991,8 +2798,6 @@
                     confirmAdult(id);
                     return;
                 }
-
-                // Raid
                 if (target.hasAttribute('data-start-raid')) {
                     e.preventDefault();
                     startRaid();
@@ -2004,8 +2809,6 @@
                     answerPuzzle(idx);
                     return;
                 }
-
-                // Shop
                 if (target.hasAttribute('data-buy-item')) {
                     e.preventDefault();
                     const id = target.getAttribute('data-buy-item');
@@ -2020,50 +2823,54 @@
                     if (pack) buyPack(pack);
                     return;
                 }
-
-                // Clan
                 if (target.hasAttribute('data-upgrade-clan')) {
                     e.preventDefault();
                     upgradeClan();
                     return;
                 }
-
-                // Toggle
                 if (target.hasAttribute('data-toggle')) {
                     e.preventDefault();
                     const id = target.getAttribute('data-toggle');
                     toggleNotif(id);
                     return;
                 }
-
-                // Ad
                 if (target.hasAttribute('data-close-ad')) {
                     e.preventDefault();
                     closeAd();
                     return;
                 }
-
-                // Portfolio sub
                 if (target.hasAttribute('data-psub')) {
                     e.preventDefault();
-                    const sub = target.getAttribute('data-psub');
-                    state._portfolioSub = sub;
+                    state._portfolioSub = target.getAttribute('data-psub');
                     scheduleUpdate();
                     return;
                 }
-
-                // Reset
                 if (target.hasAttribute('data-reset')) {
                     e.preventDefault();
                     resetProgress();
                     return;
                 }
-
-                // Avatar
-                if (target.hasAttribute('data-avatar')) {
+                if (target.hasAttribute('data-close-toast')) {
                     e.preventDefault();
-                    const [part, value] = target.getAttribute('data-avatar').split('|');
-                    setAvatarPart(part, value);
+                    const id = parseInt(target.getAttribute('data-close-toast'), 10);
+                    removeToast(id);
+                    return;
+                }
+                if (target.hasAttribute('data-check-sensors')) {
+                    e.preventDefault();
+                    if ('geolocation' in navigator) {
+                        navigator.geolocation.getCurrentPosition(
+                            (pos) => pushToast(`📍 Геолокация: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`, 'success'),
+                            () => pushToast('❌ Геолокация недоступна', 'warn')
+                        );
+                    } else {
+                        pushToast('❌ Геолокация не поддерживается', 'warn');
+                    }
+                    if ('DeviceMotionEvent' in window) {
+                        pushToast('📱 Шагомер: датчики движения доступны', 'success');
+                    } else {
+                        pushToast('📱 Шагомер: датчики не поддерживаются', 'warn');
+                    }
                     return;
                 }
             });
@@ -2077,6 +2884,7 @@
             setTimeout(function() {
                 document.getElementById('loading-screen').classList.add('hidden');
             }, 1000);
+            setTimeout(() => Music.init(), 500);
         });
 
         loadState();
