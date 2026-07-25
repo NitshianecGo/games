@@ -687,7 +687,7 @@
         }
 
         // ============================================================
-        //  TOASTS
+        //  TOASTS (now without auto-render)
         // ============================================================
 
         let toastIdCounter = 0;
@@ -695,11 +695,7 @@
         function pushToast(text, type = 'info') {
             const id = ++toastIdCounter;
             state.toasts.push({ id, text, type });
-            render();
-            setTimeout(() => {
-                state.toasts = state.toasts.filter(t => t.id !== id);
-                render();
-            }, 4200);
+            // render will be called by update()
         }
 
         // ============================================================
@@ -722,9 +718,7 @@
                     _portfolioSub: state._portfolioSub,
                 };
                 localStorage.setItem('wasteland_protocol', JSON.stringify(data));
-            } catch (e) {
-                // ignore
-            }
+            } catch (e) { /* ignore */ }
         }
 
         function loadState() {
@@ -740,13 +734,11 @@
                 state.confirmedAdult = state.confirmedAdult || {};
                 state.notifSettings = state.notifSettings || { progress: true, raid: true, clan: true, offers: true };
                 state._portfolioSub = state._portfolioSub || 'achievements';
-            } catch (e) {
-                // ignore
-            }
+            } catch (e) { /* ignore */ }
         }
 
         // ============================================================
-        //  EFFECTS (replaces useEffect)
+        //  EFFECTS (pure, no render calls)
         // ============================================================
 
         function runEffects() {
@@ -771,7 +763,40 @@
             if (milestone > state.lastAdMilestone && state.steps < 500000 && !getAdsDisabled()) {
                 state.showAd = true;
             }
-            // challenge timer
+            // challenge timer (will be handled in update loop)
+        }
+
+        // ============================================================
+        //  ACTIONS
+        // ============================================================
+
+        let updateScheduled = false;
+
+        function scheduleUpdate() {
+            if (!updateScheduled) {
+                updateScheduled = true;
+                requestAnimationFrame(() => {
+                    updateScheduled = false;
+                    update();
+                });
+            }
+        }
+
+        function update() {
+            // Run effects to update state (toasts, unlocks, etc.)
+            runEffects();
+            // Handle challenge timer separately (it's asynchronous)
+            // But we handle it in the render loop via setTimeout in runEffects? 
+            // Actually we moved timer logic to runEffects, but it uses setTimeout which calls render.
+            // We'll keep timer handling separate.
+            handleChallengeTimer();
+            // Save and render
+            saveState();
+            render();
+        }
+
+        // Challenge timer logic (to avoid recursion)
+        function handleChallengeTimer() {
             if (state.challenge.active) {
                 if (state.challenge.timeLeft <= 0) {
                     const success = state.challenge.clicks >= 18;
@@ -783,14 +808,16 @@
                     } else {
                         pushToast('Время вышло — бонус не выдан', 'warn');
                     }
-                    render();
+                    // after finishing, schedule update
+                    scheduleUpdate();
                     return;
                 }
                 if (!state.challengeTimer) {
                     state.challengeTimer = setTimeout(() => {
                         state.challenge.timeLeft -= 1;
                         state.challengeTimer = null;
-                        render();
+                        // after decrement, update UI
+                        scheduleUpdate();
                     }, 1000);
                 }
             } else {
@@ -799,31 +826,26 @@
                     state.challengeTimer = null;
                 }
             }
-            saveState();
         }
 
-        // ============================================================
-        //  ACTIONS
-        // ============================================================
-
         function setTab(tab) { state.tab = tab;
-            render(); }
+            scheduleUpdate(); }
 
         function addSteps(n) {
             state.steps += n;
-            render();
+            scheduleUpdate();
         }
 
         function startChallenge() {
             state.challenge = { active: true, timeLeft: 15, clicks: 0, result: null };
             state.challengeTimer = null;
-            render();
+            scheduleUpdate();
         }
 
         function challengeClick() {
             if (!state.challenge.active) return;
             state.challenge.clicks += 1;
-            render();
+            scheduleUpdate();
         }
 
         function startRaid() {
@@ -836,7 +858,7 @@
                 puzzle: null,
                 result: null,
             };
-            render();
+            scheduleUpdate();
         }
 
         function advanceRaidStage(r) {
@@ -846,7 +868,7 @@
                 state.steps += 3000 + r.combo * 500;
                 const newRaid = { ...r, stage: 'result', result: 'win', stageIndex: nextIndex };
                 state.raid = newRaid;
-                render();
+                scheduleUpdate();
                 return;
             }
             const stage = RAID_STAGES[nextIndex];
@@ -862,7 +884,7 @@
                 const puzzle = pick(PUZZLES);
                 state.raid = { ...r, stage: 'puzzle', stageIndex: nextIndex, puzzle };
             }
-            render();
+            scheduleUpdate();
         }
 
         function runTap() {
@@ -873,7 +895,7 @@
                 advanceRaidStage({ ...r, meters: r.target });
             } else {
                 state.raid = { ...r, meters };
-                render();
+                scheduleUpdate();
             }
         }
 
@@ -892,51 +914,81 @@
 
         function buyItem(item) {
             const crystals = getCrystals();
-            if (crystals < item.price) { pushToast('Недостаточно кристаллов', 'warn'); return; }
+            if (crystals < item.price) { pushToast('Недостаточно кристаллов', 'warn');
+                scheduleUpdate(); return; }
             state.crystalsSpent += item.price;
             state.owned.push(item.id);
             pushToast(`Куплено: ${item.name}`, 'success');
-            render();
+            scheduleUpdate();
         }
 
         function buyPack(pack) {
             state.crystalsBought += pack.amount;
             pushToast(`+${pack.amount} кристаллов зачислено (демо-покупка)`, 'success');
-            render();
+            scheduleUpdate();
         }
 
         function upgradeClan() {
             const next = CLAN_TIERS[state.clanTier + 1];
             if (!next) return;
             const crystals = getCrystals();
-            if (crystals < next.cost) { pushToast('Недостаточно кристаллов для улучшения', 'warn'); return; }
+            if (crystals < next.cost) { pushToast('Недостаточно кристаллов для улучшения', 'warn');
+                scheduleUpdate(); return; }
             state.crystalsSpent += next.cost;
             state.clanTier += 1;
             pushToast(`Клан улучшен: ${next.label}`, 'success');
-            render();
+            scheduleUpdate();
         }
 
         function toggleNotif(id) {
             state.notifSettings[id] = !state.notifSettings[id];
-            render();
+            scheduleUpdate();
         }
 
         function closeAd() {
             state.showAd = false;
             state.lastAdMilestone = Math.floor(state.steps / 30000);
-            render();
+            scheduleUpdate();
         }
 
         function closeModal() { state.selectedItem = null;
-            render(); }
+            scheduleUpdate(); }
 
         function confirmAdult(id) {
             state.confirmedAdult[id] = true;
-            render();
+            scheduleUpdate();
         }
 
         function setSelectedItem(id) { state.selectedItem = id;
-            render(); }
+            scheduleUpdate(); }
+
+        function resetProgress() {
+            if (!confirm('Сбросить весь прогресс? Это действие необратимо.')) return;
+            localStorage.removeItem('wasteland_protocol');
+            Object.assign(state, {
+                steps: 0,
+                unlocked: [],
+                unlockedAch: [],
+                confirmedAdult: {},
+                crystalsSpent: 0,
+                crystalsBought: 0,
+                owned: [],
+                notifSettings: { progress: true, raid: true, clan: true, offers: true },
+                lastAdMilestone: 0,
+                showAd: false,
+                clanTier: 0,
+                challenge: { active: false, timeLeft: 15, clicks: 0, result: null },
+                raid: { stage: 'idle', stageIndex: 0, meters: 0, target: 0, combo: 0, puzzle: null, result: null },
+                prevLevel: 1,
+                _portfolioSub: 'achievements',
+            });
+            if (state.challengeTimer) {
+                clearTimeout(state.challengeTimer);
+                state.challengeTimer = null;
+            }
+            pushToast('Прогресс сброшен', 'warn');
+            scheduleUpdate();
+        }
 
         // ============================================================
         //  RENDER — SVG HELPERS
@@ -1068,8 +1120,6 @@
 
         function renderPortfolio() {
             const sub = state._portfolioSub || 'achievements';
-            const setSub = (s) => { state._portfolioSub = s;
-                render(); };
             let content = '';
             if (sub === 'achievements') {
                 content = ACHIEVEMENTS.map(a => {
@@ -1274,8 +1324,6 @@
         // ============================================================
 
         function render() {
-            runEffects();
-
             const root = document.getElementById('root');
             const li = getLevelInfo();
             const crystals = getCrystals();
@@ -1570,39 +1618,13 @@
                     e.preventDefault();
                     const sub = target.getAttribute('data-psub');
                     state._portfolioSub = sub;
-                    render();
+                    scheduleUpdate();
                     return;
                 }
 
                 if (target.hasAttribute('data-reset')) {
                     e.preventDefault();
-                    if (confirm('Сбросить весь прогресс? Это действие необратимо.')) {
-                        localStorage.removeItem('wasteland_protocol');
-                        Object.assign(state, {
-                            steps: 0,
-                            unlocked: [],
-                            unlockedAch: [],
-                            confirmedAdult: {},
-                            crystalsSpent: 0,
-                            crystalsBought: 0,
-                            owned: [],
-                            notifSettings: { progress: true, raid: true, clan: true, offers: true },
-                            lastAdMilestone: 0,
-                            showAd: false,
-                            clanTier: 0,
-                            challenge: { active: false, timeLeft: 15, clicks: 0, result: null },
-                            raid: { stage: 'idle', stageIndex: 0, meters: 0, target: 0, combo: 0, puzzle: null,
-                                result: null },
-                            prevLevel: 1,
-                            _portfolioSub: 'achievements',
-                        });
-                        if (state.challengeTimer) {
-                            clearTimeout(state.challengeTimer);
-                            state.challengeTimer = null;
-                        }
-                        render();
-                        pushToast('Прогресс сброшен', 'warn');
-                    }
+                    resetProgress();
                     return;
                 }
             });
@@ -1614,7 +1636,8 @@
 
         loadState();
         state.prevLevel = getLevelInfo().level;
-        render();
+        // initial render
+        scheduleUpdate();
         setupEventDelegation();
 
         console.log('Протокол Пустошь загружен.');
