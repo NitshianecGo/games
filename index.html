@@ -35,7 +35,7 @@
             background-color: var(--metro-dark);
             color: var(--metro-text);
             font-family: 'Share Tech Mono', monospace;
-            height: 100dvh; /* Высота под iOS Safari */
+            height: 100dvh;
             width: 100vw;
             overflow: hidden;
             display: flex;
@@ -56,7 +56,6 @@
             pointer-events: none;
         }
 
-        /* Экранные контейнеры */
         .screen {
             display: none;
             width: 100%;
@@ -231,7 +230,7 @@
             white-space: nowrap;
         }
 
-        /* Индикатор приема рации */
+        /* Индикатор работы Рации */
         .ptt-status-banner {
             display: none;
             background: rgba(255, 119, 0, 0.15);
@@ -254,10 +253,9 @@
             display: block;
         }
 
-        /* Область сообщений со скроллом */
         .chat-body {
             flex: 1;
-            min-height: 0; /* Обязательно для iOS flex-scroll */
+            min-height: 0;
             background: #07090b;
             border: 1px solid var(--metro-border);
             padding: 10px;
@@ -328,7 +326,7 @@
             margin-top: 4px;
         }
 
-        /* Аудио плеер */
+        /* Аудио плеер голосовых сообщений */
         .audio-player {
             display: flex;
             align-items: center;
@@ -369,7 +367,6 @@
             background: var(--metro-amber);
         }
 
-        /* Панель ввода */
         .chat-input-panel {
             background: var(--metro-panel);
             border: 1px solid var(--metro-border);
@@ -498,7 +495,7 @@
             </div>
         </div>
 
-        <!-- Индикатор входящей речи рации -->
+        <!-- Индикатор радиоэфира -->
         <div id="ptt-banner" class="ptt-status-banner">
             📡 ВХОДЯЩАЯ ТРАНСЛЯЦИЯ РАЦИИ: <strong id="ptt-speaker-name">---</strong>
         </div>
@@ -508,7 +505,6 @@
         </div>
 
         <div class="chat-input-panel">
-            <!-- Большая кнопка Рации PTT -->
             <button id="ptt-button" class="ptt-btn">
                 🎙️ ЗАЖМИ И ГОВОРИ (РАЦИЯ)
             </button>
@@ -526,7 +522,7 @@
     </div>
 
     <script>
-        /* ================= 1. ЗВУКОВОЙ ДВИЖОК ЭФИРА ================= */
+        /* ================= 1. ЗВУКОВОЙ ДВИЖОК И ЭФФЕКТЫ ================= */
         class MetroSoundEngine {
             constructor() { this.ctx = null; }
             init() {
@@ -545,7 +541,6 @@
                 osc.connect(gain); gain.connect(this.ctx.destination);
                 osc.start(); osc.stop(this.ctx.currentTime + 0.05);
             }
-            /* Сигнал начала рации (Roger Beep Start) */
             playPTTStart() {
                 this.init();
                 const now = this.ctx.currentTime;
@@ -559,7 +554,6 @@
                 osc.connect(gain); gain.connect(this.ctx.destination);
                 osc.start(now); osc.stop(now + 0.09);
             }
-            /* Сигнал завершения передачи рации (Roger Beep End) */
             playPTTEnd() {
                 this.init();
                 const now = this.ctx.currentTime;
@@ -588,21 +582,22 @@
         let myUsername = localStorage.getItem('metro_uname') || '';
         let currentRoom = new URLSearchParams(window.location.search).get('room') || localStorage.getItem('metro_room') || '';
 
-        /* Переменные записи аудиосообщений */
         let isVoiceRecording = false;
         let voiceRecorder = null;
         let voiceChunks = [];
 
-        /* Управление аудиосообщениями (Плей/Пауза) */
         let activeAudio = null;
         let activeAudioBtn = null;
 
-        /* PTT (Рация) переменные */
+        /* PTT Переменные (PCM Streaming) */
         let isPTTTransmitting = false;
-        let pttMediaRecorder = null;
         let pttStreamId = null;
-        let pttAudioQueue = [];
-        let isPlayingPTTQueue = false;
+        let pttAudioCtx = null;
+        let pttMicStream = null;
+        let pttProcessor = null;
+
+        let rxAudioCtx = null;
+        let nextStartTime = 0;
 
         /* ================= 3. ИНИЦИАЛИЗАЦИЯ ================= */
         window.onload = () => {
@@ -689,16 +684,14 @@
             document.getElementById('conn-status').classList.remove('disconnected');
         }
 
-        /* ================= 5. ДВИЖОК РАЦИИ (PUSH-TO-TALK) ================= */
+        /* ================= 5. ДВИЖОК РАЦИИ (PCM STREAMING) ================= */
         function setupPTTEvents() {
             const btn = document.getElementById('ptt-button');
 
-            // Мышь
             btn.addEventListener('mousedown', startPTT);
             btn.addEventListener('mouseup', stopPTT);
             btn.addEventListener('mouseleave', stopPTT);
 
-            // Тачскрин (мобильные)
             btn.addEventListener('touchstart', (e) => { e.preventDefault(); startPTT(); }, { passive: false });
             btn.addEventListener('touchend', (e) => { e.preventDefault(); stopPTT(); }, { passive: false });
             btn.addEventListener('touchcancel', (e) => { e.preventDefault(); stopPTT(); }, { passive: false });
@@ -710,7 +703,7 @@
             audioEngine.playPTTStart();
 
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                pttMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 isPTTTransmitting = true;
                 pttStreamId = 'stream_' + Date.now();
 
@@ -718,27 +711,42 @@
                 btn.classList.add('transmitting');
                 btn.innerText = '🔴 ЭФИР ОТКРЫТ (ГОВОРИТЕ)';
 
-                pttMediaRecorder = new MediaRecorder(stream);
+                // Считываем звук с частотой 16000 Гц (стандарт портативных раций)
+                pttAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                const source = pttAudioCtx.createMediaStreamSource(pttMicStream);
                 
-                pttMediaRecorder.ondataavailable = (e) => {
-                    if (e.data.size > 0 && isPTTTransmitting) {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                            publishPayload({
-                                type: 'ptt_chunk',
-                                streamId: pttStreamId,
-                                chunk: reader.result
-                            });
-                        };
-                        reader.readAsDataURL(e.data);
-                    }
-                };
+                // Процессор обработки буфера звука
+                pttProcessor = pttAudioCtx.createScriptProcessor(2048, 1, 1);
 
-                // Оповещаем всех об открытии передачи
                 publishPayload({ type: 'ptt_start', streamId: pttStreamId });
 
-                // Нарезаем аудио фрагментами по 300 мс для передачи
-                pttMediaRecorder.start(300);
+                pttProcessor.onaudioprocess = (e) => {
+                    if (!isPTTTransmitting) return;
+                    const inputData = e.inputBuffer.getChannelData(0);
+                    
+                    // Сжимаем Float32 в Int16 PCM для экономии трафика
+                    const pttInt16 = new Int16Array(inputData.length);
+                    for (let i = 0; i < inputData.length; i++) {
+                        let s = Math.max(-1, Math.min(1, inputData[i]));
+                        pttInt16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                    }
+
+                    // Кодируем в Base64
+                    let binary = '';
+                    const bytes = new Uint8Array(pttInt16.buffer);
+                    for (let i = 0; i < bytes.byteLength; i++) {
+                        binary += String.fromCharCode(bytes[i]);
+                    }
+
+                    publishPayload({
+                        type: 'ptt_chunk',
+                        streamId: pttStreamId,
+                        chunk: btoa(binary)
+                    });
+                };
+
+                source.connect(pttProcessor);
+                pttProcessor.connect(pttAudioCtx.destination);
 
             } catch (err) {
                 isPTTTransmitting = false;
@@ -756,18 +764,16 @@
 
             audioEngine.playPTTEnd();
 
-            if (pttMediaRecorder && pttMediaRecorder.state !== 'inactive') {
-                pttMediaRecorder.stop();
-                pttMediaRecorder.stream.getTracks().forEach(track => track.stop());
-            }
+            if (pttProcessor) { pttProcessor.disconnect(); pttProcessor = null; }
+            if (pttAudioCtx) { pttAudioCtx.close(); pttAudioCtx = null; }
+            if (pttMicStream) { pttMicStream.getTracks().forEach(t => t.stop()); pttMicStream = null; }
 
-            // Оповещаем об окончании передачи
             publishPayload({ type: 'ptt_end', streamId: pttStreamId });
         }
 
-        /* Обработка входящих данных рации */
+        /* Прием и бесшовное воспроизведение PCM пакетов */
         function handlePTTIncoming(data) {
-            if (data.uid === myUserId) return; // Игнорируем собственную речь
+            if (data.uid === myUserId) return;
 
             const banner = document.getElementById('ptt-banner');
             const speakerTag = document.getElementById('ptt-speaker-name');
@@ -776,38 +782,52 @@
                 speakerTag.innerText = data.sender;
                 banner.classList.add('active');
                 audioEngine.playPTTStart();
+
+                if (!rxAudioCtx) rxAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                if (rxAudioCtx.state === 'suspended') rxAudioCtx.resume();
+                nextStartTime = rxAudioCtx.currentTime;
+
             } else if (data.type === 'ptt_chunk') {
-                pttAudioQueue.push(data.chunk);
-                if (!isPlayingPTTQueue) {
-                    processPTTQueue();
+                if (!rxAudioCtx) return;
+
+                // Декодируем Base64 в Int16 PCM
+                const binary = atob(data.chunk);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) {
+                    bytes[i] = binary.charCodeAt(i);
                 }
+                const int16 = new Int16Array(bytes.buffer);
+
+                // Преобразуем в Float32 для Web Audio API
+                const float32 = new Float32Array(int16.length);
+                for (let i = 0; i < int16.length; i++) {
+                    float32[i] = int16[i] / (int16[i] < 0 ? 0x8000 : 0x7FFF);
+                }
+
+                // Создаем и проигрываем сэмпл без задержек
+                const audioBuffer = rxAudioCtx.createBuffer(1, float32.length, 16000);
+                audioBuffer.getChannelData(0).set(float32);
+
+                const source = rxAudioCtx.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(rxAudioCtx.destination);
+
+                if (nextStartTime < rxAudioCtx.currentTime) {
+                    nextStartTime = rxAudioCtx.currentTime;
+                }
+                source.start(nextStartTime);
+                nextStartTime += audioBuffer.duration;
+
             } else if (data.type === 'ptt_end') {
                 setTimeout(() => {
                     banner.classList.remove('active');
                     audioEngine.playPTTEnd();
-                }, 500);
+                }, 300);
             }
         }
 
-        function processPTTQueue() {
-            if (pttAudioQueue.length === 0) {
-                isPlayingPTTQueue = false;
-                return;
-            }
-
-            isPlayingPTTQueue = true;
-            const chunkData = pttAudioQueue.shift();
-            const audio = new Audio(chunkData);
-
-            audio.onended = () => processPTTQueue();
-            audio.onerror = () => processPTTQueue();
-
-            audio.play().catch(() => processPTTQueue());
-        }
-
-        /* ================= 6. РАБОТА С ГОЛОСОВЫМИ СООБЩЕНИЯМИ ================= */
+        /* ================= 6. ГОЛОСОВЫЕ СООБЩЕНИЯ ================= */
         function playAudio(btn, src) {
-            // Повторное нажатие — Пауза/Возобновление
             if (activeAudio && activeAudioBtn === btn) {
                 if (!activeAudio.paused) {
                     activeAudio.pause();
@@ -819,7 +839,6 @@
                 return;
             }
 
-            // Выключаем предыдущее проигрывание
             if (activeAudio) {
                 activeAudio.pause();
                 if (activeAudioBtn) activeAudioBtn.innerText = '▶';
@@ -879,7 +898,7 @@
             }
         }
 
-        /* ================= 7. ОТПРАВКА ОБЫЧНЫХ СООБЩЕНИЙ ================= */
+        /* ================= 7. ОТПРАВКА И РЕНДЕР СООБЩЕНИЙ ================= */
         function publishPayload(data) {
             if (!mqttClient || !mqttClient.connected) return;
             const fullPayload = {
@@ -937,7 +956,6 @@
             reader.readAsDataURL(file);
         }
 
-        /* ================= 8. ОТОБРАЖЕНИЕ СООБЩЕНИЙ ================= */
         const renderedMsgs = new Set();
 
         function renderIncomingMessage(data) {
