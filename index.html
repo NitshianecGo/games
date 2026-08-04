@@ -6,7 +6,7 @@
     <title>METRO NET // РАДИОСТАНЦИЯ ЭКСПЕДИЦИИ</title>
     <!-- Шрифт терминала Metro -->
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
-    <!-- MQTT.js через CDN для гарантии подключения через любой интернет (WebSockets) -->
+    <!-- MQTT.js через CDN -->
     <script src="https://unpkg.com/mqtt@5.3.0/dist/mqtt.min.js"></script>
     <style>
         :root {
@@ -40,7 +40,7 @@
             align-items: center;
         }
 
-        /* Эффект ЭЛТ-монитора (Scanlines) */
+        /* Эффект ЭЛТ-монитора */
         .crt::before {
             content: " ";
             display: block;
@@ -388,7 +388,7 @@
             border-radius: 2px;
         }
 
-        /* Аудио плеер в Metro стиле */
+        /* Аудио плеер */
         .audio-player {
             display: flex;
             align-items: center;
@@ -477,7 +477,7 @@
             height: 46px;
         }
 
-        /* Экран аудиозвонка в стилистике Metro */
+        /* Экраны аудиозвонка */
         .metro-call-overlay {
             display: none;
             position: fixed;
@@ -522,6 +522,7 @@
             margin-bottom: 8px;
             letter-spacing: 2px;
             text-shadow: 0 0 8px var(--metro-amber-glow);
+            text-align: center;
         }
 
         .call-timer {
@@ -550,6 +551,17 @@
             text-transform: uppercase;
         }
 
+        .call-control-btn.accept {
+            border-color: var(--metro-green);
+            color: var(--metro-green);
+        }
+
+        .call-control-btn.accept:hover {
+            background: var(--metro-green);
+            color: var(--metro-dark);
+            box-shadow: 0 0 20px var(--metro-green);
+        }
+
         .call-control-btn.mute.muted {
             border-color: var(--metro-amber);
             color: var(--metro-amber);
@@ -567,7 +579,7 @@
             box-shadow: 0 0 20px var(--metro-red);
         }
 
-        /* Модалка просмотра изображений */
+        /* Модалка просмотра фото */
         #image-modal {
             display: none;
             position: fixed;
@@ -606,6 +618,7 @@
 <body class="crt">
 
     <div id="toast">КООРДИНАТЫ СКОПИРОВАНЫ</div>
+    <audio id="remote-audio-player" autoplay></audio>
 
     <!-- 1. Экран Загрузки -->
     <div id="screen-loading" class="screen active">
@@ -643,7 +656,7 @@
                 </div>
             </div>
             <div class="header-actions">
-                <button class="copy-btn call-btn" onclick="startAudioCall()">📞 АУДИО ВЫЗОВ</button>
+                <button class="copy-btn call-btn" onclick="initiateAudioCall()">📞 АУДИО ВЫЗОВ</button>
                 <button class="copy-btn" onclick="copyInviteLink()">🔗 СКОПИРОВАТЬ ССЫЛКУ</button>
             </div>
         </div>
@@ -663,7 +676,18 @@
         </div>
     </div>
 
-    <!-- 4. Экран Аудиозвонка -->
+    <!-- 4. Экран Входящего Звонка -->
+    <div id="incoming-call-overlay" class="metro-call-overlay">
+        <div class="call-avatar-box">📡</div>
+        <div class="call-status-text" id="incoming-caller-title">ВХОДЯЩИЙ ВЫЗОВ...</div>
+        <div style="color: var(--metro-muted); margin-bottom: 25px;">Запрос прямого аудиосопряжения</div>
+        <div class="call-controls">
+            <button class="call-control-btn accept" onclick="acceptIncomingCall()">✅ ПРИНЯТЬ</button>
+            <button class="call-control-btn end" onclick="rejectIncomingCall()">❌ ОТКЛОНИТЬ</button>
+        </div>
+    </div>
+
+    <!-- 5. Экран Активного Звонка -->
     <div id="call-overlay" class="metro-call-overlay">
         <div class="call-avatar-box">🎙️</div>
         <div class="call-status-text" id="call-status">УСТАНОВКА СВЯЗИ...</div>
@@ -680,7 +704,7 @@
     </div>
 
     <script>
-        /* ================= 1. ЗВУКОВОЙ ДВИЖОК (Web Audio API) ================= */
+        /* ================= 1. ЗВУКОВОЙ ДВИЖОК ================= */
         class MetroSoundEngine {
             constructor() {
                 this.ctx = null;
@@ -759,7 +783,7 @@
                 const gain = this.ctx.createGain();
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(425, now);
-                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.setValueAtTime(0.12, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
                 osc.connect(gain);
                 gain.connect(this.ctx.destination);
@@ -790,11 +814,22 @@
         let recTimer = null;
         let recSeconds = 0;
 
-        /* Переменные звонка */
+        /* WebRTC & Вызов */
+        let peerConnection = null;
+        let localAudioStream = null;
+        let ringtoneInterval = null;
         let callTimerInterval = null;
         let callSeconds = 0;
-        let callStream = null;
         let isCallMuted = false;
+        let activeCallPartnerUid = null;
+        let pendingCallerData = null;
+
+        const RTC_CONFIG = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
 
         /* ================= 3. ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ ================= */
         window.onload = () => {
@@ -871,7 +906,11 @@
                 mqttClient.on('message', (topic, message) => {
                     try {
                         const payload = JSON.parse(message.toString());
-                        renderIncomingMessage(payload);
+                        if (payload.type === 'call_signal') {
+                            handleCallSignal(payload);
+                        } else {
+                            renderIncomingMessage(payload);
+                        }
                     } catch(e) {
                         console.error("Ошибка парсинга сообщения:", e);
                     }
@@ -907,52 +946,255 @@
             document.getElementById('conn-status').classList.remove('disconnected');
         }
 
-        /* ================= 5. АУДИО ЗВОНОК ================= */
-        async function startAudioCall() {
-            audioEngine.playClick();
-            
+        /* ================= 5. ПРОВЕРКА ОБОРУДОВАНИЯ И WebRTC ЗВОНОК ================= */
+
+        // Проверка микрофона и динамиков
+        async function setupLocalAudioWithFallback() {
             try {
-                callStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const inputs = devices.filter(d => d.kind === 'audioinput');
+                const outputs = devices.filter(d => d.kind === 'audiooutput');
+
+                console.log(`[Metro Audio Engine] Доступно микрофонов: ${inputs.length}, динамиков: ${outputs.length}`);
+
+                // Захват микрофона с эхоподавлением и автоусилением
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
+                return stream;
+            } catch (e) {
+                console.warn("[Metro Audio Engine] Ошибка расширенной настройки звука. Используем базовый микрофон fallback:", e);
+                return await navigator.mediaDevices.getUserMedia({ audio: true });
+            }
+        }
+
+        // Перенаправление входящего звука на громкую связь/динамик
+        async function attachRemoteAudioStream(stream) {
+            const audioEl = document.getElementById('remote-audio-player');
+            audioEl.srcObject = stream;
+
+            if ('setSinkId' in audioEl) {
+                try {
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const outputs = devices.filter(d => d.kind === 'audiooutput');
+                    if (outputs.length > 0) {
+                        // Используем динамик вывода
+                        await audioEl.setSinkId(outputs[0].deviceId);
+                    }
+                } catch (err) {
+                    console.log("[Metro Audio Engine] Автовыбор динамика недоступен, используется системный громкоговоритель:", err);
+                }
+            }
+            audioEl.play().catch(e => console.log("Блокировка автозвука браузером:", e));
+        }
+
+        function sendCallSignal(action, extraData = {}) {
+            publishPayload({
+                type: 'call_signal',
+                action: action,
+                targetUid: extraData.targetUid || null,
+                ...extraData
+            });
+        }
+
+        function startRingtone() {
+            stopRingtone();
+            ringtoneInterval = setInterval(() => audioEngine.playBeep(), 1200);
+        }
+
+        function stopRingtone() {
+            if (ringtoneInterval) {
+                clearInterval(ringtoneInterval);
+                ringtoneInterval = null;
+            }
+        }
+
+        // 1. Инициатор (Участник 1) начинает звонок
+        async function initiateAudioCall() {
+            audioEngine.playClick();
+            if (activeCallPartnerUid) return alert("Вы уже находитесь в режиме сопряжения!");
+
+            try {
+                localAudioStream = await setupLocalAudioWithFallback();
             } catch (err) {
-                alert("Ошибка доступа к микрофону: " + err.message);
+                return alert("Ошибка: Микрофон не найден или заблокирован!");
+            }
+
+            document.getElementById('call-overlay').classList.add('active');
+            document.getElementById('call-status').innerText = "ВЫЗОВ ЭФИРА...";
+            document.getElementById('call-timer').innerText = "00:00";
+            
+            startRingtone();
+            sendCallSignal('invite');
+        }
+
+        // 2. Обработка входящих сигналов на обоих сторонах
+        async function handleCallSignal(data) {
+            if (data.uid === myUserId) return; // Игнорируем собственные сигналы
+
+            switch(data.action) {
+                case 'invite':
+                    if (activeCallPartnerUid) {
+                        sendCallSignal('busy', { targetUid: data.uid });
+                        return;
+                    }
+                    pendingCallerData = data;
+                    document.getElementById('incoming-caller-title').innerText = `ВХОДЯЩИЙ ВЫЗОВ: ${data.sender}`;
+                    document.getElementById('incoming-call-overlay').classList.add('active');
+                    startRingtone();
+                    break;
+
+                case 'accept':
+                    if (data.targetUid === myUserId) {
+                        stopRingtone();
+                        activeCallPartnerUid = data.uid;
+                        document.getElementById('call-status').innerText = `СОЕДИНЕНИЕ С [${data.sender}]...`;
+                        createPeerConnection(data.uid);
+                        
+                        // Создаем и отправляем WebRTC Offer
+                        const offer = await peerConnection.createOffer();
+                        await peerConnection.setLocalDescription(offer);
+                        sendCallSignal('offer', { targetUid: data.uid, sdp: offer });
+                    }
+                    break;
+
+                case 'reject':
+                    if (data.targetUid === myUserId) {
+                        stopRingtone();
+                        closeCallUI();
+                        alert(`Сталкер [${data.sender}] отклонил вызов.`);
+                    }
+                    break;
+
+                case 'busy':
+                    if (data.targetUid === myUserId) {
+                        stopRingtone();
+                        closeCallUI();
+                        alert(`Частота сталкера [${data.sender}] занята.`);
+                    }
+                    break;
+
+                case 'offer':
+                    if (data.targetUid === myUserId) {
+                        stopRingtone();
+                        activeCallPartnerUid = data.uid;
+                        createPeerConnection(data.uid);
+                        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                        
+                        const answer = await peerConnection.createAnswer();
+                        await peerConnection.setLocalDescription(answer);
+                        sendCallSignal('answer', { targetUid: data.uid, sdp: answer });
+                        startCallTimer();
+                    }
+                    break;
+
+                case 'answer':
+                    if (data.targetUid === myUserId && peerConnection) {
+                        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                        startCallTimer();
+                    }
+                    break;
+
+                case 'ice':
+                    if (data.targetUid === myUserId && peerConnection) {
+                        try {
+                            await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                        } catch(e) { console.error("ICE error:", e); }
+                    }
+                    break;
+
+                case 'end':
+                    if (activeCallPartnerUid === data.uid || pendingCallerData?.uid === data.uid) {
+                        stopRingtone();
+                        closeCallUI();
+                    }
+                    break;
+            }
+        }
+
+        // 3. Ответ Участника 2 ("Принять")
+        async function acceptIncomingCall() {
+            audioEngine.playClick();
+            stopRingtone();
+            document.getElementById('incoming-call-overlay').classList.remove('active');
+
+            if (!pendingCallerData) return;
+
+            try {
+                localAudioStream = await setupLocalAudioWithFallback();
+            } catch (err) {
+                alert("Ошибка доступа к микрофону!");
+                sendCallSignal('reject', { targetUid: pendingCallerData.uid });
                 return;
             }
 
-            const overlay = document.getElementById('call-overlay');
-            const statusText = document.getElementById('call-status');
-            const timerText = document.getElementById('call-timer');
+            document.getElementById('call-overlay').classList.add('active');
+            document.getElementById('call-status').innerText = `СОЕДИНЕНИЕ С [${pendingCallerData.sender}]...`;
             
-            overlay.classList.add('active');
-            statusText.innerText = "ПОИСК СИГНАЛА...";
-            timerText.innerText = "00:00";
+            sendCallSignal('accept', { targetUid: pendingCallerData.uid });
+        }
+
+        // 4. Отклонение ("Отклонить")
+        function rejectIncomingCall() {
+            audioEngine.playClick();
+            stopRingtone();
+            document.getElementById('incoming-call-overlay').classList.remove('active');
+            if (pendingCallerData) {
+                sendCallSignal('reject', { targetUid: pendingCallerData.uid });
+                pendingCallerData = null;
+            }
+        }
+
+        // 5. Создание WebRTC соединения
+        function createPeerConnection(partnerUid) {
+            peerConnection = new RTCPeerConnection(RTC_CONFIG);
+
+            // Добавляем локальные аудиодорожки
+            if (localAudioStream) {
+                localAudioStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localAudioStream);
+                });
+            }
+
+            // Передача ICE кандидатов
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    sendCallSignal('ice', { targetUid: partnerUid, candidate: event.candidate });
+                }
+            };
+
+            // Получение удаленного аудиопотока
+            peerConnection.ontrack = (event) => {
+                console.log("[WebRTC] Входящий аудиопоток получен");
+                attachRemoteAudioStream(event.streams[0]);
+            };
+
+            peerConnection.onconnectionstatechange = () => {
+                if (peerConnection.connectionState === 'connected') {
+                    document.getElementById('call-status').innerText = "В ЭФИРЕ (P2P СОЕДИНЕНО)";
+                }
+            };
+        }
+
+        function startCallTimer() {
+            if (callTimerInterval) clearInterval(callTimerInterval);
             callSeconds = 0;
-            isCallMuted = false;
-
-            document.getElementById('call-mute-btn').classList.remove('muted');
-            document.getElementById('call-mute-btn').innerText = "🎤 МИКРОФОН";
-
-            audioEngine.playBeep();
-
-            publishPayload({
-                type: 'system',
-                content: `📞 Сталкер [${myUsername}] запрашивает голосовое соединение...`
-            });
-
-            setTimeout(() => {
-                statusText.innerText = "В ЭФИРЕ (СОЕДИНЕНО)";
-                callTimerInterval = setInterval(() => {
-                    callSeconds++;
-                    const mins = String(Math.floor(callSeconds / 60)).padStart(2, '0');
-                    const secs = String(callSeconds % 60).padStart(2, '0');
-                    timerText.innerText = `${mins}:${secs}`;
-                }, 1000);
-            }, 2000);
+            callTimerInterval = setInterval(() => {
+                callSeconds++;
+                const mins = String(Math.floor(callSeconds / 60)).padStart(2, '0');
+                const secs = String(callSeconds % 60).padStart(2, '0');
+                document.getElementById('call-timer').innerText = `${mins}:${secs}`;
+            }, 1000);
         }
 
         function toggleCallMute() {
-            if (!callStream) return;
+            if (!localAudioStream) return;
             isCallMuted = !isCallMuted;
-            callStream.getAudioTracks().forEach(track => track.enabled = !isCallMuted);
+            localAudioStream.getAudioTracks().forEach(track => track.enabled = !isCallMuted);
             
             const muteBtn = document.getElementById('call-mute-btn');
             if (isCallMuted) {
@@ -967,22 +1209,33 @@
 
         function endCall() {
             audioEngine.playClick();
-            if (callTimerInterval) clearInterval(callTimerInterval);
-            
-            if (callStream) {
-                callStream.getTracks().forEach(track => track.stop());
-                callStream = null;
+            if (activeCallPartnerUid) {
+                sendCallSignal('end', { targetUid: activeCallPartnerUid });
             }
-
-            document.getElementById('call-overlay').classList.remove('active');
-
-            publishPayload({
-                type: 'system',
-                content: `⛔ Сеанс связи завершен сталкером [${myUsername}].`
-            });
+            closeCallUI();
         }
 
-        /* ================= 6. ОТПРАВКА И ПОЛУЧЕНИЕ ================= */
+        function closeCallUI() {
+            stopRingtone();
+            if (callTimerInterval) clearInterval(callTimerInterval);
+            
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+            if (localAudioStream) {
+                localAudioStream.getTracks().forEach(track => track.stop());
+                localAudioStream = null;
+            }
+
+            activeCallPartnerUid = null;
+            pendingCallerData = null;
+
+            document.getElementById('incoming-call-overlay').classList.remove('active');
+            document.getElementById('call-overlay').classList.remove('active');
+        }
+
+        /* ================= 6. ОТПРАВКА И ПОЛУЧЕНИЕ ЧАТА ================= */
         function publishPayload(data) {
             if (!mqttClient || !mqttClient.connected) {
                 alert("Нет связи с радиовышкой! Переподключение...");
