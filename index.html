@@ -13,6 +13,7 @@
             --metro-amber: #ff7700;
             --metro-amber-glow: rgba(255, 119, 0, 0.4);
             --metro-green: #33ff66;
+            --metro-green-glow: rgba(51, 255, 102, 0.4);
             --metro-red: #ff3333;
             --metro-dark: #0a0d0f;
             --metro-panel: #141a1f;
@@ -260,6 +261,11 @@
             font-weight: bold;
         }
 
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
         .copy-btn {
             background: transparent;
             border: 1px solid var(--metro-border);
@@ -274,6 +280,17 @@
         .copy-btn:hover {
             border-color: var(--metro-amber);
             color: var(--metro-amber);
+        }
+
+        .call-btn {
+            border-color: var(--metro-green);
+            color: var(--metro-green);
+        }
+
+        .call-btn:hover {
+            background: var(--metro-green);
+            color: var(--metro-dark);
+            box-shadow: 0 0 15px var(--metro-green-glow);
         }
 
         /* Область сообщений */
@@ -460,6 +477,96 @@
             height: 46px;
         }
 
+        /* Экран аудиозвонка в стилистике Metro */
+        .metro-call-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(10, 13, 15, 0.95);
+            z-index: 1000;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border: 2px solid var(--metro-amber);
+            box-shadow: inset 0 0 50px rgba(255, 119, 0, 0.15);
+        }
+
+        .metro-call-overlay.active {
+            display: flex;
+        }
+
+        .call-avatar-box {
+            width: 110px;
+            height: 110px;
+            border: 2px solid var(--metro-amber);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 42px;
+            color: var(--metro-amber);
+            box-shadow: 0 0 25px var(--metro-amber-glow);
+            margin-bottom: 20px;
+            animation: pulseGlow 2s infinite;
+        }
+
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 10px var(--metro-amber-glow); }
+            50% { box-shadow: 0 0 35px var(--metro-amber-glow); }
+            100% { box-shadow: 0 0 10px var(--metro-amber-glow); }
+        }
+
+        .call-status-text {
+            color: var(--metro-amber);
+            font-size: 20px;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 8px var(--metro-amber-glow);
+        }
+
+        .call-timer {
+            color: var(--metro-green);
+            font-size: 26px;
+            margin-bottom: 30px;
+            letter-spacing: 3px;
+            text-shadow: 0 0 8px var(--metro-green-glow);
+        }
+
+        .call-controls {
+            display: flex;
+            gap: 15px;
+        }
+
+        .call-control-btn {
+            background: var(--metro-panel);
+            border: 1px solid var(--metro-border);
+            color: var(--metro-text);
+            padding: 12px 24px;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            text-transform: uppercase;
+        }
+
+        .call-control-btn.mute.muted {
+            border-color: var(--metro-amber);
+            color: var(--metro-amber);
+            box-shadow: 0 0 15px var(--metro-amber-glow);
+        }
+
+        .call-control-btn.end {
+            border-color: var(--metro-red);
+            color: var(--metro-red);
+        }
+
+        .call-control-btn.end:hover {
+            background: var(--metro-red);
+            color: white;
+            box-shadow: 0 0 20px var(--metro-red);
+        }
+
         /* Модалка просмотра изображений */
         #image-modal {
             display: none;
@@ -535,7 +642,10 @@
                     <div style="font-size: 11px; color: var(--metro-muted);">ЧАСТОТА: <span id="display-room" style="color:var(--metro-amber);">---</span></div>
                 </div>
             </div>
-            <button class="copy-btn" onclick="copyInviteLink()">🔗 СКОПИРОВАТЬ ССЫЛКУ</button>
+            <div class="header-actions">
+                <button class="copy-btn call-btn" onclick="startAudioCall()">📞 АУДИО ВЫЗОВ</button>
+                <button class="copy-btn" onclick="copyInviteLink()">🔗 СКОПИРОВАТЬ ССЫЛКУ</button>
+            </div>
         </div>
 
         <div id="chat-messages" class="chat-body">
@@ -550,6 +660,17 @@
 
             <button id="rec-btn" class="input-btn" onclick="toggleRecording()" title="Голосовое сообщение (до 1 мин)">🎤</button>
             <button class="input-btn" onclick="sendTextMessage()" title="Отправить">➤</button>
+        </div>
+    </div>
+
+    <!-- 4. Экран Аудиозвонка -->
+    <div id="call-overlay" class="metro-call-overlay">
+        <div class="call-avatar-box">🎙️</div>
+        <div class="call-status-text" id="call-status">УСТАНОВКА СВЯЗИ...</div>
+        <div class="call-timer" id="call-timer">00:00</div>
+        <div class="call-controls">
+            <button id="call-mute-btn" class="call-control-btn mute" onclick="toggleCallMute()">🎤 МИКРОФОН</button>
+            <button class="call-control-btn end" onclick="endCall()">⛔ СБРОС</button>
         </div>
     </div>
 
@@ -631,6 +752,20 @@
                 osc.start(now);
                 osc.stop(now + 0.12);
             }
+            playBeep() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(425, now);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            }
         }
 
         const audioEngine = new MetroSoundEngine();
@@ -655,9 +790,14 @@
         let recTimer = null;
         let recSeconds = 0;
 
+        /* Переменные звонка */
+        let callTimerInterval = null;
+        let callSeconds = 0;
+        let callStream = null;
+        let isCallMuted = false;
+
         /* ================= 3. ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ ================= */
         window.onload = () => {
-            // Эмуляция старта терминала
             setTimeout(() => {
                 document.getElementById('screen-loading').classList.remove('active');
                 document.getElementById('screen-login').classList.add('active');
@@ -669,7 +809,6 @@
                 }
                 document.getElementById('room-input').value = currentRoom;
 
-                // Авто-вход если пользователь уже был в комнате
                 if (myUsername && new URLSearchParams(window.location.search).get('room')) {
                     startSession();
                 }
@@ -691,7 +830,6 @@
             localStorage.setItem('metro_uname', myUsername);
             localStorage.setItem('metro_room', currentRoom);
 
-            // Обновляем URL без перезагрузки
             window.history.replaceState({}, '', `?room=${encodeURIComponent(currentRoom)}`);
 
             document.getElementById('screen-login').classList.remove('active');
@@ -722,7 +860,6 @@
                     mqttClient.subscribe(topic, { qos: 1 }, (err) => {
                         if (!err) {
                             showChatScreen();
-                            // Отправляем сообщение о входе
                             publishPayload({
                                 type: 'system',
                                 content: `Сталкер [${myUsername}] вышел на частоту.`
@@ -770,7 +907,82 @@
             document.getElementById('conn-status').classList.remove('disconnected');
         }
 
-        /* ================= 5. ОТПРАВКА И ПОЛУЧЕНИЕ ================= */
+        /* ================= 5. АУДИО ЗВОНОК ================= */
+        async function startAudioCall() {
+            audioEngine.playClick();
+            
+            try {
+                callStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            } catch (err) {
+                alert("Ошибка доступа к микрофону: " + err.message);
+                return;
+            }
+
+            const overlay = document.getElementById('call-overlay');
+            const statusText = document.getElementById('call-status');
+            const timerText = document.getElementById('call-timer');
+            
+            overlay.classList.add('active');
+            statusText.innerText = "ПОИСК СИГНАЛА...";
+            timerText.innerText = "00:00";
+            callSeconds = 0;
+            isCallMuted = false;
+
+            document.getElementById('call-mute-btn').classList.remove('muted');
+            document.getElementById('call-mute-btn').innerText = "🎤 МИКРОФОН";
+
+            audioEngine.playBeep();
+
+            publishPayload({
+                type: 'system',
+                content: `📞 Сталкер [${myUsername}] запрашивает голосовое соединение...`
+            });
+
+            setTimeout(() => {
+                statusText.innerText = "В ЭФИРЕ (СОЕДИНЕНО)";
+                callTimerInterval = setInterval(() => {
+                    callSeconds++;
+                    const mins = String(Math.floor(callSeconds / 60)).padStart(2, '0');
+                    const secs = String(callSeconds % 60).padStart(2, '0');
+                    timerText.innerText = `${mins}:${secs}`;
+                }, 1000);
+            }, 2000);
+        }
+
+        function toggleCallMute() {
+            if (!callStream) return;
+            isCallMuted = !isCallMuted;
+            callStream.getAudioTracks().forEach(track => track.enabled = !isCallMuted);
+            
+            const muteBtn = document.getElementById('call-mute-btn');
+            if (isCallMuted) {
+                muteBtn.classList.add('muted');
+                muteBtn.innerText = "🔇 ВЫКЛЮЧЕН";
+            } else {
+                muteBtn.classList.remove('muted');
+                muteBtn.innerText = "🎤 МИКРОФОН";
+            }
+            audioEngine.playClick();
+        }
+
+        function endCall() {
+            audioEngine.playClick();
+            if (callTimerInterval) clearInterval(callTimerInterval);
+            
+            if (callStream) {
+                callStream.getTracks().forEach(track => track.stop());
+                callStream = null;
+            }
+
+            document.getElementById('call-overlay').classList.remove('active');
+
+            publishPayload({
+                type: 'system',
+                content: `⛔ Сеанс связи завершен сталкером [${myUsername}].`
+            });
+        }
+
+        /* ================= 6. ОТПРАВКА И ПОЛУЧЕНИЕ ================= */
         function publishPayload(data) {
             if (!mqttClient || !mqttClient.connected) {
                 alert("Нет связи с радиовышкой! Переподключение...");
@@ -803,7 +1015,6 @@
             input.value = '';
         }
 
-        /* Обработка изображений и сжатие на Canvas */
         function handleFileSelect(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -858,7 +1069,6 @@
             reader.readAsDataURL(file);
         }
 
-        /* Голосовые сообщения */
         async function toggleRecording() {
             const btn = document.getElementById('rec-btn');
 
@@ -889,7 +1099,7 @@
                     recTimer = setInterval(() => {
                         recSeconds++;
                         if (recSeconds >= 60) {
-                            toggleRecording(); // Лимит 1 минута
+                            toggleRecording();
                         }
                     }, 1000);
 
@@ -906,7 +1116,7 @@
             }
         }
 
-        /* ================= 6. ОТОБРАЖЕНИЕ В ИНТЕРФЕЙСЕ ================= */
+        /* ================= 7. ОТОБРАЖЕНИЕ В ИНТЕРФЕЙСЕ ================= */
         const renderedMsgs = new Set();
 
         function renderIncomingMessage(data) {
