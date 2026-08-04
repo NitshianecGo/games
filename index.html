@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>METRO NET // ПРЯМАЯ ЛИНИЯ СВЯЗИ (WEBRTC)</title>
+    <title>METRO NET // РАЦИЯ И АУДИОЗВОНОК (WEBRTC)</title>
     <!-- Шрифт терминала Metro -->
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
-    <!-- MQTT.js для быстрых сигналов -->
+    <!-- MQTT.js для моментальной сигнализации -->
     <script src="https://unpkg.com/mqtt@5.3.0/dist/mqtt.min.js"></script>
     <style>
         :root {
@@ -28,6 +28,7 @@
             padding: 0;
             user-select: none;
             -webkit-user-select: none;
+            -webkit-touch-callout: none;
         }
 
         body {
@@ -257,6 +258,61 @@
             flex-shrink: 0;
         }
 
+        /* Блок с 2 Кнопками связи */
+        .controls-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        .mode-btn {
+            height: 46px;
+            background: #0b0e11;
+            border: 1px solid var(--metro-border);
+            color: var(--metro-amber);
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 4px;
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.8);
+            transition: all 0.15s ease;
+            touch-action: manipulation;
+        }
+
+        /* Стиль для Рации (Зажатие) */
+        .mode-btn.ptt-mode {
+            border-color: var(--metro-amber);
+        }
+        .mode-btn.ptt-mode.active-ptt {
+            background: var(--metro-amber);
+            color: var(--metro-dark);
+            box-shadow: 0 0 15px var(--metro-amber-glow);
+        }
+
+        /* Стиль для Звонка (1 Клик) */
+        .mode-btn.call-mode {
+            border-color: #33aaff;
+            color: #33aaff;
+        }
+        .mode-btn.call-mode.active-call {
+            background: var(--metro-red);
+            border-color: var(--metro-red);
+            color: white;
+            box-shadow: 0 0 15px rgba(255, 51, 51, 0.6);
+            animation: pulse-call 1.5s infinite alternate;
+        }
+
+        @keyframes pulse-call {
+            0% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+
         .input-row { display: flex; gap: 6px; align-items: center; }
 
         .input-btn {
@@ -271,32 +327,6 @@
         }
 
         #chat-message-input { flex: 1; height: 38px; font-size: 13px; }
-
-        .call-btn {
-            width: 100%;
-            height: 48px;
-            background: #0b0e11;
-            border: 2px solid var(--metro-amber);
-            color: var(--metro-amber);
-            font-family: inherit;
-            font-size: 14px;
-            font-weight: bold;
-            letter-spacing: 1px;
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
-            transition: all 0.2s ease;
-        }
-
-        .call-btn.active-call {
-            background: var(--metro-red);
-            border-color: var(--metro-red);
-            color: white;
-            box-shadow: 0 0 15px rgba(255, 51, 51, 0.6);
-        }
 
         #toast {
             position: fixed;
@@ -316,7 +346,7 @@
 
     <div id="toast">СКОПИРОВАНО В БУФЕР</div>
 
-    <!-- Скрытый элемент для воспроизведения чистейшего голоса -->
+    <!-- Аудио элемент для прямого воспроизведения голоса -->
     <audio id="remote-audio" autoplay style="display:none;"></audio>
 
     <!-- 1. Экран Загрузки -->
@@ -329,7 +359,7 @@
     <!-- 2. Экран Входа -->
     <div id="screen-login" class="screen">
         <div class="login-card">
-            <div class="metro-title">ПРЯМАЯ ЛИНИЯ</div>
+            <div class="metro-title">ЛИНИЯ СВЯЗИ</div>
             <div class="field-group">
                 <label for="username-input">Позывной сталкера</label>
                 <input type="text" id="username-input" class="metro-input" placeholder="Артем" maxlength="15" autocomplete="off">
@@ -344,7 +374,7 @@
         </div>
     </div>
 
-    <!-- 3. Экран Чата и Звонка -->
+    <!-- 3. Экран Чата и Управления -->
     <div id="screen-chat" class="screen">
         <div class="chat-header">
             <div class="channel-info">
@@ -358,17 +388,23 @@
         </div>
 
         <div id="call-banner" class="call-banner">
-            📞 АКТИВНОЕ СОЕДИНЕНИЕ WEBRTC (ПРЯМОЙ ЭФИР)
+            🎙️ ЭФИР АКТИВЕН: <span id="banner-mode-text">ПОДКЛЮЧЕНО</span>
         </div>
 
         <div id="chat-messages" class="chat-body">
-            <div class="msg system">Канал без VPN. Нажмите «НАЧАТЬ ЗВОНОК» — у собеседника автоматически включится аудиосвязь.</div>
+            <div class="msg system">Прямая линия связи РФ ⇄ США активна без VPN. Выберите удобный режим разговора ниже.</div>
         </div>
 
         <div class="chat-input-panel">
-            <button id="call-toggle-btn" class="call-btn" onclick="toggleCall()">
-                📞 НАЧАТЬ ЗВОНОК (БЕЗ VPN)
-            </button>
+            <!-- 2 КНОПКИ УПРАВЛЕНИЯ -->
+            <div class="controls-row">
+                <button id="ptt-btn" class="mode-btn ptt-mode">
+                    📻 РАЦИЯ<br>(ЗАЖАТЬ)
+                </button>
+                <button id="call-toggle-btn" class="mode-btn call-mode" onclick="toggleCall()">
+                    📞 ЗВОНОК<br>(1 НАЖАТИЕ)
+                </button>
+            </div>
 
             <div class="input-row">
                 <input type="text" id="chat-message-input" class="metro-input" placeholder="Сообщение..." onkeypress="handleKeyPress(event)">
@@ -378,8 +414,7 @@
     </div>
 
     <script>
-        /* ================= 1. КОНФИГУРАЦИЯ И СЕРВЕРЫ ОБХОДА БЛОКИРОВОК ================= */
-        // Публичные STUN-серверы Google & Twilio для создания прямого P2P соединения РФ-США
+        /* ================= 1. СЕРВЕРЫ ОБХОДА БЛОКИРОВОК (STUN/WebRTC) ================= */
         const iceServersConfig = {
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
@@ -411,10 +446,34 @@
 
         let currentRoom = cleanRoomName(rawRoom);
 
-        /* WebRTC переменные */
+        /* Состояние WebRTC и Режимов */
         let peerConnection = null;
         let localStream = null;
-        let isInCall = false;
+        let isPTTActive = false;
+        let isCallActive = false;
+
+        /* Звуковые эффекты терминала */
+        class MetroSoundEngine {
+            constructor() { this.ctx = null; }
+            init() {
+                if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+            }
+            playBeep(freq1, freq2, duration) {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq1, now);
+                if (freq2) osc.frequency.setValueAtTime(freq2, now + duration / 2);
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(now); osc.stop(now + duration);
+            }
+        }
+        const audioEngine = new MetroSoundEngine();
 
         /* ================= 2. ИНИЦИАЛИЗАЦИЯ ================= */
         window.onload = () => {
@@ -430,6 +489,16 @@
                     startSession();
                 }
             }, 800);
+
+            // Настройка зажатия для Кнопки 1 (Рация)
+            const pttBtn = document.getElementById('ptt-btn');
+            pttBtn.addEventListener('mousedown', startPTT);
+            pttBtn.addEventListener('mouseup', stopPTT);
+            pttBtn.addEventListener('mouseleave', stopPTT);
+
+            pttBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startPTT(); }, { passive: false });
+            pttBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopPTT(); }, { passive: false });
+            pttBtn.addEventListener('touchcancel', (e) => { e.preventDefault(); stopPTT(); }, { passive: false });
         };
 
         function startSession() {
@@ -453,7 +522,7 @@
             connectMQTT();
         }
 
-        /* ================= 3. МГНОВЕННАЯ СИГНАЛИЗАЦИЯ СВЯЗИ ================= */
+        /* ================= 3. СИГНАЛИЗАЦИЯ И ПОДКЛЮЧЕНИЕ ================= */
         function connectMQTT() {
             const clientId = 'metro_' + myUserId + '_' + Math.random().toString(36).substr(2, 4);
 
@@ -461,7 +530,7 @@
                 mqttClient = mqtt.connect(BROKERS[currentBrokerIdx], { clientId: clientId, keepalive: 30 });
 
                 mqttClient.on('connect', () => {
-                    const topic = `metro/webrtc/v7/${currentRoom}`;
+                    const topic = `metro/webrtc/v8/${currentRoom}`;
                     mqttClient.subscribe(topic, { qos: 1 }, (err) => {
                         if (!err) {
                             showChatScreen();
@@ -473,12 +542,12 @@
                 mqttClient.on('message', (topic, message) => {
                     try {
                         const payload = JSON.parse(message.toString());
-                        if (payload.uid === myUserId) return; // Игнорируем свои сообщения
+                        if (payload.uid === myUserId) return;
 
                         if (payload.type === 'rtc_offer') handleOffer(payload);
                         else if (payload.type === 'rtc_answer') handleAnswer(payload);
                         else if (payload.type === 'rtc_candidate') handleCandidate(payload);
-                        else if (payload.type === 'rtc_end') stopCall(false);
+                        else if (payload.type === 'status_update') handleRemoteStatus(payload);
                         else renderIncomingMessage(payload);
                     } catch(e) { console.error(e); }
                 });
@@ -500,62 +569,125 @@
             document.getElementById('display-room').innerText = '#' + currentRoom;
         }
 
-        /* ================= 4. ДВИЖОК WEBRTC (ПРЯМОЙ ЭФИР РЕСПУБЛИКА-США) ================= */
+        /* ================= 4. WEBRTC И УПРАВЛЕНИЕ МИКРОФОНОМ ================= */
+        async function ensureAudioInit() {
+            if (!localStream) {
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+                });
+                setMicEnabled(false); // По умолчанию микрофон закрыт
+            }
+
+            if (!peerConnection) {
+                peerConnection = new RTCPeerConnection(iceServersConfig);
+
+                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+                peerConnection.ontrack = (event) => {
+                    document.getElementById('remote-audio').srcObject = event.streams[0];
+                };
+
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        publishPayload({ type: 'rtc_candidate', candidate: event.candidate });
+                    }
+                };
+
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                publishPayload({ type: 'rtc_offer', offer: offer });
+            }
+        }
+
+        function setMicEnabled(enabled) {
+            if (localStream && localStream.getAudioTracks().length > 0) {
+                localStream.getAudioTracks()[0].enabled = enabled;
+            }
+        }
+
+        /* --- КНОПКА 1: РАЦИЯ (PUSH-TO-TALK / ЗАЖАТИЕ) --- */
+        async function startPTT() {
+            if (isPTTActive || isCallActive) return;
+            isPTTActive = true;
+
+            document.getElementById('ptt-btn').classList.add('active-ptt');
+            audioEngine.playBeep(800, 1200, 0.08);
+
+            await ensureAudioInit();
+            setMicEnabled(true);
+
+            updateBanner(true, `РАЦИЯ: ${myUsername} говорит...`);
+            publishPayload({ type: 'status_update', mode: 'ptt', active: true, speaker: myUsername });
+        }
+
+        function stopPTT() {
+            if (!isPTTActive) return;
+            isPTTActive = false;
+
+            document.getElementById('ptt-btn').classList.remove('active-ptt');
+            audioEngine.playBeep(600, 400, 0.1);
+
+            if (!isCallActive) {
+                setMicEnabled(false);
+                updateBanner(false);
+            }
+
+            publishPayload({ type: 'status_update', mode: 'ptt', active: false, speaker: myUsername });
+        }
+
+        /* --- КНОПКА 2: ЗВОНОК (TOGGLE CALL / 1 НАЖАТИЕ) --- */
         async function toggleCall() {
-            if (!isInCall) {
-                await startCall(true);
+            if (!isCallActive) {
+                // Включаем Звонок
+                isCallActive = true;
+                document.getElementById('call-toggle-btn').classList.add('active-call');
+                document.getElementById('call-toggle-btn').innerHTML = '🔴 ЗВОНОК<br>(В ЭФИРЕС)';
+                audioEngine.playBeep(900, 1400, 0.12);
+
+                await ensureAudioInit();
+                setMicEnabled(true);
+
+                updateBanner(true, `АУДИОЗВОНОК (АКТИВЕН)`);
+                publishPayload({ type: 'status_update', mode: 'call', active: true, speaker: myUsername });
             } else {
-                stopCall(true);
+                // Выключаем Звонок
+                isCallActive = false;
+                document.getElementById('call-toggle-btn').classList.remove('active-call');
+                document.getElementById('call-toggle-btn').innerHTML = '📞 ЗВОНОК<br>(1 НАЖАТИЕ)';
+                audioEngine.playBeep(500, 300, 0.12);
+
+                if (!isPTTActive) {
+                    setMicEnabled(false);
+                    updateBanner(false);
+                }
+
+                publishPayload({ type: 'status_update', mode: 'call', active: false, speaker: myUsername });
             }
         }
 
-        async function createPeerConnection() {
-            peerConnection = new RTCPeerConnection(iceServersConfig);
-
-            // Получаем доступ к микрофону с шумоподавлением и эхоподавлением
-            localStream = await navigator.mediaDevices.getUserMedia({
-                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-            });
-
-            // Добавляем микрофон в прямой поток
-            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-            // Когда прилетает голос собеседника -> выводим в динамики
-            peerConnection.ontrack = (event) => {
-                const remoteAudio = document.getElementById('remote-audio');
-                remoteAudio.srcObject = event.streams[0];
-            };
-
-            // Пересылаем сетевые данные (ICE) второму абоненту
-            peerConnection.onicecandidate = (event) => {
-                if (event.candidate) {
-                    publishPayload({ type: 'rtc_candidate', candidate: event.candidate });
-                }
-            };
-        }
-
-        async function startCall(isInitiator) {
-            try {
-                isInCall = true;
-                updateCallUI(true);
-                await createPeerConnection();
-
-                if (isInitiator) {
-                    const offer = await peerConnection.createOffer();
-                    await peerConnection.setLocalDescription(offer);
-                    publishPayload({ type: 'rtc_offer', offer: offer });
-                }
-            } catch (e) {
-                alert("Ошибка доступа к микрофону!");
-                stopCall(false);
-            }
-        }
-
+        /* Обработка WebRTC сигналов со стороны второго собеседника */
         async function handleOffer(payload) {
-            if (!isInCall) {
-                isInCall = true;
-                updateCallUI(true);
-                await createPeerConnection();
+            if (!peerConnection) {
+                peerConnection = new RTCPeerConnection(iceServersConfig);
+
+                if (!localStream) {
+                    localStream = await navigator.mediaDevices.getUserMedia({
+                        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+                    });
+                    setMicEnabled(false);
+                }
+
+                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+                peerConnection.ontrack = (event) => {
+                    document.getElementById('remote-audio').srcObject = event.streams[0];
+                };
+
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        publishPayload({ type: 'rtc_candidate', candidate: event.candidate });
+                    }
+                };
             }
 
             await peerConnection.setRemoteDescription(new RTCSessionDescription(payload.offer));
@@ -565,50 +697,36 @@
         }
 
         async function handleAnswer(payload) {
-            if (peerConnection) {
+            if (peerConnection && peerConnection.signalingState !== 'stable') {
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(payload.answer));
             }
         }
 
         async function handleCandidate(payload) {
             if (peerConnection) {
-                try {
-                    await peerConnection.addIceCandidate(new RTCIceCandidate(payload.candidate));
-                } catch(e) {}
+                try { await peerConnection.addIceCandidate(new RTCIceCandidate(payload.candidate)); } catch(e){}
             }
         }
 
-        function stopCall(sendSignal = true) {
-            isInCall = false;
-            updateCallUI(false);
-
-            if (sendSignal) publishPayload({ type: 'rtc_end' });
-
-            if (localStream) {
-                localStream.getTracks().forEach(track => track.stop());
-                localStream = null;
+        function handleRemoteStatus(payload) {
+            if (payload.active) {
+                const modeName = payload.mode === 'ptt' ? 'РАЦИЯ' : 'АУДИОЗВОНОК';
+                updateBanner(true, `${modeName}: говорит ${payload.speaker}`);
+                audioEngine.playBeep(800, 1000, 0.06);
+            } else {
+                if (!isCallActive && !isPTTActive) {
+                    updateBanner(false);
+                }
             }
-
-            if (peerConnection) {
-                peerConnection.close();
-                peerConnection = null;
-            }
-
-            const remoteAudio = document.getElementById('remote-audio');
-            remoteAudio.srcObject = null;
         }
 
-        function updateCallUI(active) {
-            const btn = document.getElementById('call-toggle-btn');
+        function updateBanner(show, text = '') {
             const banner = document.getElementById('call-banner');
-
-            if (active) {
-                btn.classList.add('active-call');
-                btn.innerText = '🔴 В ЭФИРЕ (НАЖМИТЕ ЧТОБЫ ЗАВЕРШИТЬ)';
+            const textElem = document.getElementById('banner-mode-text');
+            if (show) {
+                textElem.innerText = text;
                 banner.classList.add('active');
             } else {
-                btn.classList.remove('active-call');
-                btn.innerText = '📞 НАЧАТЬ ЗВОНОК (БЕЗ VPN)';
                 banner.classList.remove('active');
             }
         }
@@ -623,7 +741,7 @@
                 timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 ...data
             };
-            mqttClient.publish(`metro/webrtc/v7/${currentRoom}`, JSON.stringify(fullPayload), { qos: 1 });
+            mqttClient.publish(`metro/webrtc/v8/${currentRoom}`, JSON.stringify(fullPayload), { qos: 1 });
         }
 
         function handleKeyPress(e) { if (e.key === 'Enter') sendTextMessage(); }
