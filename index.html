@@ -129,249 +129,286 @@
         </div>
     </div>
 
-    <script>
-        /* ================= ЗВУКОВОЙ ДВИЖОК (Web Audio API) ================= */
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playClick() {
-            if(audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.type = 'square'; osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-            osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-        }
+   <script>
+    /* ================= ЗВУКОВОЙ ДВИЖОК (Web Audio API) ================= */
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playClick() {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.type = 'square'; osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+    }
 
-        /* ================= ПЕРЕМЕННЫЕ ================= */
-        let peer = null;
-        let connections = []; // Поддерживаем массив соединений
-        let myName = localStorage.getItem('metro_name') || '';
-        let roomId = new URLSearchParams(window.location.search).get('room');
-        let isHost = !roomId;
+    /* ================= ПЕРЕМЕННЫЕ ================= */
+    let peer = null;
+    let connections = [];
+    let myName = localStorage.getItem('metro_name') || '';
+    let roomId = new URLSearchParams(window.location.search).get('room');
+    let isHost = !roomId;
+    
+    let mediaRecorder;
+    let audioChunks = [];
+    let recordTimeout;
+
+    /* ================= ИНИЦИАЛИЗАЦИЯ ================= */
+    window.onload = () => {
+        setTimeout(() => {
+            document.getElementById('loading-screen').classList.remove('active');
+            document.getElementById('login-screen').classList.add('active');
+            
+            if (myName) document.getElementById('username').value = myName;
+            
+            if (isHost) {
+                document.getElementById('btn-action').innerText = "СОЗДАТЬ КОМНАТУ";
+            } else {
+                document.getElementById('btn-action').innerText = "ВОЙТИ В КАНАЛ";
+            }
+        }, 1200);
+    };
+
+    /* ================= ЛОГИКА КОМНАТЫ И PEERJS ================= */
+    function joinOrCreateRoom() {
+        playClick();
+        const nameInput = document.getElementById('username').value.trim();
+        if (!nameInput) return alert("Введите позывной!");
         
-        let mediaRecorder;
-        let audioChunks = [];
-        let recordTimeout;
+        myName = nameInput;
+        localStorage.setItem('metro_name', myName);
+        
+        document.getElementById('login-screen').classList.remove('active');
+        document.getElementById('loading-screen').classList.add('active');
+        document.getElementById('loading-text').innerText = "ПОИСК ЧАСТОТЫ (STUN)...";
 
-        /* ================= ИНИЦИАЛИЗАЦИЯ ================= */
-        window.onload = () => {
-            setTimeout(() => {
-                document.getElementById('loading-screen').classList.remove('active');
-                document.getElementById('login-screen').classList.add('active');
-                
-                if (myName) document.getElementById('username').value = myName;
-                
-                if (isHost) {
-                    document.getElementById('btn-action').innerText = "СОЗДАТЬ КОМНАТУ";
-                } else {
-                    document.getElementById('btn-action').innerText = "ВОЙТИ В КАНАЛ";
-                }
-            }, 1500); // Имитация загрузки ЭЛТ
+        if (isHost) {
+            roomId = 'metro-' + Math.random().toString(36).substr(2, 9);
+            initPeer(roomId, () => {
+                window.history.replaceState({}, '', `?room=${roomId}`);
+                showChat();
+            });
+        } else {
+            initPeer(null, () => {
+                document.getElementById('loading-text').innerText = "ПОДКЛЮЧЕНИЕ К ХОСТУ...";
+                const conn = peer.connect(roomId, { reliable: true });
+                setupConnection(conn);
+                showChat();
+            });
+        }
+    }
+
+    function initPeer(id, callback) {
+        // Конфигурация со STUN-серверами Google для пробития NAT/роутеров
+        const peerConfig = {
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:stun3.l.google.com:19302' },
+                    { urls: 'stun:stun4.l.google.com:19302' }
+                ]
+            }
         };
 
-        /* ================= ЛОГИКА КОМНАТЫ И PEERJS ================= */
-        function joinOrCreateRoom() {
-            playClick();
-            const nameInput = document.getElementById('username').value.trim();
-            if (!nameInput) return alert("Введите позывной!");
-            
-            myName = nameInput;
-            localStorage.setItem('metro_name', myName);
-            
-            document.getElementById('login-screen').classList.remove('active');
-            document.getElementById('loading-screen').classList.add('active');
-            document.getElementById('loading-text').innerText = "НАСТРОЙКА ЧАСТОТЫ...";
+        peer = id ? new Peer(id, peerConfig) : new Peer(peerConfig);
 
-            // Инициализация Peer
-            if (isHost) {
-                // Хост генерирует ID
-                roomId = 'metro-' + Math.random().toString(36).substr(2, 9);
-                initPeer(roomId, () => {
-                    window.history.replaceState({}, '', `?room=${roomId}`);
-                    showChat();
-                });
-            } else {
-                // Гость подключается по ID из URL
-                initPeer(null, () => {
-                    const conn = peer.connect(roomId);
-                    setupConnection(conn);
-                    showChat();
-                });
-            }
-        }
+        peer.on('open', (peerId) => {
+            console.log('Узел инициализирован ID:', peerId);
+            callback();
+        });
 
-        function initPeer(id, callback) {
-            peer = id ? new Peer(id) : new Peer();
-            
-            peer.on('open', (peerId) => {
-                callback();
-            });
+        peer.on('connection', (conn) => {
+            setupConnection(conn);
+        });
 
-            peer.on('connection', (conn) => {
-                setupConnection(conn);
-            });
-
-            peer.on('error', (err) => {
-                console.error(err);
-                alert("Ошибка связи. Возможно канал разрушен.");
-            });
-        }
-
-        function setupConnection(conn) {
-            conn.on('open', () => {
-                connections.push(conn);
-                addSystemMessage("Новый сталкер на частоте.");
-            });
-
-            conn.on('data', (data) => {
-                displayMessage(data.name, data.type, data.content, false);
-                // Если мы хост, пересылаем сообщение всем остальным (чтобы работал групповой чат)
-                if (isHost) {
-                    broadcast(data, conn.peer);
-                }
-            });
-
-            conn.on('close', () => {
-                connections = connections.filter(c => c.peer !== conn.peer);
-                addSystemMessage("Сталкер покинул частоту.");
-            });
-        }
-
-        function broadcast(data, excludePeerId = null) {
-            connections.forEach(conn => {
-                if (conn.peer !== excludePeerId && conn.open) {
-                    conn.send(data);
-                }
-            });
-        }
-
-        /* ================= ИНТЕРФЕЙС ЧАТА ================= */
-        function showChat() {
+        peer.on('error', (err) => {
+            console.error('PeerJS Error:', err);
             document.getElementById('loading-screen').classList.remove('active');
-            document.getElementById('chat-screen').classList.add('active');
-            document.getElementById('display-name').innerText = myName;
+            document.getElementById('login-screen').classList.add('active');
             
-            const link = window.location.href;
-            document.getElementById('invite-link-box').innerText = "КООРДИНАТЫ (URL): " + link;
+            if (err.type === 'peer-unavailable') {
+                alert("ОШИБКА: Комната не найдена или Создатель вышел из сети.");
+            } else {
+                alert("Ошибка соединения: " + err.type);
+            }
+        });
+    }
+
+    function setupConnection(conn) {
+        conn.on('open', () => {
+            if (!connections.some(c => c.peer === conn.peer)) {
+                connections.push(conn);
+            }
+            addSystemMessage(`Сталкер вошел в канал.`);
+        });
+
+        conn.on('data', (data) => {
+            displayMessage(data.name, data.type, data.content, false);
+            // Если мы создатель (хост), ретранслируем сообщение другим участникам
+            if (isHost) {
+                broadcast(data, conn.peer);
+            }
+        });
+
+        conn.on('close', () => {
+            connections = connections.filter(c => c.peer !== conn.peer);
+            addSystemMessage("Сталкер покинул частоту.");
+        });
+
+        conn.on('error', (err) => {
+            console.error("Ошибка канала:", err);
+        });
+    }
+
+    function broadcast(data, excludePeerId = null) {
+        connections.forEach(conn => {
+            if (conn.peer !== excludePeerId && conn.open) {
+                conn.send(data);
+            }
+        });
+    }
+
+    /* ================= ИНТЕРФЕЙС ЧАТА ================= */
+    function showChat() {
+        document.getElementById('loading-screen').classList.remove('active');
+        document.getElementById('chat-screen').classList.add('active');
+        document.getElementById('display-name').innerText = myName;
+        
+        const link = window.location.href;
+        document.getElementById('invite-link-box').innerText = "КООРДИНАТЫ (URL): " + link;
+    }
+
+    function copyInviteLink() {
+        playClick();
+        navigator.clipboard.writeText(window.location.href);
+        alert("Координаты скопированы! Отправьте ссылку другу.");
+    }
+
+    function addSystemMessage(text) {
+        const box = document.getElementById('chat-box');
+        box.innerHTML += `<div class="message other"><div class="msg-name">СИСТЕМА</div>${text}</div>`;
+        box.scrollTop = box.scrollHeight;
+    }
+
+    /* ================= ОТПРАВКА ДАННЫХ ================= */
+    function handleEnter(e) { if (e.key === 'Enter') sendTextMessage(); }
+
+    function sendTextMessage() {
+        const input = document.getElementById('msg-input');
+        const text = input.value.trim();
+        if (!text) return;
+        
+        if (connections.length === 0) {
+            alert("Нет активных подключений! Подождите или пригласите друга по ссылке.");
+            return;
         }
 
-        function copyInviteLink() {
-            playClick();
-            navigator.clipboard.writeText(window.location.href);
-            alert("Координаты скопированы. Отправьте ссылку сталкеру.");
+        playClick();
+        const data = { name: myName, type: 'text', content: text };
+        broadcast(data);
+        displayMessage(myName, 'text', text, true);
+        input.value = '';
+    }
+
+    function handleFileUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (connections.length === 0) {
+            alert("Нет активных подключений в канале.");
+            return;
         }
 
-        function addSystemMessage(text) {
-            const box = document.getElementById('chat-box');
-            box.innerHTML += `<div class="message other"><div class="msg-name">СИСТЕМА</div>${text}</div>`;
-            box.scrollTop = box.scrollHeight;
+        if (file.size > 10 * 1024 * 1024) {
+            alert("Файл слишком большой. Максимум 10MB.");
+            return;
         }
 
-        /* ================= ОТПРАВКА ДАННЫХ ================= */
-        function handleEnter(e) { if (e.key === 'Enter') sendTextMessage(); }
-
-        function sendTextMessage() {
-            const input = document.getElementById('msg-input');
-            const text = input.value.trim();
-            if (!text) return;
-            
-            playClick();
-            const data = { name: myName, type: 'text', content: text };
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const type = file.type.startsWith('image') ? 'image' : 'video';
+            const data = { name: myName, type: type, content: event.target.result };
             broadcast(data);
-            displayMessage(myName, 'text', text, true);
-            input.value = '';
+            displayMessage(myName, type, event.target.result, true);
+        };
+        reader.readAsDataURL(file);
+    }
+
+    /* ================= ЗАПИСЬ АУДИО ================= */
+    async function startRecording() {
+        if (connections.length === 0) {
+            alert("Нет активных подключений в канале.");
+            return;
         }
 
-        function handleFileUpload(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            // Ограничение для WebRTC без сервера (10MB)
-            if (file.size > 10 * 1024 * 1024) {
-                alert("Файл слишком тяжелый. Максимум 10MB.");
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const type = file.type.startsWith('image') ? 'image' : 'video';
-                const data = { name: myName, type: type, content: event.target.result };
-                broadcast(data);
-                displayMessage(myName, type, event.target.result, true);
-            };
-            reader.readAsDataURL(file);
-        }
-
-        /* ================= ЗАПИСЬ АУДИО ================= */
-        async function startRecording() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
-                audioChunks = [];
-                
-                document.getElementById('record-btn').classList.add('recording');
-
-                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                mediaRecorder.onstop = () => {
-                    document.getElementById('record-btn').classList.remove('recording');
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                    
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        const data = { name: myName, type: 'audio', content: event.target.result };
-                        broadcast(data);
-                        displayMessage(myName, 'audio', event.target.result, true);
-                    };
-                    reader.readAsDataURL(audioBlob);
-                    
-                    stream.getTracks().forEach(track => track.stop()); // Выключаем микрофон
-                };
-
-                mediaRecorder.start();
-                
-                // Ограничение 60 секунд
-                recordTimeout = setTimeout(() => {
-                    if (mediaRecorder.state === 'recording') stopRecording();
-                }, 60000);
-
-            } catch (err) {
-                alert("Нет доступа к микрофону.");
-            }
-        }
-
-        function stopRecording() {
-            if (mediaRecorder && mediaRecorder.state === 'recording') {
-                mediaRecorder.stop();
-                clearTimeout(recordTimeout);
-            }
-        }
-
-        /* ================= ОТОБРАЖЕНИЕ СООБЩЕНИЙ ================= */
-        function displayMessage(name, type, content, isSelf) {
-            const box = document.getElementById('chat-box');
-            const alignmentClass = isSelf ? 'self' : 'other';
-            let innerHTML = `<div class="msg-name">${name}</div>`;
-
-            if (type === 'text') {
-                innerHTML += `<div>${content}</div>`;
-            } else if (type === 'image') {
-                innerHTML += `<div class="media-content"><img src="${content}"></div>`;
-            } else if (type === 'video') {
-                innerHTML += `<div class="media-content"><video src="${content}" controls></video></div>`;
-            } else if (type === 'audio') {
-                innerHTML += `<div class="media-content"><audio src="${content}" controls></audio></div>`;
-            }
-
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `message ${alignmentClass}`;
-            msgDiv.innerHTML = innerHTML;
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
             
-            box.appendChild(msgDiv);
-            box.scrollTop = box.scrollHeight;
+            document.getElementById('record-btn').classList.add('recording');
+
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.onstop = () => {
+                document.getElementById('record-btn').classList.remove('recording');
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const data = { name: myName, type: 'audio', content: event.target.result };
+                    broadcast(data);
+                    displayMessage(myName, 'audio', event.target.result, true);
+                };
+                reader.readAsDataURL(audioBlob);
+                
+                stream.getTracks().forEach(track => track.stop());
+            };
+
+            mediaRecorder.start();
+            
+            recordTimeout = setTimeout(() => {
+                if (mediaRecorder.state === 'recording') stopRecording();
+            }, 60000);
+
+        } catch (err) {
+            alert("Ошибка микрофона: проверьте разрешения браузера.");
+        }
+    }
+
+    function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+            clearTimeout(recordTimeout);
+        }
+    }
+
+    /* ================= ОТОБРАЖЕНИЕ СООБЩЕНИЙ ================= */
+    function displayMessage(name, type, content, isSelf) {
+        const box = document.getElementById('chat-box');
+        const alignmentClass = isSelf ? 'self' : 'other';
+        let innerHTML = `<div class="msg-name">${name}</div>`;
+
+        if (type === 'text') {
+            innerHTML += `<div>${content}</div>`;
+        } else if (type === 'image') {
+            innerHTML += `<div class="media-content"><img src="${content}"></div>`;
+        } else if (type === 'video') {
+            innerHTML += `<div class="media-content"><video src="${content}" controls></video></div>`;
+        } else if (type === 'audio') {
+            innerHTML += `<div class="media-content"><audio src="${content}" controls></audio></div>`;
         }
 
-    </script>
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${alignmentClass}`;
+        msgDiv.innerHTML = innerHTML;
+        
+        box.appendChild(msgDiv);
+        box.scrollTop = box.scrollHeight;
+    }
+</script>
 </body>
 </html>
