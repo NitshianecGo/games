@@ -4,19 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>МЕТРО ЭФИР — Рация & Связь</title>
-    <!-- MQTT.js Библиотека -->
+    <!-- MQTT.js для связи -->
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <!-- Three.js для 3D тоннеля поезда -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
     <style>
         :root {
-            --bg-color: #0d0f12;
-            --panel-bg: #161a20;
+            --bg-color: #080a0c;
+            --panel-bg: rgba(18, 22, 28, 0.75);
+            --panel-border: rgba(255, 153, 0, 0.25);
             --accent-gold: #ff9900;
+            --accent-gold-glow: rgba(255, 153, 0, 0.4);
             --accent-green: #00ff66;
             --accent-red: #ff3333;
-            --text-main: #e0e6ed;
-            --text-muted: #6c7a89;
-            --border-color: #2a323d;
-            --radius: 8px;
+            --text-main: #e2e8f0;
+            --text-muted: #64748b;
+            --radius: 10px;
         }
 
         * {
@@ -35,6 +39,20 @@
             justify-content: center;
             align-items: center;
             overflow: hidden;
+            position: relative;
+        }
+
+        /* CRT Сканлайны для атмосферы старого монитора */
+        body::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            z-index: 999;
+            background-size: 100% 3px, 6px 100%;
+            pointer-events: none;
+            opacity: 0.6;
         }
 
         /* Оболочка экранов */
@@ -44,133 +62,229 @@
             max-width: 480px;
             height: 100vh;
             background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             flex-direction: column;
             position: relative;
-            box-shadow: 0 0 30px rgba(0,0,0,0.8);
-            border-left: 1px solid var(--border-color);
-            border-right: 1px solid var(--border-color);
+            z-index: 10;
+            box-shadow: 0 0 50px rgba(0,0,0,0.9), inset 0 0 2px rgba(255,255,255,0.1);
+            border-left: 1px solid rgba(255,255,255,0.08);
+            border-right: 1px solid rgba(255,255,255,0.08);
+            overflow: hidden;
         }
 
         .screen.active {
             display: flex;
         }
 
-        /* 1. ЭКРАН ЗАГРУЗКИ */
+        /* ================= 1. 3D ЭКРАН ЗАГРУЗКИ (ВАГОН / ТОННЕЛЬ) ================= */
         #screen-loading {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 100;
+            background: #000;
             justify-content: center;
             align-items: center;
+        }
+
+        #webgl-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1;
+        }
+
+        /* Накладка грязного стекла поверх 3D кадра */
+        .glass-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 2;
+            pointer-events: none;
+            background: 
+                radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.85) 100%),
+                repeating-linear-gradient(45deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 2px, transparent 2px, transparent 4px);
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.9);
+        }
+
+        /* Царапины и капли на стекле */
+        .glass-grime {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 3;
+            pointer-events: none;
+            opacity: 0.5;
+            background-image: radial-gradient(rgba(255,255,255,0.1) 1px, transparent 0);
+            background-size: 24px 24px;
+            filter: drop-shadow(0px 0px 2px rgba(0,0,0,0.8));
+        }
+
+        .loading-ui {
+            position: relative;
+            z-index: 10;
             text-align: center;
-            padding: 20px;
+            padding: 30px;
+            background: rgba(10, 13, 16, 0.85);
+            border: 1px solid var(--panel-border);
+            border-radius: var(--radius);
+            box-shadow: 0 0 30px rgba(0,0,0,0.8), 0 0 15px var(--accent-gold-glow);
+            backdrop-filter: blur(8px);
+            max-width: 80%;
+            animation: uiPulse 3s infinite alternate;
         }
 
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 3px solid var(--border-color);
-            border-top-color: var(--accent-gold);
-            border-radius: 50%;
-            animation: spin 1s infinite linear;
-            margin-bottom: 20px;
+        @keyframes uiPulse {
+            from { border-color: rgba(255, 153, 0, 0.3); }
+            to { border-color: rgba(255, 153, 0, 0.7); }
         }
 
-        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .metro-loader-title {
+            color: var(--accent-gold);
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px var(--accent-gold);
+            margin-bottom: 10px;
+        }
 
-        /* 2. ЭКРАН ВХОДА */
+        .progress-bar-wrap {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            margin: 15px 0 10px 0;
+            overflow: hidden;
+            border: 1px solid rgba(255,153,0,0.2);
+        }
+
+        .progress-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: var(--accent-gold);
+            box-shadow: 0 0 10px var(--accent-gold);
+            transition: width 0.3s ease;
+        }
+
+        #loading-status {
+            font-size: 11px;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            font-family: monospace;
+        }
+
+        /* ================= 2. ЭКРАН ВХОДА ================= */
         #screen-login {
             justify-content: center;
             padding: 30px 20px;
+            background: radial-gradient(circle at center, #181d24 0%, #0a0c0f 100%);
         }
 
         .login-card {
-            background: rgba(0,0,0,0.3);
-            border: 1px solid var(--border-color);
-            padding: 25px;
+            background: rgba(15, 18, 22, 0.85);
+            border: 1px solid var(--panel-border);
+            padding: 30px 25px;
             border-radius: var(--radius);
-            box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 0 0 20px rgba(255,153,0,0.05);
+            animation: fadeIn 0.8s ease-out;
         }
 
         .login-title {
             color: var(--accent-gold);
-            font-size: 20px;
-            font-weight: bold;
-            letter-spacing: 2px;
+            font-size: 24px;
+            font-weight: 900;
+            letter-spacing: 3px;
             margin-bottom: 5px;
             text-transform: uppercase;
             text-align: center;
+            text-shadow: 0 0 12px var(--accent-gold-glow);
         }
 
         .login-subtitle {
             color: var(--text-muted);
-            font-size: 12px;
+            font-size: 11px;
             text-align: center;
             margin-bottom: 25px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
         }
 
         .form-group {
-            margin-bottom: 18px;
+            margin-bottom: 20px;
         }
 
         .form-group label {
             display: block;
-            font-size: 11px;
-            color: var(--text-muted);
+            font-size: 10px;
+            color: var(--accent-gold);
             text-transform: uppercase;
-            margin-bottom: 6px;
-            letter-spacing: 1px;
+            margin-bottom: 8px;
+            letter-spacing: 1.5px;
+            font-weight: bold;
         }
 
         .metro-input {
             width: 100%;
-            padding: 12px 15px;
-            background: #0d0f12;
-            border: 1px solid var(--border-color);
+            padding: 14px 16px;
+            background: rgba(8, 10, 12, 0.9);
+            border: 1px solid var(--panel-border);
             color: var(--accent-gold);
             border-radius: var(--radius);
             font-size: 15px;
             outline: none;
-            transition: border-color 0.2s;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
         }
 
         .metro-input:focus {
             border-color: var(--accent-gold);
+            box-shadow: 0 0 12px var(--accent-gold-glow), inset 0 2px 4px rgba(0,0,0,0.8);
         }
 
         .btn-primary {
             width: 100%;
-            padding: 14px;
-            background: var(--accent-gold);
+            padding: 16px;
+            background: linear-gradient(180deg, #ffaa00 0%, #cc7700 100%);
             border: none;
             color: #000;
-            font-weight: bold;
+            font-weight: 900;
             font-size: 14px;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
             border-radius: var(--radius);
             cursor: pointer;
             text-transform: uppercase;
-            transition: opacity 0.2s;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(255, 153, 0, 0.3);
             margin-top: 10px;
         }
 
-        .btn-primary:active { opacity: 0.8; }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(255, 153, 0, 0.5);
+        }
 
-        /* 3. ОСНОВНОЙ ЭКРАН ЧАТА И РАЦИИ */
+        .btn-primary:active { transform: translateY(1px); }
+
+        /* ================= 3. ЧАТ И РАЦИЯ ================= */
         .chat-header {
-            padding: 15px;
-            background: #0f1216;
-            border-bottom: 1px solid var(--border-color);
+            padding: 15px 20px;
+            background: rgba(12, 15, 19, 0.9);
+            border-bottom: 1px solid var(--panel-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            z-index: 20;
         }
 
         .header-info h2 {
             font-size: 16px;
             color: var(--accent-gold);
-            letter-spacing: 1px;
+            letter-spacing: 1.5px;
+            text-shadow: 0 0 8px var(--accent-gold-glow);
         }
 
         .header-info span {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-muted);
         }
 
@@ -178,21 +292,26 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            font-size: 11px;
+            font-size: 10px;
+            font-weight: bold;
             background: rgba(0, 255, 102, 0.1);
             color: var(--accent-green);
-            padding: 4px 8px;
+            padding: 4px 10px;
             border-radius: 20px;
             border: 1px solid rgba(0, 255, 102, 0.3);
+            letter-spacing: 1px;
         }
 
         .status-dot {
-            width: 7px;
-            height: 7px;
+            width: 6px;
+            height: 6px;
             background: var(--accent-green);
             border-radius: 50%;
-            box-shadow: 0 0 6px var(--accent-green);
+            box-shadow: 0 0 8px var(--accent-green);
+            animation: blink 1.5s infinite alternate;
         }
+
+        @keyframes blink { from { opacity: 0.3; } to { opacity: 1; } }
 
         .status-badge.disconnected {
             background: rgba(255, 51, 51, 0.1);
@@ -202,46 +321,66 @@
 
         .status-badge.disconnected .status-dot {
             background: var(--accent-red);
-            box-shadow: 0 0 6px var(--accent-red);
+            box-shadow: 0 0 8px var(--accent-red);
         }
 
-        /* Эфирный баннер входящей связи */
+        /* Баннер трансляции рации */
         .ptt-banner {
             display: none;
-            background: rgba(255, 153, 0, 0.15);
+            background: linear-gradient(90deg, rgba(255, 153, 0, 0.2) 0%, rgba(255, 51, 51, 0.2) 100%);
             border-bottom: 1px solid var(--accent-gold);
             color: var(--accent-gold);
-            padding: 8px 15px;
+            padding: 10px 20px;
             font-size: 12px;
             font-weight: bold;
             align-items: center;
             gap: 10px;
-            animation: pulseBanner 1s infinite alternate;
+            letter-spacing: 1px;
+            animation: pttPulse 0.8s infinite alternate;
+            z-index: 15;
         }
 
         .ptt-banner.active { display: flex; }
 
-        @keyframes pulseBanner {
-            from { background: rgba(255, 153, 0, 0.1); }
-            to { background: rgba(255, 153, 0, 0.25); }
+        @keyframes pttPulse {
+            from { background: rgba(255, 153, 0, 0.15); }
+            to { background: rgba(255, 51, 51, 0.3); }
         }
 
-        /* Список сообщений */
+        /* Канвас частиц пыли в воздухе чата */
+        #dust-canvas {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.4;
+        }
+
+        /* Сообщения */
         .chat-messages {
             flex: 1;
-            padding: 15px;
+            padding: 20px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            background: #12151a;
+            gap: 14px;
+            position: relative;
+            z-index: 5;
+            scroll-behavior: smooth;
         }
 
         .msg {
             max-width: 85%;
             display: flex;
             flex-direction: column;
-            gap: 3px;
+            gap: 4px;
+            animation: msgSlide 0.3s ease-out forwards;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        @keyframes msgSlide {
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .msg.self { align-self: flex-end; }
@@ -251,11 +390,12 @@
             align-self: center;
             max-width: 100%;
             font-size: 11px;
-            color: var(--text-muted);
-            background: rgba(255,255,255,0.03);
-            padding: 4px 12px;
-            border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.05);
+            color: var(--accent-gold);
+            background: rgba(255, 153, 0, 0.08);
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 153, 0, 0.2);
+            text-shadow: 0 0 5px var(--accent-gold-glow);
         }
 
         .msg-meta {
@@ -268,58 +408,66 @@
         }
 
         .msg-text {
-            background: #1c222b;
-            padding: 10px 14px;
-            border-radius: 12px;
+            background: rgba(22, 27, 34, 0.85);
+            padding: 12px 16px;
+            border-radius: 14px;
             font-size: 14px;
             line-height: 1.4;
-            border: 1px solid var(--border-color);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             word-break: break-word;
+            backdrop-filter: blur(4px);
         }
 
         .msg.self .msg-text {
-            background: #2b2316;
+            background: rgba(45, 30, 10, 0.85);
             border-color: rgba(255, 153, 0, 0.3);
             color: #fff;
+            box-shadow: 0 4px 15px rgba(255, 153, 0, 0.1);
         }
 
         .msg-media img, .msg-media video {
             max-width: 100%;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            border: 1px solid var(--panel-border);
             margin-top: 4px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
 
-        /* Аудио плеер голосовых сообщений */
+        /* Плеер голосовых сообщений */
         .audio-player {
             display: flex;
             align-items: center;
-            gap: 10px;
-            background: #1c222b;
-            padding: 8px 12px;
-            border-radius: 20px;
-            border: 1px solid var(--border-color);
-            min-width: 180px;
+            gap: 12px;
+            background: rgba(22, 27, 34, 0.9);
+            padding: 10px 14px;
+            border-radius: 30px;
+            border: 1px solid var(--panel-border);
+            min-width: 200px;
         }
 
         .audio-play-btn {
             background: var(--accent-gold);
             border: none;
-            width: 28px;
-            height: 28px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             color: #000;
-            font-size: 10px;
+            font-size: 12px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 0 10px var(--accent-gold-glow);
+            transition: transform 0.2s;
         }
+
+        .audio-play-btn:active { transform: scale(0.9); }
 
         .audio-wave {
             flex: 1;
             height: 4px;
-            background: var(--border-color);
+            background: rgba(255,255,255,0.1);
             border-radius: 2px;
             overflow: hidden;
             position: relative;
@@ -329,119 +477,142 @@
             height: 100%;
             width: 0%;
             background: var(--accent-gold);
+            box-shadow: 0 0 8px var(--accent-gold);
         }
 
-        /* Блок управления Рацией (PTT) */
+        /* Кнопка PTT (Рация) */
         .ptt-container {
-            padding: 15px;
-            background: #0f1216;
-            border-top: 1px solid var(--border-color);
+            padding: 15px 20px;
+            background: rgba(12, 15, 19, 0.95);
+            border-top: 1px solid var(--panel-border);
             display: flex;
             justify-content: center;
+            z-index: 20;
         }
 
         .ptt-btn {
             width: 100%;
-            padding: 16px;
-            background: linear-gradient(180deg, #2a313a 0%, #1a1f26 100%);
-            border: 2px solid var(--border-color);
+            padding: 18px;
+            background: linear-gradient(180deg, #252d38 0%, #151920 100%);
+            border: 2px solid var(--panel-border);
             color: var(--text-main);
-            font-weight: bold;
+            font-weight: 900;
             font-size: 14px;
             border-radius: var(--radius);
             cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            transition: all 0.1s ease;
-            letter-spacing: 1px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1);
+            transition: all 0.15s ease;
+            letter-spacing: 2px;
             text-align: center;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
         }
 
         .ptt-btn:active, .ptt-btn.transmitting {
-            background: linear-gradient(180deg, #cc2929 0%, #801a1a 100%);
+            background: linear-gradient(180deg, #e62e2e 0%, #801414 100%);
             border-color: var(--accent-red);
             color: #fff;
-            box-shadow: 0 0 15px rgba(255, 51, 51, 0.6);
+            box-shadow: 0 0 25px rgba(255, 51, 51, 0.8), inset 0 0 10px rgba(0,0,0,0.5);
             transform: translateY(2px);
+            text-shadow: 0 0 8px #fff;
         }
 
-        /* Нижняя панель ввода (Текст, Фото, Голос) */
+        /* Ввод сообщений */
         .input-panel {
-            padding: 10px 15px 15px 15px;
-            background: #0f1216;
+            padding: 12px 20px 20px 20px;
+            background: rgba(12, 15, 19, 0.95);
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
+            z-index: 20;
         }
 
         .action-btn {
-            background: #1c222b;
-            border: 1px solid var(--border-color);
+            background: rgba(22, 27, 34, 0.9);
+            border: 1px solid var(--panel-border);
             color: var(--text-main);
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             border-radius: var(--radius);
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 18px;
             flex-shrink: 0;
+            transition: all 0.2s ease;
+        }
+
+        .action-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
         }
 
         .action-btn.recording {
             background: var(--accent-red);
             color: #fff;
-            animation: pulse 1s infinite alternate;
+            border-color: var(--accent-red);
+            animation: pulseRec 1s infinite alternate;
         }
 
-        @keyframes pulse { from { opacity: 0.7; } to { opacity: 1; } }
+        @keyframes pulseRec { from { opacity: 0.7; } to { opacity: 1; } }
 
         .chat-input {
             flex: 1;
-            padding: 10px 12px;
-            background: #0d0f12;
-            border: 1px solid var(--border-color);
+            padding: 12px 16px;
+            background: rgba(8, 10, 12, 0.9);
+            border: 1px solid var(--panel-border);
             color: #fff;
             border-radius: var(--radius);
             font-size: 14px;
             outline: none;
+            transition: border-color 0.3s;
         }
 
         .chat-input:focus { border-color: var(--accent-gold); }
 
-        /* Всплывающие уведомления */
+        /* Уведомление Toast */
         .toast {
             position: absolute;
-            top: 20px;
+            top: 25px;
             left: 50%;
             transform: translateX(-50%);
             background: var(--accent-gold);
             color: #000;
-            padding: 8px 16px;
-            border-radius: 20px;
+            padding: 10px 20px;
+            border-radius: 30px;
             font-size: 12px;
-            font-weight: bold;
+            font-weight: 900;
+            letter-spacing: 1px;
             display: none;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-            z-index: 100;
+            box-shadow: 0 5px 20px rgba(255, 153, 0, 0.5);
+            z-index: 200;
         }
     </style>
 </head>
 <body>
 
-    <div id="toast" class="toast">Ссылка скопирована!</div>
+    <div id="toast" class="toast">ССЫЛКА В БУФЕРЕ ОБМЕНА</div>
 
-    <!-- 1. ЭКРАН ЗАГРУЗКИ -->
+    <!-- 1. 3D ЭКРАН ЗАГРУЗКИ ПОЕЗДА -->
     <div id="screen-loading" class="screen active">
-        <div class="spinner"></div>
-        <div id="loading-status" style="color: var(--accent-gold); font-size: 13px; letter-spacing: 1px;">ПОИСК СИГНАЛА...</div>
+        <canvas id="webgl-canvas"></canvas>
+        <div class="glass-overlay"></div>
+        <div class="glass-grime"></div>
+
+        <div class="loading-ui">
+            <div class="metro-loader-title">МЕТРО-ЭФИР</div>
+            <div class="progress-bar-wrap">
+                <div id="progress-fill" class="progress-bar-fill"></div>
+            </div>
+            <div id="loading-status">ПОДКЛЮЧЕНИЕ К ЧАСТОТЕ...</div>
+        </div>
     </div>
 
     <!-- 2. ЭКРАН ВХОДА -->
     <div id="screen-login" class="screen">
         <div class="login-card">
             <div class="login-title">МЕТРО-ЭФИР</div>
-            <div class="login-subtitle">Автономный модуль связи</div>
+            <div class="login-subtitle">Автономный модуль связи тоннелей</div>
             
             <div class="form-group">
                 <label>Позывной (Имя)</label>
@@ -453,12 +624,14 @@
                 <input type="text" id="room-input" class="metro-input" placeholder="metro-77" maxlength="20">
             </div>
 
-            <button class="btn-primary" onclick="startSession()">Подключиться к эфиру</button>
+            <button class="btn-primary" onclick="startSession()">Выйти в эфир</button>
         </div>
     </div>
 
-    <!-- 3. ОСНОВНОЙ ЭКРАН СВЯЗИ -->
+    <!-- 3. ОСНОВНОЙ ЭКРАН ЧАТА И РАЦИИ -->
     <div id="screen-chat" class="screen">
+        <canvas id="dust-canvas"></canvas>
+
         <!-- Шапка -->
         <div class="chat-header">
             <div class="header-info">
@@ -466,7 +639,7 @@
                 <span>Позывной: <strong id="display-user" style="color:var(--text-main);">...</strong></span>
             </div>
             <div style="display: flex; gap: 8px; align-items: center;">
-                <button class="action-btn" onclick="copyInviteLink()" title="Скопировать ссылку" style="width:32px; height:32px; font-size:12px;">🔗</button>
+                <button class="action-btn" onclick="copyInviteLink()" title="Скопировать ссылку" style="width:34px; height:34px; font-size:12px;">🔗</button>
                 <div id="conn-status" class="status-badge">
                     <div class="status-dot"></div>
                     <span>В ЭФИРЕ</span>
@@ -480,77 +653,254 @@
             <span id="ptt-speaker-name">Неизвестный</span>
         </div>
 
-        <!-- Чат сообщений -->
+        <!-- Сообщения -->
         <div id="chat-messages" class="chat-messages"></div>
 
-        <!-- Рация (Кнопка PTT) -->
+        <!-- Рация PTT -->
         <div class="ptt-container">
             <button id="ptt-button" class="ptt-btn">🎙️ ЗАЖМИ И ГОВОРИ (РАЦИЯ)</button>
         </div>
 
-        <!-- Панель ввода текстовых и медиа сообщений -->
+        <!-- Нижняя панель -->
         <div class="input-panel">
             <input type="file" id="file-input" accept="image/*,video/*" style="display:none;" onchange="handleFileSelect(event)">
-            <button class="action-btn" onclick="document.getElementById('file-input').click()" title="Отправить медиа">📷</button>
+            <button class="action-btn" onclick="document.getElementById('file-input').click()" title="Отправить фото/видео">📷</button>
             <button id="rec-btn" class="action-btn" onclick="toggleVoiceRecord()" title="Записать голосовое">🎤</button>
-            <input type="text" id="chat-message-input" class="chat-input" placeholder="Сообщение..." onkeypress="handleKeyPress(event)">
+            <input type="text" id="chat-message-input" class="chat-input" placeholder="Сообщение в эфир..." onkeypress="handleKeyPress(event)">
             <button class="action-btn" onclick="sendTextMessage()" style="background:var(--accent-gold); color:#000; font-weight:bold;">➤</button>
         </div>
     </div>
 
-    <!-- JS ДВИЖОК РАЦИИ И MQTT -->
+    <!-- ДВИЖОК 3D ТОННЕЛЯ, ЗВУКА И MQTT -->
     <script>
-        /* ================= 1. ЗВУКОВОЙ ДВИЖОК И ЭФФЕКТЫ ================= */
+        /* ================= 1. ЗВУКОВОЙ ДВИЖОК С ЭФФЕКТАМИ ПОЕЗДА И РАДИО ================= */
         class MetroSoundEngine {
-            constructor() { this.ctx = null; }
+            constructor() { 
+                this.ctx = null; 
+                this.trainNoiseNode = null;
+            }
             init() {
                 if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
                 if (this.ctx.state === 'suspended') this.ctx.resume();
             }
+
+            // Гул тоннеля и стук колес поезда
+            startTrainSound() {
+                this.init();
+                const bufferSize = 2 * this.ctx.sampleRate;
+                const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    output[i] = Math.random() * 2 - 1;
+                }
+
+                const whiteNoise = this.ctx.createBufferSource();
+                whiteNoise.buffer = noiseBuffer;
+                whiteNoise.loop = true;
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = 180;
+
+                const gain = this.ctx.createGain();
+                gain.gain.value = 0.05;
+
+                whiteNoise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+                whiteNoise.start();
+
+                this.trainNoiseNode = gain;
+
+                // Стук колес ("тук-тук... тук-тук")
+                this.wheelsInterval = setInterval(() => {
+                    if (!this.ctx) return;
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const g = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(80, now);
+                    osc.frequency.exponentialRampToValueAtTime(30, now + 0.08);
+                    g.gain.setValueAtTime(0.08, now);
+                    g.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+                    osc.connect(g); g.connect(this.ctx.destination);
+                    osc.start(now); osc.stop(now + 0.08);
+                }, 450);
+            }
+
+            stopTrainSound() {
+                if (this.wheelsInterval) clearInterval(this.wheelsInterval);
+                if (this.trainNoiseNode) {
+                    try {
+                        this.trainNoiseNode.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.5);
+                    } catch(e){}
+                }
+            }
+
             playClick() {
                 this.init();
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
                 osc.type = 'triangle';
-                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(60, this.ctx.currentTime + 0.05);
+                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.04);
                 gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.04);
                 osc.connect(gain); gain.connect(this.ctx.destination);
-                osc.start(); osc.stop(this.ctx.currentTime + 0.05);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.04);
             }
+
             playPTTStart() {
                 this.init();
                 const now = this.ctx.currentTime;
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(800, now);
-                osc.frequency.setValueAtTime(1200, now + 0.04);
-                gain.gain.setValueAtTime(0.08, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+                osc.frequency.setValueAtTime(900, now);
+                osc.frequency.setValueAtTime(1400, now + 0.05);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
                 osc.connect(gain); gain.connect(this.ctx.destination);
-                osc.start(now); osc.stop(now + 0.09);
+                osc.start(now); osc.stop(now + 0.1);
             }
+
             playPTTEnd() {
                 this.init();
                 const now = this.ctx.currentTime;
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
                 osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(600, now);
-                osc.frequency.setValueAtTime(400, now + 0.06);
-                gain.gain.setValueAtTime(0.06, now);
+                osc.frequency.setValueAtTime(700, now);
+                osc.frequency.setValueAtTime(300, now + 0.07);
+                gain.gain.setValueAtTime(0.08, now);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
                 osc.connect(gain); gain.connect(this.ctx.destination);
                 osc.start(now); osc.stop(now + 0.12);
+            }
+
+            playMessageIncoming() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(now); osc.stop(now + 0.2);
             }
         }
 
         const audioEngine = new MetroSoundEngine();
 
-        /* ================= 2. СОСТОЯНИЕ И МЕТРИКИ ================= */
-        // Расширенный список брокеров (12 устойчивых вариантов)
+        /* ================= 2. 3D АНИМАЦИЯ ТОННЕЛЯ ПОЕЗДА (THREE.JS) ================= */
+        let scene, camera, renderer, tunnelMesh, lightRings = [];
+
+        function init3DTunnel() {
+            const canvas = document.getElementById('webgl-canvas');
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x05070a, 0.035);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 5;
+
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            // Тоннельная труба с кольцами-тюбингами
+            const tunnelGeo = new THREE.CylinderGeometry(5, 5, 300, 16, 100, true);
+            const tunnelMat = new THREE.MeshBasicMaterial({
+                color: 0x11161d,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.25
+            });
+            tunnelMesh = new THREE.Mesh(tunnelGeo, tunnelMat);
+            tunnelMesh.rotation.x = Math.PI / 2;
+            scene.add(tunnelMesh);
+
+            // Светящиеся желтые фонари тоннеля
+            for (let i = 0; i < 15; i++) {
+                const lightGeo = new THREE.SphereGeometry(0.15, 8, 8);
+                const lightMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+                const lightMesh = new THREE.Mesh(lightGeo, lightMat);
+                
+                lightMesh.position.set(3.8 * Math.cos(i), 3.8 * Math.sin(i), -i * 20);
+                scene.add(lightMesh);
+                lightRings.push(lightMesh);
+            }
+
+            animate3DTunnel();
+        }
+
+        function animate3DTunnel() {
+            requestAnimationFrame(animate3DTunnel);
+
+            // Движение сквозь тоннель
+            tunnelMesh.position.z += 1.2;
+            if (tunnelMesh.position.z > 50) tunnelMesh.position.z = 0;
+
+            // Движение фонарей
+            lightRings.forEach(light => {
+                light.position.z += 1.5;
+                if (light.position.z > 10) {
+                    light.position.z = -280;
+                }
+            });
+
+            // Легкая вибрация камеры от движения вагона
+            camera.position.x = (Math.random() - 0.5) * 0.04;
+            camera.position.y = (Math.random() - 0.5) * 0.04;
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            if (camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        });
+
+        /* ================= 3. ЧАСТИЦЫ ПЫЛИ В ВОЗДУХЕ ЧАТА ================= */
+        function initDustParticles() {
+            const canvas = document.getElementById('dust-canvas');
+            const ctx = canvas.getContext('2d');
+            let width = canvas.width = canvas.offsetWidth;
+            let height = canvas.height = canvas.offsetHeight;
+
+            const particles = Array.from({ length: 45 }, () => ({
+                x: Math.random() * width,
+                y: Math.random() * height,
+                r: Math.random() * 1.5 + 0.5,
+                alpha: Math.random() * 0.5 + 0.2,
+                dx: (Math.random() - 0.5) * 0.3,
+                dy: Math.random() * 0.4 + 0.1
+            }));
+
+            function render() {
+                ctx.clearRect(0, 0, width, height);
+                particles.forEach(p => {
+                    p.x += p.dx;
+                    p.y += p.dy;
+                    if (p.y > height) p.y = 0;
+                    if (p.x > width) p.x = 0;
+                    if (p.x < 0) p.x = width;
+
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 180, 80, ${p.alpha})`;
+                    ctx.fill();
+                });
+                requestAnimationFrame(render);
+            }
+            render();
+        }
+
+        /* ================= 4. СОСТОЯНИЕ И ПОДКЛЮЧЕНИЕ MQTT ================= */
         const BROKERS = [
             'wss://broker.emqx.io:8084/mqtt',
             'wss://broker.hivemq.com:8884/mqtt',
@@ -600,24 +950,36 @@
         let rxAudioCtx = null;
         let nextStartTime = 0;
 
-        /* ================= 3. ИНИЦИАЛИЗАЦИЯ ================= */
+        /* ================= 5. ИНИЦИАЛИЗАЦИЯ И СТАРТ ================= */
         window.onload = () => {
+            init3DTunnel();
             setupPTTEvents();
-            setTimeout(() => {
-                document.getElementById('screen-loading').classList.remove('active');
-                document.getElementById('screen-login').classList.add('active');
+            audioEngine.startTrainSound();
 
-                if (myUsername) document.getElementById('username-input').value = myUsername;
-                if (!currentRoom) currentRoom = 'metro-' + Math.random().toString(36).substr(2, 6);
-                document.getElementById('room-input').value = currentRoom;
+            let progress = 0;
+            const fill = document.getElementById('progress-fill');
+            const pInterval = setInterval(() => {
+                progress += 5;
+                fill.style.width = progress + '%';
+                if (progress >= 100) {
+                    clearInterval(pInterval);
+                    setTimeout(() => {
+                        document.getElementById('screen-loading').style.display = 'none';
+                        document.getElementById('screen-login').classList.add('active');
+                        audioEngine.stopTrainSound();
 
-                if (myUsername && new URLSearchParams(window.location.search).get('room')) {
-                    startSession();
+                        if (myUsername) document.getElementById('username-input').value = myUsername;
+                        if (!currentRoom) currentRoom = 'metro-' + Math.random().toString(36).substr(2, 6);
+                        document.getElementById('room-input').value = currentRoom;
+
+                        if (myUsername && new URLSearchParams(window.location.search).get('room')) {
+                            startSession();
+                        }
+                    }, 400);
                 }
-            }, 800);
+            }, 50);
         };
 
-        /* ================= 4. ПОДКЛЮЧЕНИЕ К MQTT ================= */
         function startSession() {
             audioEngine.playClick();
             const unameInput = document.getElementById('username-input').value.trim();
@@ -634,7 +996,7 @@
             window.history.replaceState({}, '', `?room=${encodeURIComponent(currentRoom)}`);
 
             document.getElementById('screen-login').classList.remove('active');
-            document.getElementById('screen-loading').classList.add('active');
+            document.getElementById('screen-loading').style.display = 'flex';
             
             connectMQTT();
         }
@@ -643,7 +1005,7 @@
             const clientId = 'metro_' + myUserId + '_' + Math.random().toString(36).substr(2, 4);
             const targetBroker = BROKERS[currentBrokerIdx];
 
-            document.getElementById('loading-status').innerText = `ПОИСК СИГНАЛА [ШЛЮЗ ${currentBrokerIdx + 1}/${BROKERS.length}]...`;
+            document.getElementById('loading-status').innerText = `ШЛЮЗ ${currentBrokerIdx + 1}/${BROKERS.length}...`;
 
             try {
                 if (mqttClient) {
@@ -694,14 +1056,15 @@
         }
 
         function showChatScreen() {
-            document.getElementById('screen-loading').classList.remove('active');
+            document.getElementById('screen-loading').style.display = 'none';
             document.getElementById('screen-chat').classList.add('active');
             document.getElementById('display-user').innerText = myUsername;
             document.getElementById('display-room').innerText = '#' + currentRoom;
             document.getElementById('conn-status').classList.remove('disconnected');
+            initDustParticles();
         }
 
-        /* ================= 5. ДВИЖОК РАЦИИ (PCM STREAMING) ================= */
+        /* ================= 6. РАЦИЯ PTT (ПОТОКОВЫЙ ГОЛОС) ================= */
         function setupPTTEvents() {
             const btn = document.getElementById('ptt-button');
             if (!btn) return;
@@ -835,7 +1198,7 @@
             }
         }
 
-        /* ================= 6. ГОЛОСОВЫЕ СООБЩЕНИЯ ================= */
+        /* ================= 7. ГОЛОСОВЫЕ СООБЩЕНИЯ И МЕДИА ================= */
         function playAudio(btn, src) {
             if (activeAudio && activeAudioBtn === btn) {
                 if (!activeAudio.paused) {
@@ -907,7 +1270,7 @@
             }
         }
 
-        /* ================= 7. ОТПРАВКА И РЕНДЕР СООБЩЕНИЙ ================= */
+        /* ================= 8. ОТПРАВКА И РЕНДЕР ================= */
         function publishPayload(data) {
             if (!mqttClient || !mqttClient.connected) return;
             const fullPayload = {
@@ -983,6 +1346,7 @@
             }
 
             const isSelf = data.uid === myUserId;
+            if (!isSelf) audioEngine.playMessageIncoming();
 
             const msgDiv = document.createElement('div');
             msgDiv.className = `msg ${isSelf ? 'self' : 'other'}`;
@@ -999,7 +1363,7 @@
                     <div class="audio-player">
                         <button class="audio-play-btn" onclick="playAudio(this, '${data.content}')">▶</button>
                         <div class="audio-wave"><div class="audio-progress"></div></div>
-                        <span style="font-size:10px; color:var(--text-muted);">ГОЛОСОВОЕ</span>
+                        <span style="font-size:10px; color:var(--text-muted);">ГОЛОС</span>
                     </div>
                 `;
             }
