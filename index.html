@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>METRO NET // STABLE AUDIO & P2P</title>
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/mqtt@5.3.0/dist/mqtt.min.js"></script>
+    <!-- Стабильная версия MQTT клиента из CDNJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
     <style>
         :root {
             --metro-amber: #ff7700;
@@ -161,7 +162,7 @@
 
     <audio id="remote-audio" autoplay playsinline style="display:none;"></audio>
 
-    <!-- LIGHTBOX -->
+    <!-- LIGHTBOX ДЛЯ ПРОСМОТРА ФОТО/ВИДЕО -->
     <div id="media-modal">
         <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
             <span style="color:var(--metro-amber); font-size: 12px;">ПРОСМОТР МЕДИА</span>
@@ -215,7 +216,7 @@
         <div id="call-banner" class="call-banner">🎙️ ЭФИР АКТИВЕН: <span id="banner-mode-text">ПОДКЛЮЧЕНО</span></div>
 
         <div id="chat-messages" class="chat-body">
-            <div class="msg system">Сеть готова. Используются брокеры на порту 443 (без блокировок провайдерами).</div>
+            <div class="msg system">Сеть готова. Подключение через защищенные WSS-каналы.</div>
         </div>
 
         <div class="chat-input-panel">
@@ -235,12 +236,12 @@
     </div>
 
     <script>
-        /* ================= 1. БРОКЕРЫ НА ПОРТУ 443 (ОБХОД БЛОКИРОВОК В РФ БЕЗ VPN) ================= */
+        /* ================= 1. ИСПРАВЛЕННЫЕ И ВАЛИДНЫЕ БРОКЕРЫ ================= */
         const BROKERS = [
-            'wss://broker.emqx.io:443/mqtt',
-            'wss://public.mqtthq.com:443/mqtt',
-            'wss://test.mosquitto.org:8081/mqtt',
-            'wss://broker.hivemq.com:8884/mqtt'
+            'wss://mqtt.eclipseprojects.io:443/mqtt', // Порт 443 без VPN
+            'wss://broker.emqx.io:8084/mqtt',          // SSL порт EMQX (исправлено с 443)
+            'wss://broker.hivemq.com:8884/mqtt',         // SSL порт HiveMQ
+            'wss://test.mosquitto.org:8081/mqtt'        // SSL порт Mosquitto
         ];
         let currentBrokerIdx = 0;
         let mqttClient = null;
@@ -268,13 +269,13 @@
 
         let currentRoom = cleanRoomName(rawRoom);
 
-        /* WebRTC & Web Audio Engine State */
+        /* Состояние WebRTC и Web Audio API */
         let peerConnection = null;
         let localStream = null;
         let isPTTActive = false;
         let isCallActive = false;
         
-        /* Web Audio API Engine for Dynamic Sample-Rate & Jitter Buffer */
+        /* Движок Web Audio API для ресемплинга и Jitter Buffer */
         let audioCtx = null;
         let voiceRecorder = null;
         let voiceChunks = [];
@@ -331,7 +332,7 @@
 
             document.getElementById('screen-login').classList.remove('active');
             document.getElementById('screen-loading').classList.add('active');
-            document.getElementById('loading-status').innerText = `ПОДКЛЮЧЕНИЕ (ПОРТ 443)...`;
+            document.getElementById('loading-status').innerText = `ПОДКЛЮЧЕНИЕ К БРОКЕРУ...`;
 
             initAudioStream();
             connectMQTT();
@@ -344,11 +345,11 @@
                         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
                     });
                     setMicEnabled(false);
-                } catch(e) { console.error("Ошибка микрофона:", e); }
+                } catch(e) { console.error("Ошибка доступа к микрофону:", e); }
             }
         }
 
-        /* ================= 2. СИГНАЛИЗАЦИЯ И СТАТУС СВЯЗИ ================= */
+        /* ================= 2. СИГНАЛИЗАЦИЯ И МАРШРУТИЗАЦИЯ ================= */
         function updateGasLamp(color, text) {
             const lamp = document.getElementById('gas-lamp');
             const lampText = document.getElementById('gas-lamp-text');
@@ -358,11 +359,16 @@
 
         function connectMQTT() {
             const clientId = 'metro_' + myUserId + '_' + Math.random().toString(36).substr(2, 4);
+            const targetBroker = BROKERS[currentBrokerIdx];
+
+            console.log(`[MQTT] Попытка подключения к брокеру: ${targetBroker}`);
+            document.getElementById('loading-status').innerText = `ПОДКЛЮЧЕНИЕ: ${targetBroker.split('/')[2]}`;
 
             try {
-                mqttClient = mqtt.connect(BROKERS[currentBrokerIdx], { clientId: clientId, keepalive: 30 });
+                mqttClient = mqtt.connect(targetBroker, { clientId: clientId, keepalive: 30, connectTimeout: 6000 });
 
                 mqttClient.on('connect', () => {
+                    console.log(`[MQTT] Успешно подключено к: ${targetBroker}`);
                     const topic = `metro/webrtc/v12/${currentRoom}`;
                     mqttClient.subscribe(topic, { qos: 1 }, (err) => {
                         if (!err) {
@@ -383,18 +389,26 @@
                         else if (payload.type === 'rtc_candidate') handleCandidate(payload);
                         else if (payload.type === 'status_update') handleRemoteStatus(payload);
                         else renderIncomingMessage(payload);
-                    } catch(e) { console.error(e); }
+                    } catch(e) { console.error("Ошибка обработки пакета:", e); }
                 });
 
-                mqttClient.on('error', () => switchBroker());
+                mqttClient.on('error', (err) => {
+                    console.warn(`[MQTT] Ошибка подключения к ${targetBroker}:`, err);
+                    switchBroker();
+                });
+
                 mqttClient.on('close', () => updateGasLamp('red', 'OFF'));
-            } catch(e) { switchBroker(); }
+            } catch(e) {
+                console.error("[MQTT] Исключение при подключении:", e);
+                switchBroker();
+            }
         }
 
         function switchBroker() {
             if (mqttClient) { try { mqttClient.end(true); } catch(e){} }
             currentBrokerIdx = (currentBrokerIdx + 1) % BROKERS.length;
-            setTimeout(connectMQTT, 1000);
+            console.log(`[MQTT] Переключение на резервный брокер №${currentBrokerIdx + 1}: ${BROKERS[currentBrokerIdx]}`);
+            setTimeout(connectMQTT, 1200);
         }
 
         function showChatScreen() {
@@ -404,7 +418,7 @@
             document.getElementById('display-room').innerText = '#' + currentRoom;
         }
 
-        /* ================= 3. WEBRTC & РАЦИЯ ================= */
+        /* ================= 3. WEBRTC & ГОЛОСОВОЙ ЭФИР ================= */
         async function setupPeerConnection() {
             if (peerConnection) return;
 
@@ -532,7 +546,7 @@
             banner.classList.toggle('active', show);
         }
 
-        /* ================= 4. ДИНАМИЧЕСКИЙ SAMPLE-RATE И JITTER BUFFER ================= */
+        /* ================= 4. ОБРАБОТКА АУДИО И JITTER BUFFER ================= */
         async function toggleVoiceRecord() {
             const ctx = getAudioContext();
             const btn = document.getElementById('rec-btn');
@@ -548,7 +562,6 @@
                         const audioBlob = new Blob(voiceChunks, { type: 'audio/webm' });
                         const reader = new FileReader();
                         reader.onloadend = () => {
-                            // ОТПРАВЛЯЕМ ВМЕСТЕ С РЕАЛЬНОЙ ЧАСТОТОЙ ДИСКРЕТИЗАЦИИ УСТРОЙСТВА
                             publishPayload({ 
                                 type: 'audio', 
                                 sampleRate: ctx.sampleRate, 
@@ -562,7 +575,7 @@
                     voiceRecorder.start();
                     isVoiceRecording = true;
                     btn.classList.add('recording');
-                } catch(e) { alert("Ошибка микрофона!"); }
+                } catch(e) { alert("Необходим доступ к микрофону!"); }
             } else {
                 isVoiceRecording = false;
                 btn.classList.remove('recording');
@@ -570,25 +583,20 @@
             }
         }
 
-        // ДЕКОДИРОВАНИЕ С АВТОМАТИЧЕСКИМ РЕСЕМПЛИРОВАНИЕМ В ДИНАМИК ПРИНИМАЮЩЕЙ СТОРОНЫ (БЕЗ "ПЬЯНОГО" ГОЛОСА)
         async function playAudioBufferWithResampling(base64Data, senderSampleRate) {
             const ctx = getAudioContext();
             
-            // Преобразуем Base64 в ArrayBuffer
             const res = await fetch(base64Data);
             const arrayBuffer = await res.arrayBuffer();
 
-            // decodeAudioData автоматически подгоняет частоту записи под текущую частоту динамика
             ctx.decodeAudioData(arrayBuffer, (decodedBuffer) => {
-                // ПОМЕЩАЕМ В JITTER BUFFER (СГЛАЖИВАНИЕ В 60 МС)
                 jitterBufferQueue.push(decodedBuffer);
                 if (!isProcessingJitter) {
                     processJitterBuffer();
                 }
-            }, (err) => console.error("Ошибка декодирования аудио:", err));
+            }, (err) => console.error("Ошибка декодирования аудио формата:", err));
         }
 
-        // АНТИ-ЭХО И СГЛАЖИВАНИЕ ДЖИТЕРА (60 МС БУФЕР)
         function processJitterBuffer() {
             if (jitterBufferQueue.length === 0) {
                 isProcessingJitter = false;
@@ -603,14 +611,13 @@
             source.buffer = bufferToPlay;
             source.connect(ctx.destination);
 
-            // Небольшая сглаживающая пауза (60ms Jitter Buffer)
             setTimeout(() => {
                 source.start(0);
                 source.onended = () => processJitterBuffer();
             }, 60);
         }
 
-        /* ================= 5. СООБЩЕНИЯ И МЕДИА ================= */
+        /* ================= 5. ЧАТ И ОТПРАВКА СООБЩЕНИЙ ================= */
         function publishPayload(data) {
             if (!mqttClient || !mqttClient.connected) return;
             const fullPayload = {
@@ -712,7 +719,7 @@
                 reader.onload = (evt) => publishPayload({ type: 'image', content: evt.target.result });
                 reader.readAsDataURL(file);
             } else if (file.type.startsWith('video/')) {
-                if (file.size > 10 * 1024 * 1024) return alert("Видео до 10 МБ!");
+                if (file.size > 10 * 1024 * 1024) return alert("Ограничение видео — до 10 МБ!");
                 const reader = new FileReader();
                 reader.onload = (evt) => publishPayload({ type: 'video', content: evt.target.result });
                 reader.readAsDataURL(file);
@@ -722,7 +729,7 @@
 
         function copyInviteLink() {
             navigator.clipboard.writeText(window.location.href);
-            alert("Ссылка скопирована!");
+            alert("Ссылка на канал скопирована!");
         }
 
         function escapeHTML(str) {
