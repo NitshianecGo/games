@@ -512,9 +512,7 @@
             <span style="color:var(--metro-amber); font-size: 12px;">ПРОСМОТР МЕДИAФАЙЛА</span>
             <button class="modal-close-btn" onclick="closeMediaModal()">✕ ЗАКРЫТЬ</button>
         </div>
-        <div class="modal-body" id="modal-container">
-            <!-- Сюда вставляется img или video -->
-        </div>
+        <div class="modal-body" id="modal-container"></div>
         <div class="modal-bottom-bar">
             <button class="download-btn" onclick="downloadCurrentMedia()">💾 СОХРАНИТЬ В ПАМЯТЬ</button>
         </div>
@@ -550,7 +548,7 @@
         <div class="chat-header">
             <div class="channel-info">
                 <!-- Газоразрядная Лампа -->
-                <div class="gas-lamp-box" title="Зеленый=P2P, Синий=TURN, Красный=Плохой сигнал">
+                <div class="gas-lamp-box" title="Зеленый=P2P/ONLINE, Синий=TURN, Красный=Плохой сигнал">
                     <div id="gas-lamp" class="gas-lamp-bulb red"></div>
                     <span id="gas-lamp-text" class="lamp-text">OFF</span>
                 </div>
@@ -601,6 +599,8 @@
                 { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' },
                 { urls: 'stun:stun2.l.google.com:19302' },
+                { urls: 'stun:stun3.l.google.com:19302' },
+                { urls: 'stun:stun4.l.google.com:19302' },
                 { urls: 'stun:global.stun.twilio.com:3478' },
                 { urls: "turn:openrelay.metered.ca:80", username: "openrelay", credential: "openrelay" },
                 { urls: "turn:openrelay.metered.ca:443", username: "openrelay", credential: "openrelay" },
@@ -737,12 +737,10 @@
             document.getElementById('screen-loading').classList.add('active');
             document.getElementById('loading-status').innerText = `ПОДКЛЮЧЕНИЕ К ЧАСТОТЕ #${currentRoom}...`;
 
-            // Предварительная подготовка аудио при входе
             initAudioStream();
             connectMQTT();
         }
 
-        /* Инициализация микрофона */
         async function initAudioStream() {
             if (!localStream) {
                 try {
@@ -756,7 +754,7 @@
             }
         }
 
-        /* ================= 2. ЛАМПОЧКА И МОНИТОРИНГ ================= */
+        /* ================= 2. УМНАЯ ЛАМПОЧКА И МОНИТОРИНГ ================= */
         function updateGasLamp(color, text) {
             const lamp = document.getElementById('gas-lamp');
             const lampText = document.getElementById('gas-lamp-text');
@@ -765,36 +763,48 @@
         }
 
         function monitorConnectionQuality() {
+            // Если WebRTC вызов не активен, но сервер сигналов (MQTT) на связи — показываем готовность
             if (!peerConnection) {
-                updateGasLamp('red', 'OFF');
+                if (mqttClient && mqttClient.connected) {
+                    updateGasLamp('green', 'ONLINE');
+                } else {
+                    updateGasLamp('red', 'OFF');
+                }
                 return;
             }
 
-            const state = peerConnection.iceConnectionState;
+            const state = peerConnection.iceConnectionState || peerConnection.connectionState;
+
             if (state === 'disconnected' || state === 'failed' || state === 'closed') {
                 updateGasLamp('red', 'BAD');
                 return;
             }
 
-            peerConnection.getStats(null).then(stats => {
-                let foundPair = false;
-                stats.forEach(report => {
-                    if (report.type === 'candidate-pair' && (report.nominated || report.selected || report.state === 'succeeded')) {
-                        foundPair = true;
-                        const localCand = stats.get(report.localCandidateId);
-                        const remoteCand = stats.get(report.remoteCandidateId);
+            if (state === 'checking' || state === 'new') {
+                updateGasLamp('red', 'WAIT');
+                return;
+            }
 
-                        const isRelay = (localCand && localCand.candidateType === 'relay') || 
-                                        (remoteCand && remoteCand.candidateType === 'relay');
-
-                        updateGasLamp(isRelay ? 'blue' : 'green', isRelay ? 'TURN' : 'P2P');
-                    }
+            if (state === 'connected' || state === 'completed') {
+                peerConnection.getStats(null).then(stats => {
+                    let isRelay = false;
+                    stats.forEach(report => {
+                        if (report.type === 'candidate-pair' && (report.nominated || report.selected || report.state === 'succeeded')) {
+                            const localCand = stats.get(report.localCandidateId);
+                            const remoteCand = stats.get(report.remoteCandidateId);
+                            if ((localCand && localCand.candidateType === 'relay') || 
+                                (remoteCand && remoteCand.candidateType === 'relay')) {
+                                isRelay = true;
+                            }
+                        }
+                    });
+                    updateGasLamp(isRelay ? 'blue' : 'green', isRelay ? 'TURN' : 'P2P');
+                }).catch(() => {
+                    updateGasLamp('green', 'P2P');
                 });
-
-                if (!foundPair) {
-                    updateGasLamp((state === 'connected' || state === 'completed') ? 'green' : 'red', (state === 'connected' || state === 'completed') ? 'P2P' : 'WAIT');
-                }
-            }).catch(() => updateGasLamp('red', 'ERR'));
+            } else {
+                updateGasLamp('green', 'ONLINE');
+            }
         }
 
         /* ================= 3. MQTT СИГНАЛИЗАЦИЯ ================= */
@@ -828,6 +838,7 @@
                 });
 
                 mqttClient.on('error', () => switchBroker());
+                mqttClient.on('close', () => updateGasLamp('red', 'OFF'));
             } catch(e) { switchBroker(); }
         }
 
@@ -843,7 +854,7 @@
             document.getElementById('display-user').innerText = myUsername;
             document.getElementById('display-room').innerText = '#' + currentRoom;
 
-            if (!statsInterval) statsInterval = setInterval(monitorConnectionQuality, 2000);
+            if (!statsInterval) statsInterval = setInterval(monitorConnectionQuality, 1500);
         }
 
         /* ================= 4. WEBRTC & РАЦИЯ PTT ================= */
@@ -1137,7 +1148,7 @@
             reader.readAsDataURL(file);
         }
 
-        /* ================= 7. СООБЩЕНИЯ И ОТРЕЙДЕРИВАНИЕ ================= */
+        /* ================= 7. СООБЩЕНИЯ И ОТРЕНДЕРИВАНИЕ ================= */
         function publishPayload(data) {
             if (!mqttClient || !mqttClient.connected) return;
             const fullPayload = {
