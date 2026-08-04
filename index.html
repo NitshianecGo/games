@@ -1,533 +1,1539 @@
-/* ================= 1. ЗВУКОВОЙ ДВИЖОК И ЭФФЕКТЫ ================= */
-class MetroSoundEngine {
-    constructor() { this.ctx = null; }
-    init() {
-        if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-        if (this.ctx.state === 'suspended') this.ctx.resume();
-    }
-    playClick() {
-        this.init();
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(300, this.ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(60, this.ctx.currentTime + 0.05);
-        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
-        osc.connect(gain); gain.connect(this.ctx.destination);
-        osc.start(); osc.stop(this.ctx.currentTime + 0.05);
-    }
-    playPTTStart() {
-        this.init();
-        const now = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(800, now);
-        osc.frequency.setValueAtTime(1200, now + 0.04);
-        gain.gain.setValueAtTime(0.08, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
-        osc.connect(gain); gain.connect(this.ctx.destination);
-        osc.start(now); osc.stop(now + 0.09);
-    }
-    playPTTEnd() {
-        this.init();
-        const now = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(600, now);
-        osc.frequency.setValueAtTime(400, now + 0.06);
-        gain.gain.setValueAtTime(0.06, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-        osc.connect(gain); gain.connect(this.ctx.destination);
-        osc.start(now); osc.stop(now + 0.12);
-    }
-}
-
-const audioEngine = new MetroSoundEngine();
-
-/* ================= 2. СОСТОЯНИЕ И МЕТРИКИ ================= */
-// Расширенный список устойчивых брокеров (12 вариантов)
-const BROKERS = [
-    'wss://broker.emqx.io:8084/mqtt',
-    'wss://broker.hivemq.com:8884/mqtt',
-    'wss://mqtt.eclipseprojects.io:443/mqtt',
-    'wss://test.mosquitto.org:8081/mqtt',
-    'wss://broker.emqx.io:443/mqtt',
-    'wss://mqtt.eclipseprojects.io:1884/mqtt',
-    'wss://public.mqtt-dashboard.com:8884/mqtt',
-    'wss://mqtt.fluux.io:443/mqtt',
-    // Резервные WS адреса (для локального тестирования http://)
-    'ws://broker.emqx.io:8083/mqtt',
-    'ws://broker.hivemq.com:8000/mqtt',
-    'ws://test.mosquitto.org:8080/mqtt',
-    'ws://mqtt.eclipseprojects.io:1883/mqtt'
-];
-
-let currentBrokerIdx = 0;
-let mqttClient = null;
-
-let myUserId = localStorage.getItem('metro_uid') || 'u_' + Math.random().toString(36).substr(2, 7);
-localStorage.setItem('metro_uid', myUserId);
-
-let myUsername = localStorage.getItem('metro_uname') || '';
-let rawRoom = new URLSearchParams(window.location.search).get('room') || localStorage.getItem('metro_room') || '';
-
-// Очистка названия комнаты: только латиница, цифры и дефис
-function cleanRoomName(str) {
-    if (!str) return '';
-    try { str = decodeURIComponent(str); } catch(e){}
-    return str.toLowerCase().replace(/[^a-z0-9_-]/g, '');
-}
-
-let currentRoom = cleanRoomName(rawRoom);
-
-let isVoiceRecording = false;
-let voiceRecorder = null;
-let voiceChunks = [];
-
-let activeAudio = null;
-let activeAudioBtn = null;
-
-/* PTT Переменные */
-let isPTTTransmitting = false;
-let pttStreamId = null;
-let pttAudioCtx = null;
-let pttMicStream = null;
-let pttProcessor = null;
-
-let rxAudioCtx = null;
-let nextStartTime = 0;
-
-/* ================= 3. ИНИЦИАЛИЗАЦИЯ ================= */
-window.onload = () => {
-    setupPTTEvents();
-    setTimeout(() => {
-        document.getElementById('screen-loading').classList.remove('active');
-        document.getElementById('screen-login').classList.add('active');
-
-        if (myUsername) document.getElementById('username-input').value = myUsername;
-        if (!currentRoom) currentRoom = 'metro-' + Math.random().toString(36).substr(2, 6);
-        document.getElementById('room-input').value = currentRoom;
-
-        if (myUsername && new URLSearchParams(window.location.search).get('room')) {
-            startSession();
-        }
-    }, 800);
-};
-
-/* ================= 4. ПОДКЛЮЧЕНИЕ К MQTT ================= */
-function startSession() {
-    audioEngine.playClick();
-    const unameInput = document.getElementById('username-input').value.trim();
-    const roomInput = cleanRoomName(document.getElementById('room-input').value.trim());
-
-    if (!unameInput || !roomInput) return alert("Укажите позывной и корректный номер частоты (только англ. буквы и цифры)!");
-
-    myUsername = unameInput;
-    currentRoom = roomInput;
-
-    localStorage.setItem('metro_uname', myUsername);
-    localStorage.setItem('metro_room', currentRoom);
-
-    // Чистая ссылка без кириллицы
-    window.history.replaceState({}, '', `?room=${encodeURIComponent(currentRoom)}`);
-
-    document.getElementById('screen-login').classList.remove('active');
-    document.getElementById('screen-loading').classList.add('active');
-    
-    connectMQTT();
-}
-
-function connectMQTT() {
-    const clientId = 'metro_' + myUserId + '_' + Math.random().toString(36).substr(2, 4);
-    const targetBroker = BROKERS[currentBrokerIdx];
-
-    document.getElementById('loading-status').innerText = `ПОИСК СИГНАЛА [ШЛЮЗ ${currentBrokerIdx + 1}/${BROKERS.length}]...`;
-
-    try {
-        if (mqttClient) {
-            try { mqttClient.end(true); } catch(e){}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>METRO NET // РАЦИЯ И МЕДИА ВЬЮЕР</title>
+    <!-- Шрифт терминала Metro -->
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <!-- MQTT.js CDN -->
+    <script src="https://unpkg.com/mqtt@5.3.0/dist/mqtt.min.js"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --metro-amber: #ff8a00;
+            --metro-amber-glow: rgba(255, 138, 0, 0.45);
+            --metro-green: #20e060;
+            --metro-green-glow: rgba(32, 224, 96, 0.45);
+            --metro-blue: #00c3ff;
+            --metro-blue-glow: rgba(0, 195, 255, 0.45);
+            --metro-red: #ff3838;
+            --metro-dark: #07090b;
+            --metro-glass: rgba(16, 22, 28, 0.72);
+            --metro-glass-border: rgba(255, 138, 0, 0.22);
+            --metro-panel: rgba(22, 30, 38, 0.85);
+            --metro-text: #d2e0eb;
+            --metro-muted: #5e7485;
         }
 
-        // Подключаемся с таймаутом 4 секунды для быстрого перебора
-        mqttClient = mqtt.connect(targetBroker, {
-            clientId: clientId, 
-            keepalive: 30, 
-            reconnectPeriod: 0, // Отключаем авто-реконнект встроенного клиента, управляем перебором вручную
-            connectTimeout: 4000 
-        });
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
 
-        mqttClient.on('connect', () => {
-            const topic = `metro/channel/v5/${currentRoom}`;
-            mqttClient.subscribe(topic, { qos: 1 }, (err) => {
-                if (!err) {
-                    showChatScreen();
-                    publishPayload({ type: 'system', content: `Сталкер [${myUsername}] вышел в эфир.` });
-                }
-            });
-        });
+        body {
+            background-color: var(--metro-dark);
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(255, 138, 0, 0.05) 0%, transparent 80%),
+                linear-gradient(to bottom, #050709, #0a0e12);
+            color: var(--metro-text);
+            font-family: 'Share Tech Mono', monospace;
+            height: 100dvh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
 
-        mqttClient.on('message', (topic, message) => {
-            try {
-                const payload = JSON.parse(message.toString());
-                if (payload.type.startsWith('ptt_')) {
-                    handlePTTIncoming(payload);
-                } else {
-                    renderIncomingMessage(payload);
-                }
-            } catch(e) { console.error(e); }
-        });
+        /* CRT Сетка Экрана */
+        .crt::before {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+            z-index: 999;
+            background-size: 100% 3px, 6px 100%;
+            pointer-events: none;
+        }
 
-        mqttClient.on('error', () => switchBroker());
-        mqttClient.on('offline', () => switchBroker());
-    } catch(e) {
-        switchBroker();
-    }
-}
+        /* Общие панели Glassmorphism */
+        .glass-panel {
+            background: var(--metro-glass);
+            backdrop-filter: blur(14px) saturate(140%);
+            -webkit-backdrop-filter: blur(14px) saturate(140%);
+            border: 1px solid var(--metro-glass-border);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6), inset 0 0 1px 1px rgba(255, 255, 255, 0.05);
+        }
 
-function switchBroker() {
-    const connStatus = document.getElementById('conn-status');
-    if (connStatus) connStatus.classList.add('disconnected');
-    
-    currentBrokerIdx = (currentBrokerIdx + 1) % BROKERS.length;
-    setTimeout(connectMQTT, 1000);
-}
+        .screen {
+            display: none;
+            width: 100%;
+            max-width: 900px;
+            height: 100dvh;
+            max-height: 100dvh;
+            flex-direction: column;
+            position: relative;
+            z-index: 10;
+            padding: 8px;
+        }
 
-function showChatScreen() {
-    document.getElementById('screen-loading').classList.remove('active');
-    document.getElementById('screen-chat').classList.add('active');
-    document.getElementById('display-user').innerText = myUsername;
-    document.getElementById('display-room').innerText = '#' + currentRoom;
-    document.getElementById('conn-status').classList.remove('disconnected');
-}
+        .screen.active { display: flex; }
 
-/* ================= 5. ДВИЖОК РАЦИИ (PCM STREAMING) ================= */
-function setupPTTEvents() {
-    const btn = document.getElementById('ptt-button');
-    if (!btn) return;
+        /* ЭКРАН ЗАГРУЗКИ */
+        #screen-loading {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: #050708;
+        }
 
-    btn.addEventListener('mousedown', startPTT);
-    btn.addEventListener('mouseup', stopPTT);
-    btn.addEventListener('mouseleave', stopPTT);
+        .metro-loader {
+            width: 54px;
+            height: 54px;
+            border: 4px solid var(--metro-muted);
+            border-top: 4px solid var(--metro-amber);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            box-shadow: 0 0 20px var(--metro-amber-glow);
+            margin-bottom: 20px;
+        }
 
-    btn.addEventListener('touchstart', (e) => { e.preventDefault(); startPTT(); }, { passive: false });
-    btn.addEventListener('touchend', (e) => { e.preventDefault(); stopPTT(); }, { passive: false });
-    btn.addEventListener('touchcancel', (e) => { e.preventDefault(); stopPTT(); }, { passive: false });
-}
+        @keyframes spin { 100% { transform: rotate(360deg); } }
 
-async function startPTT() {
-    if (isPTTTransmitting) return;
-    audioEngine.init();
-    audioEngine.playPTTStart();
+        .loading-title {
+            color: var(--metro-amber);
+            font-size: 22px;
+            letter-spacing: 3px;
+            text-shadow: 0 0 12px var(--metro-amber);
+            margin-bottom: 8px;
+        }
 
-    try {
-        pttMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        isPTTTransmitting = true;
-        pttStreamId = 'stream_' + Date.now();
+        .loading-status { color: var(--metro-muted); font-size: 13px; letter-spacing: 1px; }
 
-        const btn = document.getElementById('ptt-button');
-        btn.classList.add('transmitting');
-        btn.innerText = '🔴 ЭФИР ОТКРЫТ (ГОВОРИТЕ)';
+        /* ЭКРАН ВХОДА */
+        #screen-login { justify-content: center; align-items: center; }
 
-        pttAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-        const source = pttAudioCtx.createMediaStreamSource(pttMicStream);
-        pttProcessor = pttAudioCtx.createScriptProcessor(2048, 1, 1);
+        .login-card {
+            padding: 24px;
+            width: 100%;
+            max-width: 400px;
+            border-radius: 4px;
+        }
 
-        publishPayload({ type: 'ptt_start', streamId: pttStreamId });
+        .metro-title {
+            color: var(--metro-amber);
+            font-size: 22px;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 0 0 12px var(--metro-amber);
+            letter-spacing: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
 
-        pttProcessor.onaudioprocess = (e) => {
-            if (!isPTTTransmitting) return;
-            const inputData = e.inputBuffer.getChannelData(0);
-            
-            const pttInt16 = new Int16Array(inputData.length);
-            for (let i = 0; i < inputData.length; i++) {
-                let s = Math.max(-1, Math.min(1, inputData[i]));
-                pttInt16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        .field-group { margin-bottom: 16px; }
+        .field-group label {
+            display: block;
+            font-size: 11px;
+            color: var(--metro-muted);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .metro-input {
+            width: 100%;
+            background: rgba(10, 14, 18, 0.85);
+            border: 1px solid var(--metro-glass-border);
+            color: var(--metro-amber);
+            padding: 12px 14px;
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s ease;
+            user-select: text;
+            -webkit-user-select: text;
+        }
+
+        .metro-input:focus {
+            border-color: var(--metro-amber);
+            box-shadow: 0 0 12px var(--metro-amber-glow);
+        }
+
+        .metro-btn {
+            width: 100%;
+            background: rgba(255, 138, 0, 0.12);
+            color: var(--metro-amber);
+            border: 1px solid var(--metro-amber);
+            padding: 14px;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            letter-spacing: 2px;
+            transition: all 0.2s ease;
+        }
+
+        .metro-btn:hover {
+            background: var(--metro-amber);
+            color: var(--metro-dark);
+            box-shadow: 0 0 20px var(--metro-amber-glow);
+        }
+
+        /* ЭКРАН ЧАТА */
+        .chat-header {
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            gap: 8px;
+            flex-shrink: 0;
+            border-radius: 4px;
+        }
+
+        .channel-info { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+
+        .gas-lamp-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(8, 12, 15, 0.8);
+            padding: 4px 10px;
+            border: 1px solid var(--metro-glass-border);
+            border-radius: 20px;
+        }
+
+        /* АНИМИРОВАННЫЙ НЕОНОВЫЙ ИНДИКАТОР */
+        .gas-lamp-bulb {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .gas-lamp-bulb.green {
+            background: var(--metro-green);
+            box-shadow: 0 0 10px var(--metro-green), 0 0 18px var(--metro-green-glow);
+            animation: neonBreatheGreen 2s infinite ease-in-out;
+        }
+
+        .gas-lamp-bulb.blue {
+            background: var(--metro-blue);
+            box-shadow: 0 0 10px var(--metro-blue), 0 0 18px var(--metro-blue-glow);
+            animation: neonBreatheBlue 2s infinite ease-in-out;
+        }
+
+        .gas-lamp-bulb.red {
+            background: var(--metro-red);
+            box-shadow: 0 0 10px var(--metro-red);
+            animation: neonFlickerRed 1.2s infinite;
+        }
+
+        @keyframes neonBreatheGreen {
+            0%, 100% { opacity: 0.8; box-shadow: 0 0 6px var(--metro-green); }
+            50% { opacity: 1; box-shadow: 0 0 16px var(--metro-green), 0 0 22px var(--metro-green-glow); }
+        }
+
+        @keyframes neonBreatheBlue {
+            0%, 100% { opacity: 0.8; box-shadow: 0 0 6px var(--metro-blue); }
+            50% { opacity: 1; box-shadow: 0 0 16px var(--metro-blue), 0 0 22px var(--metro-blue-glow); }
+        }
+
+        @keyframes neonFlickerRed {
+            0%, 100% { opacity: 0.9; }
+            50% { opacity: 0.3; }
+            52% { opacity: 1; }
+            75% { opacity: 0.5; }
+        }
+
+        .lamp-text { font-size: 10px; color: var(--metro-muted); font-weight: bold; letter-spacing: 1px; }
+        .user-tag { color: var(--metro-amber); font-weight: bold; }
+
+        .copy-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--metro-glass-border);
+            color: var(--metro-text);
+            padding: 6px 12px;
+            font-family: inherit;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .copy-btn:hover {
+            border-color: var(--metro-amber);
+            color: var(--metro-amber);
+        }
+
+        .call-banner {
+            display: none;
+            background: rgba(32, 224, 96, 0.12);
+            border: 1px solid var(--metro-green);
+            color: var(--metro-green);
+            padding: 8px 12px;
+            text-align: center;
+            font-size: 12px;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+            border-radius: 4px;
+            animation: pulseBanner 1.2s infinite alternate;
+        }
+
+        @keyframes pulseBanner { 0% { opacity: 0.6; } 100% { opacity: 1; box-shadow: 0 0 12px var(--metro-green-glow); } }
+        .call-banner.active { display: block; }
+
+        .chat-body {
+            flex: 1;
+            min-height: 0;
+            padding: 12px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+        }
+
+        /* АНИМАЦИЯ ПОЯВЛЕНИЯ СООБЩЕНИЙ */
+        .msg {
+            max-width: 82%;
+            padding: 10px 14px;
+            border: 1px solid var(--metro-glass-border);
+            background: rgba(20, 28, 36, 0.85);
+            backdrop-filter: blur(8px);
+            word-wrap: break-word;
+            border-radius: 4px;
+            animation: msgSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes msgSlideIn {
+            from { opacity: 0; transform: translateY(12px) scale(0.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .msg.self { 
+            align-self: flex-end; 
+            border-color: rgba(255, 138, 0, 0.4); 
+            background: rgba(35, 24, 14, 0.85); 
+        }
+
+        .msg.other { 
+            align-self: flex-start; 
+            border-color: rgba(94, 116, 133, 0.3); 
+        }
+
+        .msg.system {
+            align-self: center;
+            max-width: 95%;
+            background: transparent;
+            border: none;
+            color: var(--metro-muted);
+            font-size: 11px;
+            text-align: center;
+            backdrop-filter: none;
+        }
+
+        .msg-meta { display: flex; justify-content: space-between; font-size: 10px; color: var(--metro-muted); margin-bottom: 4px; gap: 12px; }
+        .msg.self .msg-sender { color: var(--metro-amber); }
+        .msg-text { font-size: 13px; line-height: 1.4; color: var(--metro-text); user-select: text; }
+
+        .msg-media-preview {
+            position: relative;
+            cursor: pointer;
+            margin-top: 6px;
+            display: inline-block;
+            max-width: 100%;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid var(--metro-glass-border);
+        }
+
+        .msg-media-preview img, .msg-media-preview video {
+            max-width: 100%;
+            max-height: 240px;
+            display: block;
+            transition: transform 0.3s ease;
+        }
+
+        .msg-media-preview:hover img, .msg-media-preview:hover video {
+            transform: scale(1.02);
+        }
+
+        .msg-media-preview-badge {
+            position: absolute;
+            bottom: 6px; right: 6px;
+            background: rgba(10, 14, 18, 0.85);
+            color: var(--metro-amber);
+            font-size: 10px;
+            padding: 3px 8px;
+            border: 1px solid var(--metro-glass-border);
+            border-radius: 3px;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* ГОЛОСОВОЕ СООБЩЕНИЕ И АНИМИРОВАННЫЙ ЭКВАЛАЙЗЕР */
+        .audio-player {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 6px;
+            background: rgba(10, 14, 18, 0.7);
+            padding: 8px 12px;
+            border: 1px solid var(--metro-glass-border);
+            border-radius: 4px;
+        }
+
+        .audio-play-btn {
+            background: var(--metro-amber);
+            color: var(--metro-dark);
+            border: none;
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex; justify-content: center; align-items: center;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+        }
+
+        .audio-play-btn:hover { transform: scale(1.08); box-shadow: 0 0 10px var(--metro-amber-glow); }
+
+        .audio-wave-bars {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            height: 22px;
+            flex: 1;
+        }
+
+        .audio-wave-bars .bar {
+            width: 3px;
+            background: var(--metro-muted);
+            border-radius: 2px;
+            height: 25%;
+            transition: height 0.2s ease, background-color 0.2s ease;
+        }
+
+        .audio-player.playing .bar {
+            background: var(--metro-amber);
+            animation: waveBounce 0.8s infinite ease-in-out alternate;
+        }
+
+        .audio-player.playing .bar:nth-child(1) { animation-delay: 0.1s; }
+        .audio-player.playing .bar:nth-child(2) { animation-delay: 0.3s; }
+        .audio-player.playing .bar:nth-child(3) { animation-delay: 0.2s; }
+        .audio-player.playing .bar:nth-child(4) { animation-delay: 0.4s; }
+        .audio-player.playing .bar:nth-child(5) { animation-delay: 0.15s; }
+        .audio-player.playing .bar:nth-child(6) { animation-delay: 0.35s; }
+
+        @keyframes waveBounce {
+            0% { height: 20%; }
+            100% { height: 100%; }
+        }
+
+        .chat-input-panel {
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex-shrink: 0;
+            border-radius: 4px;
+        }
+
+        .controls-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        /* КНОПКА PTT С ПУЛЬСАЦИЕЙ */
+        .mode-btn {
+            height: 48px;
+            background: rgba(10, 14, 18, 0.7);
+            border: 1px solid var(--metro-glass-border);
+            color: var(--metro-amber);
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            cursor: pointer;
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
+            gap: 8px;
+            text-align: center;
+            padding: 6px;
+            transition: all 0.15s ease;
+            touch-action: manipulation;
+            border-radius: 4px;
+        }
+
+        .mode-btn.ptt-mode { border-color: var(--metro-amber); }
+        .mode-btn.ptt-mode.active-ptt {
+            background: var(--metro-amber) !important;
+            color: var(--metro-dark) !important;
+            animation: pttPulse 1s infinite alternate;
+        }
+
+        @keyframes pttPulse {
+            0% { box-shadow: 0 0 10px var(--metro-amber), inset 0 0 8px rgba(255,255,255,0.4); }
+            100% { box-shadow: 0 0 28px var(--metro-amber), 0 0 35px var(--metro-amber-glow), inset 0 0 15px rgba(255,255,255,0.8); }
+        }
+
+        .mode-btn.call-mode { border-color: #00c3ff; color: #00c3ff; }
+        .mode-btn.call-mode.active-call {
+            background: var(--metro-red);
+            border-color: var(--metro-red);
+            color: white;
+            box-shadow: 0 0 18px rgba(255, 56, 56, 0.7);
+        }
+
+        .input-row { display: flex; gap: 8px; align-items: center; }
+
+        .input-btn {
+            background: rgba(10, 14, 18, 0.8);
+            border: 1px solid var(--metro-glass-border);
+            color: var(--metro-amber);
+            width: 42px; height: 42px;
+            cursor: pointer;
+            display: flex; justify-content: center; align-items: center;
+            flex-shrink: 0;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .input-btn:hover {
+            border-color: var(--metro-amber);
+            box-shadow: 0 0 10px var(--metro-amber-glow);
+        }
+
+        .input-btn.recording {
+            background: var(--metro-red);
+            color: white;
+            border-color: var(--metro-red);
+            animation: recPulse 0.8s infinite alternate;
+        }
+
+        @keyframes recPulse { 0% { opacity: 0.7; } 100% { opacity: 1; box-shadow: 0 0 15px rgba(255, 56, 56, 0.8); } }
+
+        #chat-message-input { flex: 1; height: 42px; font-size: 13px; border-radius: 4px; }
+
+        /* LIGHTBOX ПЛАВНОЕ МОДАЛЬНОЕ ОКНО */
+        #media-modal {
+            display: flex;
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(5, 7, 9, 0.88);
+            backdrop-filter: blur(16px);
+            z-index: 10000;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        #media-modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-top-bar {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10001;
+        }
+
+        .modal-close-btn {
+            background: rgba(20, 28, 36, 0.8);
+            border: 1px solid var(--metro-amber);
+            color: var(--metro-amber);
+            padding: 8px 16px;
+            font-family: inherit;
+            font-size: 13px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-radius: 4px;
+        }
+
+        .modal-body {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: auto;
+        }
+
+        .modal-body img, .modal-body video {
+            max-width: 92vw;
+            max-height: 78vh;
+            object-fit: contain;
+            border: 1px solid var(--metro-amber);
+            box-shadow: 0 0 30px var(--metro-amber-glow);
+            transform: scale(0.92);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-radius: 4px;
+        }
+
+        #media-modal.active .modal-body img, #media-modal.active .modal-body video {
+            transform: scale(1);
+        }
+
+        .modal-bottom-bar {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            padding-top: 10px;
+        }
+
+        .download-btn {
+            background: var(--metro-amber);
+            color: var(--metro-dark);
+            border: none;
+            padding: 12px 24px;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 0 20px var(--metro-amber-glow);
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .download-btn:hover { transform: scale(1.04); }
+
+        #toast {
+            position: fixed;
+            bottom: 80px; left: 50%;
+            transform: translateX(-50%);
+            background: var(--metro-amber);
+            color: var(--metro-dark);
+            padding: 8px 18px;
+            font-weight: bold;
+            display: none;
+            z-index: 1000;
+            font-size: 12px;
+            border-radius: 4px;
+            box-shadow: 0 0 15px var(--metro-amber-glow);
+        }
+    </style>
+</head>
+<body class="crt">
+
+    <div id="toast">СКОПИРОВАНО В БУФЕР</div>
+
+    <audio id="remote-audio" autoplay playsinline style="display:none;"></audio>
+
+    <!-- Lightbox просмотрщик -->
+    <div id="media-modal">
+        <div class="modal-top-bar">
+            <span style="color:var(--metro-amber); font-size: 12px; letter-spacing: 1px;">ПРОСМОТР МЕДИAФАЙЛА</span>
+            <button class="modal-close-btn" onclick="closeMediaModal()"><i data-lucide="x"></i> ЗАКРЫТЬ</button>
+        </div>
+        <div class="modal-body" id="modal-container"></div>
+        <div class="modal-bottom-bar">
+            <button class="download-btn" onclick="downloadCurrentMedia()"><i data-lucide="download"></i> СОХРАНИТЬ В ПАМЯТЬ</button>
+        </div>
+    </div>
+
+    <!-- 1. Экран Загрузки -->
+    <div id="screen-loading" class="screen active">
+        <div class="metro-loader"></div>
+        <div class="loading-title">METRO-NET WebRTC</div>
+        <div id="loading-status" class="loading-status">ПОИСК ОПТИМАЛЬНОГО МАРШРУТА...</div>
+    </div>
+
+    <!-- 2. Экран Входа -->
+    <div id="screen-login" class="screen">
+        <div class="login-card glass-panel">
+            <div class="metro-title"><i data-lucide="radio"></i> ЛИНИЯ СВЯЗИ</div>
+            <div class="field-group">
+                <label for="username-input">Позывной сталкера</label>
+                <input type="text" id="username-input" class="metro-input" placeholder="Артем" maxlength="15" autocomplete="off">
+            </div>
+            <div class="field-group">
+                <label for="room-input">Номер частоты</label>
+                <input type="text" id="room-input" class="metro-input" placeholder="канал..." maxlength="20" autocomplete="off">
+            </div>
+            <button class="metro-btn" onclick="startSession()">
+                <span>ПОДКЛЮЧИТЬСЯ</span> <i data-lucide="arrow-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- 3. Экран Чата -->
+    <div id="screen-chat" class="screen">
+        <div class="chat-header glass-panel">
+            <div class="channel-info">
+                <div class="gas-lamp-box" title="Зеленый=P2P, Синий=TURN, Красный=Плохой сигнал">
+                    <div id="gas-lamp" class="gas-lamp-bulb red"></div>
+                    <span id="gas-lamp-text" class="lamp-text">OFF</span>
+                </div>
+                <div>
+                    <span><strong id="display-user" class="user-tag">---</strong></span>
+                    <span style="color:var(--metro-muted); margin-left: 2px;">[<span id="display-room" style="color:var(--metro-amber);">---</span>]</span>
+                </div>
+            </div>
+            <button class="copy-btn" onclick="copyInviteLink()"><i data-lucide="share-2" style="width:14px;"></i> ССЫЛКА</button>
+        </div>
+
+        <div id="call-banner" class="call-banner">
+            <i data-lucide="mic" style="width:14px; display:inline-block; vertical-align:middle;"></i> ЭФИР АКТИВЕН: <span id="banner-mode-text">ПОДКЛЮЧЕНО</span>
+        </div>
+
+        <div id="chat-messages" class="chat-body glass-panel">
+            <div class="msg system">Частота настроена. Нажмите на фото/видео для увеличения в стеклянном вьюере.</div>
+        </div>
+
+        <div class="chat-input-panel glass-panel">
+            <div class="controls-row">
+                <button id="ptt-btn" class="mode-btn ptt-mode">
+                    <i data-lucide="radio"></i> РАЦИЯ (ЗАЖАТЬ)
+                </button>
+                <button id="call-toggle-btn" class="mode-btn call-mode" onclick="toggleCall()">
+                    <i data-lucide="phone"></i> ЗВОНОК
+                </button>
+            </div>
+
+            <div class="input-row">
+                <button class="input-btn" onclick="document.getElementById('file-picker').click()" title="Фото/Видео">
+                    <i data-lucide="paperclip"></i>
+                </button>
+                <input type="file" id="file-picker" style="display:none;" accept="image/*,video/*" onchange="handleFileSelect(event)">
+
+                <input type="text" id="chat-message-input" class="metro-input" placeholder="Сообщение..." onkeypress="handleKeyPress(event)">
+
+                <button id="rec-btn" class="input-btn" onclick="toggleVoiceRecord()" title="Записать аудио">
+                    <i data-lucide="mic"></i>
+                </button>
+                <button class="input-btn" onclick="sendTextMessage()">
+                    <i data-lucide="send"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ИНИЦИАЛИЗАЦИЯ ИКОНОК LUCIDE */
+        function refreshIcons() {
+            if (window.lucide) lucide.createIcons();
+        }
+
+        /* ================= ДИНАМИЧЕСКИЕ НАСТРОЙКИ СЕТИ ПО РЕГИОНАМ ================= */
+        const REGIONAL_CONFIGS = {
+            RU: {
+                brokers: [
+                    'wss://broker.emqx.io:8084/mqtt',
+                    'wss://test.mosquitto.org:8081/mqtt',
+                    'wss://broker.hivemq.com:8884/mqtt'
+                ],
+                stun: [
+                    { urls: 'stun:stun.yandex.ru:3478' },
+                    { urls: 'stun:stun.l.google.com:19302' }
+                ]
+            },
+            EU: {
+                brokers: [
+                    'wss://test.mosquitto.org:8081/mqtt',
+                    'wss://broker.emqx.io:8084/mqtt',
+                    'wss://broker.hivemq.com:8884/mqtt'
+                ],
+                stun: [
+                    { urls: 'stun:stun.voipbuster.com:3478' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ]
+            },
+            US: {
+                brokers: [
+                    'wss://broker.hivemq.com:8884/mqtt',
+                    'wss://broker.emqx.io:8084/mqtt',
+                    'wss://test.mosquitto.org:8081/mqtt'
+                ],
+                stun: [
+                    { urls: 'stun:global.stun.twilio.com:3478' },
+                    { urls: 'stun:stun2.l.google.com:19302' }
+                ]
+            },
+            GLOBAL: {
+                brokers: [
+                    'wss://broker.emqx.io:8084/mqtt',
+                    'wss://test.mosquitto.org:8081/mqtt',
+                    'wss://broker.hivemq.com:8884/mqtt'
+                ],
+                stun: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:global.stun.twilio.com:3478' }
+                ]
             }
-
-            let binary = '';
-            const bytes = new Uint8Array(pttInt16.buffer);
-            for (let i = 0; i < bytes.byteLength; i++) {
-                binary += String.fromCharCode(bytes[i]);
-            }
-
-            publishPayload({
-                type: 'ptt_chunk',
-                streamId: pttStreamId,
-                chunk: btoa(binary)
-            });
         };
 
-        source.connect(pttProcessor);
-        pttProcessor.connect(pttAudioCtx.destination);
+        const COMMON_TURN_SERVERS = [
+            { urls: "turn:openrelay.metered.ca:80", username: "openrelay", credential: "openrelay" },
+            { urls: "turn:openrelay.metered.ca:443", username: "openrelay", credential: "openrelay" },
+            { urls: "turn:openrelay.metered.ca:443?transport=tcp", username: "openrelay", credential: "openrelay" }
+        ];
 
-    } catch (err) {
-        isPTTTransmitting = false;
-        alert("Ошибка рации: Нет доступа к микрофону!");
-    }
-}
+        let iceServersConfig = { iceServers: [...REGIONAL_CONFIGS.GLOBAL.stun, ...COMMON_TURN_SERVERS] };
+        let rankedBrokers = [...REGIONAL_CONFIGS.GLOBAL.brokers];
+        let currentBrokerIdx = 0;
+        let mqttClient = null;
+        
+        let connectTimeoutTimer = null;
+        const CONNECT_TIMEOUT_MS = 3500;
 
-function stopPTT() {
-    if (!isPTTTransmitting) return;
-    isPTTTransmitting = false;
+        let myUserId = localStorage.getItem('metro_uid') || 'u_' + Math.random().toString(36).substr(2, 7);
+        localStorage.setItem('metro_uid', myUserId);
 
-    const btn = document.getElementById('ptt-button');
-    btn.classList.remove('transmitting');
-    btn.innerText = '🎙️ ЗАЖМИ И ГОВОРИ (РАЦИЯ)';
+        let myUsername = localStorage.getItem('metro_uname') || '';
+        let rawRoom = new URLSearchParams(window.location.search).get('room') || localStorage.getItem('metro_room') || '';
 
-    audioEngine.playPTTEnd();
-
-    if (pttProcessor) { pttProcessor.disconnect(); pttProcessor = null; }
-    if (pttAudioCtx) { pttAudioCtx.close(); pttAudioCtx = null; }
-    if (pttMicStream) { pttMicStream.getTracks().forEach(t => t.stop()); pttMicStream = null; }
-
-    publishPayload({ type: 'ptt_end', streamId: pttStreamId });
-}
-
-function handlePTTIncoming(data) {
-    if (data.uid === myUserId) return;
-
-    const banner = document.getElementById('ptt-banner');
-    const speakerTag = document.getElementById('ptt-speaker-name');
-
-    if (data.type === 'ptt_start') {
-        speakerTag.innerText = data.sender;
-        banner.classList.add('active');
-        audioEngine.playPTTStart();
-
-        if (!rxAudioCtx) rxAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-        if (rxAudioCtx.state === 'suspended') rxAudioCtx.resume();
-        nextStartTime = rxAudioCtx.currentTime;
-
-    } else if (data.type === 'ptt_chunk') {
-        if (!rxAudioCtx) return;
-
-        const binary = atob(data.chunk);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) {
-            bytes[i] = binary.charCodeAt(i);
-        }
-        const int16 = new Int16Array(bytes.buffer);
-
-        const float32 = new Float32Array(int16.length);
-        for (let i = 0; i < int16.length; i++) {
-            float32[i] = int16[i] / (int16[i] < 0 ? 0x8000 : 0x7FFF);
+        function cleanRoomName(str) {
+            if (!str) return '';
+            try { str = decodeURIComponent(str); } catch(e){}
+            return str.toLowerCase().replace(/[^a-z0-9_-]/g, '');
         }
 
-        const audioBuffer = rxAudioCtx.createBuffer(1, float32.length, 16000);
-        audioBuffer.getChannelData(0).set(float32);
+        let currentRoom = cleanRoomName(rawRoom);
 
-        const source = rxAudioCtx.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(rxAudioCtx.destination);
+        /* WebRTC & Media State */
+        let peerConnection = null;
+        let localStream = null;
+        let isPTTActive = false;
+        let isCallActive = false;
 
-        if (nextStartTime < rxAudioCtx.currentTime) {
-            nextStartTime = rxAudioCtx.currentTime;
+        /* Lightbox State */
+        let activeMediaSrc = '';
+        let activeMediaType = '';
+
+        /* Audio Recording State */
+        let isVoiceRecording = false;
+        let voiceRecorder = null;
+        let voiceChunks = [];
+        let activeAudio = null;
+        let activeAudioContainer = null;
+        let statsInterval = null;
+
+        /* Звуковые эффекты */
+        class MetroSoundEngine {
+            constructor() { this.ctx = null; }
+            init() {
+                if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+            }
+            playBeep(freq1, freq2, duration) {
+                try {
+                    this.init();
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq1, now);
+                    if (freq2) osc.frequency.setValueAtTime(freq2, now + duration / 2);
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.start(now); osc.stop(now + duration);
+                } catch(e){}
+            }
         }
-        source.start(nextStartTime);
-        nextStartTime += audioBuffer.duration;
+        const audioEngine = new MetroSoundEngine();
 
-    } else if (data.type === 'ptt_end') {
-        setTimeout(() => {
-            banner.classList.remove('active');
-            audioEngine.playPTTEnd();
-        }, 300);
-    }
-}
-
-/* ================= 6. ГОЛОСОВЫЕ СООБЩЕНИЯ ================= */
-function playAudio(btn, src) {
-    if (activeAudio && activeAudioBtn === btn) {
-        if (!activeAudio.paused) {
-            activeAudio.pause();
-            btn.innerText = '▶';
-        } else {
-            activeAudio.play();
-            btn.innerText = '❚❚';
+        function unlockAudio() {
+            const remoteAudio = document.getElementById('remote-audio');
+            remoteAudio.play().then(() => remoteAudio.pause()).catch(() => {});
+            audioEngine.init();
         }
-        return;
-    }
 
-    if (activeAudio) {
-        activeAudio.pause();
-        if (activeAudioBtn) activeAudioBtn.innerText = '▶';
-    }
+        /* ================= 1. ОПРЕДЕЛЕНИЕ РЕГИОНА И ТЕСТ СКОРОСТИ ================= */
+        async function detectCountryAndOptimize() {
+            let regionKey = 'GLOBAL';
+            try {
+                updateLoadingStatus("ОПРЕДЕЛЕНИЕ РЕГИОНА И ТЕСТ СКОРОСТИ...");
+                const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(2000) });
+                const data = await res.json();
+                const cc = data.country_code;
 
-    activeAudio = new Audio(src);
-    activeAudioBtn = btn;
-    const progress = btn.parentElement.querySelector('.audio-progress');
+                if (['RU', 'BY', 'KZ', 'AM', 'KG'].includes(cc)) regionKey = 'RU';
+                else if (['DE', 'FR', 'GB', 'PL', 'NL', 'UA', 'IT', 'ES'].includes(cc)) regionKey = 'EU';
+                else if (['US', 'CA', 'MX'].includes(cc)) regionKey = 'US';
 
-    btn.innerText = '❚❚';
-    activeAudio.play().catch(e => console.error("Audio error:", e));
+                console.log(`[MetroNet] Регион: ${regionKey} (${cc})`);
+            } catch(e) {
+                console.warn("[MetroNet] Ошибка геолокации, используем глобальные узлы.");
+            }
 
-    activeAudio.ontimeupdate = () => {
-        if (activeAudio && activeAudio.duration) {
-            const pct = (activeAudio.currentTime / activeAudio.duration) * 100;
-            progress.style.width = pct + '%';
+            const targetConfig = REGIONAL_CONFIGS[regionKey] || REGIONAL_CONFIGS.GLOBAL;
+            iceServersConfig = { iceServers: [...targetConfig.stun, ...COMMON_TURN_SERVERS] };
+
+            rankedBrokers = await sortBrokersByLatency(targetConfig.brokers);
+            currentBrokerIdx = 0;
         }
-    };
 
-    activeAudio.onended = () => {
-        btn.innerText = '▶';
-        progress.style.width = '0%';
-        activeAudio = null;
-        activeAudioBtn = null;
-    };
-}
+        async function sortBrokersByLatency(brokerList) {
+            const results = await Promise.all(brokerList.map(async (url) => {
+                const start = performance.now();
+                try {
+                    const ws = new WebSocket(url, ['mqtt']);
+                    const latency = await new Promise((resolve) => {
+                        const timer = setTimeout(() => { try { ws.close(); } catch(e){} resolve(9999); }, 1800);
+                        ws.onopen = () => {
+                            const ping = Math.round(performance.now() - start);
+                            ws.close();
+                            clearTimeout(timer);
+                            resolve(ping);
+                        };
+                        ws.onerror = () => { clearTimeout(timer); resolve(9999); };
+                    });
+                    return { url, latency };
+                } catch(e) {
+                    return { url, latency: 9999 };
+                }
+            }));
 
-async function toggleVoiceRecord() {
-    const btn = document.getElementById('rec-btn');
-    audioEngine.init();
+            results.sort((a, b) => a.latency - b.latency);
+            return results.map(r => r.url);
+        }
 
-    if (!isVoiceRecording) {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            voiceRecorder = new MediaRecorder(stream);
-            voiceChunks = [];
+        function updateLoadingStatus(msg) {
+            const elem = document.getElementById('loading-status');
+            if (elem) elem.innerText = msg;
+        }
 
-            voiceRecorder.ondataavailable = e => { if (e.data.size > 0) voiceChunks.push(e.data); };
-            voiceRecorder.onstop = () => {
-                const audioBlob = new Blob(voiceChunks, { type: 'audio/webm' });
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    publishPayload({ type: 'audio', content: reader.result });
-                };
-                reader.readAsDataURL(audioBlob);
-                stream.getTracks().forEach(track => track.stop());
+        /* ================= 2. ИНИЦИАЛИЗАЦИЯ ================= */
+        window.onload = () => {
+            refreshIcons();
+            setTimeout(() => {
+                document.getElementById('screen-loading').classList.remove('active');
+                document.getElementById('screen-login').classList.add('active');
+
+                if (myUsername) document.getElementById('username-input').value = myUsername;
+                if (!currentRoom) currentRoom = 'metro-' + Math.random().toString(36).substr(2, 6);
+                document.getElementById('room-input').value = currentRoom;
+
+                if (myUsername && new URLSearchParams(window.location.search).get('room')) {
+                    startSession();
+                }
+            }, 600);
+
+            const pttBtn = document.getElementById('ptt-btn');
+
+            pttBtn.addEventListener('mousedown', (e) => { e.preventDefault(); unlockAudio(); startPTT(); });
+            pttBtn.addEventListener('mouseup', (e) => { e.preventDefault(); stopPTT(); });
+            pttBtn.addEventListener('mouseleave', (e) => { e.preventDefault(); stopPTT(); });
+
+            pttBtn.addEventListener('touchstart', (e) => {
+                if (e.cancelable) e.preventDefault();
+                unlockAudio();
+                startPTT();
+            }, { passive: false });
+
+            pttBtn.addEventListener('touchend', (e) => {
+                if (e.cancelable) e.preventDefault();
+                stopPTT();
+            }, { passive: false });
+
+            pttBtn.addEventListener('touchcancel', (e) => {
+                if (e.cancelable) e.preventDefault();
+                stopPTT();
+            }, { passive: false });
+        };
+
+        async function startSession() {
+            unlockAudio();
+            const unameInput = document.getElementById('username-input').value.trim();
+            const roomInput = cleanRoomName(document.getElementById('room-input').value.trim());
+
+            if (!unameInput || !roomInput) return alert("Заполните позывной и частоту!");
+
+            myUsername = unameInput;
+            currentRoom = roomInput;
+
+            localStorage.setItem('metro_uname', myUsername);
+            localStorage.setItem('metro_room', currentRoom);
+
+            window.history.replaceState({}, '', `?room=${encodeURIComponent(currentRoom)}`);
+
+            document.getElementById('screen-login').classList.remove('active');
+            document.getElementById('screen-loading').classList.add('active');
+
+            initAudioStream();
+            await connectMQTT();
+        }
+
+        async function initAudioStream() {
+            if (!localStream) {
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia({
+                        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+                    });
+                    setMicEnabled(false);
+                } catch(e) {
+                    console.error("Ошибка микрофона:", e);
+                }
+            }
+        }
+
+        /* ================= 3. МОНИТОРИНГ НЕОНОВОЙ ЛАМПЫ ================= */
+        function updateGasLamp(color, text) {
+            const lamp = document.getElementById('gas-lamp');
+            const lampText = document.getElementById('gas-lamp-text');
+            lamp.className = `gas-lamp-bulb ${color}`;
+            lampText.innerText = text;
+        }
+
+        function monitorConnectionQuality() {
+            if (!peerConnection) {
+                updateGasLamp('red', 'OFF');
+                return;
+            }
+
+            const state = peerConnection.iceConnectionState;
+            if (state === 'disconnected' || state === 'failed' || state === 'closed') {
+                updateGasLamp('red', 'BAD');
+                return;
+            }
+
+            peerConnection.getStats(null).then(stats => {
+                let foundPair = false;
+                stats.forEach(report => {
+                    if (report.type === 'candidate-pair' && (report.nominated || report.selected || report.state === 'succeeded')) {
+                        foundPair = true;
+                        const localCand = stats.get(report.localCandidateId);
+                        const remoteCand = stats.get(report.remoteCandidateId);
+
+                        const isRelay = (localCand && localCand.candidateType === 'relay') || 
+                                        (remoteCand && remoteCand.candidateType === 'relay');
+
+                        updateGasLamp(isRelay ? 'blue' : 'green', isRelay ? 'TURN' : 'P2P');
+                    }
+                });
+
+                if (!foundPair) {
+                    updateGasLamp((state === 'connected' || state === 'completed') ? 'green' : 'red', (state === 'connected' || state === 'completed') ? 'P2P' : 'WAIT');
+                }
+            }).catch(() => updateGasLamp('red', 'ERR'));
+        }
+
+        /* ================= 4. MQTT СИГНАЛИЗАЦИЯ И УМНЫЙ СВИТЧЕР ================= */
+        async function connectMQTT() {
+            if (currentBrokerIdx === 0 && !window.geoOptimized) {
+                window.geoOptimized = true;
+                await detectCountryAndOptimize();
+            }
+
+            const brokerUrl = rankedBrokers[currentBrokerIdx];
+            const hostName = new URL(brokerUrl).hostname;
+            const clientId = 'metro_' + myUserId + '_' + Math.random().toString(36).substr(2, 4);
+
+            updateLoadingStatus(`ПОДКЛЮЧЕНИЕ [${currentBrokerIdx + 1}/${rankedBrokers.length}]: ${hostName}...`);
+
+            if (mqttClient) {
+                try { mqttClient.end(true); } catch(e){}
+            }
+
+            let isConnected = false;
+
+            clearTimeout(connectTimeoutTimer);
+            connectTimeoutTimer = setTimeout(() => {
+                if (!isConnected) {
+                    console.warn(`[MetroNet] Узел ${hostName} не ответил за ${CONNECT_TIMEOUT_MS}мс.`);
+                    switchBrokerAndRetry();
+                }
+            }, CONNECT_TIMEOUT_MS);
+
+            try {
+                mqttClient = mqtt.connect(brokerUrl, { 
+                    clientId: clientId, 
+                    keepalive: 30,
+                    connectTimeout: CONNECT_TIMEOUT_MS,
+                    reconnectPeriod: 0
+                });
+
+                mqttClient.on('connect', () => {
+                    isConnected = true;
+                    clearTimeout(connectTimeoutTimer);
+                    const topic = `metro/webrtc/v11/${currentRoom}`;
+                    mqttClient.subscribe(topic, { qos: 1 }, (err) => {
+                        if (!err) {
+                            showChatScreen();
+                            publishPayload({ type: 'system', content: `Сталкер [${myUsername}] вышел в эфир (${hostName}).` });
+                        }
+                    });
+                });
+
+                mqttClient.on('message', (topic, message) => {
+                    try {
+                        const payload = JSON.parse(message.toString());
+                        if (payload.uid === myUserId && (payload.type.startsWith('rtc_') || payload.type === 'status_update')) return;
+
+                        if (payload.type === 'rtc_offer') handleOffer(payload);
+                        else if (payload.type === 'rtc_answer') handleAnswer(payload);
+                        else if (payload.type === 'rtc_candidate') handleCandidate(payload);
+                        else if (payload.type === 'status_update') handleRemoteStatus(payload);
+                        else renderIncomingMessage(payload);
+                    } catch(e) { console.error(e); }
+                });
+
+                mqttClient.on('error', () => { if (!isConnected) switchBrokerAndRetry(); });
+                mqttClient.on('close', () => {
+                    if (isConnected) {
+                        updateGasLamp('red', 'DISC');
+                        setTimeout(switchBrokerAndRetry, 1000);
+                    }
+                });
+
+            } catch(e) {
+                switchBrokerAndRetry();
+            }
+        }
+
+        function switchBrokerAndRetry() {
+            clearTimeout(connectTimeoutTimer);
+            if (mqttClient) { try { mqttClient.end(true); } catch(e){} }
+            currentBrokerIdx = (currentBrokerIdx + 1) % rankedBrokers.length;
+            setTimeout(connectMQTT, 300);
+        }
+
+        function showChatScreen() {
+            document.getElementById('screen-loading').classList.remove('active');
+            document.getElementById('screen-chat').classList.add('active');
+            document.getElementById('display-user').innerText = myUsername;
+            document.getElementById('display-room').innerText = '#' + currentRoom;
+
+            if (!statsInterval) statsInterval = setInterval(monitorConnectionQuality, 2000);
+            refreshIcons();
+        }
+
+        /* ================= 5. WEBRTC & PTT ================= */
+        async function setupPeerConnection() {
+            if (peerConnection) return;
+
+            peerConnection = new RTCPeerConnection(iceServersConfig);
+            peerConnection.oniceconnectionstatechange = () => monitorConnectionQuality();
+
+            await initAudioStream();
+            if (localStream) {
+                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+            }
+
+            peerConnection.ontrack = (event) => {
+                const remoteAudio = document.getElementById('remote-audio');
+                remoteAudio.srcObject = event.streams[0];
+                remoteAudio.play().catch(() => {});
             };
 
-            voiceRecorder.start();
-            isVoiceRecording = true;
-            btn.classList.add('recording');
-        } catch(e) { alert("Ошибка микрофона: " + e.message); }
-    } else {
-        isVoiceRecording = false;
-        btn.classList.remove('recording');
-        if (voiceRecorder && voiceRecorder.state === 'recording') voiceRecorder.stop();
-    }
-}
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    publishPayload({ type: 'rtc_candidate', candidate: event.candidate });
+                }
+            };
+        }
 
-/* ================= 7. ОТПРАВКА И РЕНДЕР СООБЩЕНИЙ ================= */
-function publishPayload(data) {
-    if (!mqttClient || !mqttClient.connected) return;
-    const fullPayload = {
-        id: 'm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-        uid: myUserId,
-        sender: myUsername,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        ...data
-    };
-    mqttClient.publish(`metro/channel/v5/${currentRoom}`, JSON.stringify(fullPayload), { qos: 1 });
-}
-
-function handleKeyPress(e) { if (e.key === 'Enter') sendTextMessage(); }
-
-function sendTextMessage() {
-    const input = document.getElementById('chat-message-input');
-    const text = input.value.trim();
-    if (!text) return;
-    publishPayload({ type: 'text', content: text });
-    input.value = '';
-}
-
-function handleFileSelect(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (file.type.startsWith('image/')) {
-        compressAndSendImage(file);
-    } else if (file.type.startsWith('video/')) {
-        if (file.size > 8 * 1024 * 1024) return alert("Видео до 8 МБ!");
-        const reader = new FileReader();
-        reader.onload = (evt) => publishPayload({ type: 'video', content: evt.result });
-        reader.readAsDataURL(file);
-    }
-    e.target.value = '';
-}
-
-function compressAndSendImage(file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            let w = img.width, h = img.height, max = 900;
-            if (w > max || h > max) {
-                if (w > h) { h = Math.round((h * max) / w); w = max; }
-                else { w = Math.round((w * max) / h); h = max; }
+        function setMicEnabled(enabled) {
+            if (localStream && localStream.getAudioTracks().length > 0) {
+                localStream.getAudioTracks().forEach(track => { track.enabled = enabled; });
             }
-            canvas.width = w; canvas.height = h;
-            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-            publishPayload({ type: 'image', content: canvas.toDataURL('image/jpeg', 0.6) });
-        };
-        img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-}
+        }
 
-const renderedMsgs = new Set();
+        async function startPTT() {
+            if (isPTTActive || isCallActive) return;
+            isPTTActive = true;
 
-function renderIncomingMessage(data) {
-    if (data.id && renderedMsgs.has(data.id)) return;
-    if (data.id) renderedMsgs.add(data.id);
+            document.getElementById('ptt-btn').classList.add('active-ptt');
+            audioEngine.playBeep(800, 1200, 0.08);
 
-    const box = document.getElementById('chat-messages');
+            await setupPeerConnection();
+            setMicEnabled(true);
 
-    if (data.type === 'system') {
-        const sysDiv = document.createElement('div');
-        sysDiv.className = 'msg system';
-        sysDiv.innerText = data.content;
-        box.appendChild(sysDiv);
-        box.scrollTop = box.scrollHeight;
-        return;
-    }
+            if (peerConnection && peerConnection.signalingState === 'stable') {
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                publishPayload({ type: 'rtc_offer', offer: offer });
+            }
 
-    const isSelf = data.uid === myUserId;
+            updateBanner(true, `РАЦИЯ: ${myUsername} в эфире...`);
+            publishPayload({ type: 'status_update', mode: 'ptt', active: true, speaker: myUsername });
+        }
 
-    const msgDiv = document.createElement('div');
-    msgDiv.className = `msg ${isSelf ? 'self' : 'other'}`;
+        function stopPTT() {
+            if (!isPTTActive) return;
+            isPTTActive = false;
 
-    let contentHTML = '';
-    if (data.type === 'text') {
-        contentHTML = `<div class="msg-text">${escapeHTML(data.content)}</div>`;
-    } else if (data.type === 'image') {
-        contentHTML = `<div class="msg-media"><img src="${data.content}"></div>`;
-    } else if (data.type === 'video') {
-        contentHTML = `<div class="msg-media"><video src="${data.content}" controls></video></div>`;
-    } else if (data.type === 'audio') {
-        contentHTML = `
-            <div class="audio-player">
-                <button class="audio-play-btn" onclick="playAudio(this, '${data.content}')">▶</button>
-                <div class="audio-wave"><div class="audio-progress"></div></div>
-                <span style="font-size:10px; color:var(--metro-muted);">ГОЛОСОВОЕ</span>
-            </div>
-        `;
-    }
+            document.getElementById('ptt-btn').classList.remove('active-ptt');
+            audioEngine.playBeep(600, 400, 0.1);
 
-    msgDiv.innerHTML = `
-        <div class="msg-meta">
-            <span class="msg-sender">${escapeHTML(data.sender)}</span>
-            <span class="msg-time">${data.timestamp}</span>
-        </div>
-        ${contentHTML}
-    `;
+            if (!isCallActive) {
+                setMicEnabled(false);
+                updateBanner(false);
+            }
 
-    box.appendChild(msgDiv);
-    box.scrollTop = box.scrollHeight;
-}
+            publishPayload({ type: 'status_update', mode: 'ptt', active: false, speaker: myUsername });
+        }
 
-function copyInviteLink() {
-    audioEngine.playClick();
-    navigator.clipboard.writeText(window.location.href);
-    const toast = document.getElementById('toast');
-    if (toast) {
-        toast.style.display = 'block';
-        setTimeout(() => toast.style.display = 'none', 2000);
-    }
-}
+        async function toggleCall() {
+            unlockAudio();
+            const callBtn = document.getElementById('call-toggle-btn');
+            if (!isCallActive) {
+                isCallActive = true;
+                callBtn.classList.add('active-call');
+                callBtn.innerHTML = '<i data-lucide="phone-off"></i> ЗАВЕРШИТЬ';
+                refreshIcons();
+                audioEngine.playBeep(900, 1400, 0.12);
 
-function escapeHTML(str) {
-    return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
-}
+                await setupPeerConnection();
+                setMicEnabled(true);
+
+                if (peerConnection) {
+                    const offer = await peerConnection.createOffer();
+                    await peerConnection.setLocalDescription(offer);
+                    publishPayload({ type: 'rtc_offer', offer: offer });
+                }
+
+                updateBanner(true, `АУДИОЗВОНОК (АКТИВЕН)`);
+                publishPayload({ type: 'status_update', mode: 'call', active: true, speaker: myUsername });
+            } else {
+                isCallActive = false;
+                callBtn.classList.remove('active-call');
+                callBtn.innerHTML = '<i data-lucide="phone"></i> ЗВОНОК';
+                refreshIcons();
+                audioEngine.playBeep(500, 300, 0.12);
+
+                if (!isPTTActive) {
+                    setMicEnabled(false);
+                    updateBanner(false);
+                }
+
+                publishPayload({ type: 'status_update', mode: 'call', active: false, speaker: myUsername });
+            }
+        }
+
+        async function handleOffer(payload) {
+            await setupPeerConnection();
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(payload.offer));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            publishPayload({ type: 'rtc_answer', answer: answer });
+        }
+
+        async function handleAnswer(payload) {
+            if (peerConnection && peerConnection.signalingState !== 'stable') {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(payload.answer));
+            }
+        }
+
+        async function handleCandidate(payload) {
+            if (peerConnection) {
+                try { await peerConnection.addIceCandidate(new RTCIceCandidate(payload.candidate)); } catch(e){}
+            }
+        }
+
+        function handleRemoteStatus(payload) {
+            if (payload.active) {
+                const modeName = payload.mode === 'ptt' ? 'РАЦИЯ' : 'АУДИОЗВОНОК';
+                updateBanner(true, `${modeName}: ${payload.speaker} вещает...`);
+                audioEngine.playBeep(800, 1000, 0.06);
+            } else {
+                if (!isCallActive && !isPTTActive) updateBanner(false);
+            }
+        }
+
+        function updateBanner(show, text = '') {
+            const banner = document.getElementById('call-banner');
+            const textElem = document.getElementById('banner-mode-text');
+            if (show) {
+                textElem.innerText = text;
+                banner.classList.add('active');
+            } else {
+                banner.classList.remove('active');
+            }
+        }
+
+        /* ================= 6. LIGHTBOX ================= */
+        function openMediaModal(type, src) {
+            activeMediaSrc = src;
+            activeMediaType = type;
+
+            const modal = document.getElementById('media-modal');
+            const container = document.getElementById('modal-container');
+            container.innerHTML = '';
+
+            if (type === 'image') {
+                const img = document.createElement('img');
+                img.src = src;
+                container.appendChild(img);
+            } else if (type === 'video') {
+                const vid = document.createElement('video');
+                vid.src = src;
+                vid.controls = true;
+                vid.autoplay = true;
+                container.appendChild(vid);
+            }
+
+            modal.classList.add('active');
+        }
+
+        function closeMediaModal() {
+            const modal = document.getElementById('media-modal');
+            const container = document.getElementById('modal-container');
+            container.innerHTML = '';
+            modal.classList.remove('active');
+        }
+
+        function downloadCurrentMedia() {
+            if (!activeMediaSrc) return;
+            const a = document.createElement('a');
+            a.href = activeMediaSrc;
+            const ext = activeMediaType === 'image' ? 'jpg' : 'mp4';
+            a.download = `metro_media_${Date.now()}.${ext}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        /* ================= 7. ГОЛОСОВЫЕ И ВОЛНА ================= */
+        async function toggleVoiceRecord() {
+            unlockAudio();
+            const btn = document.getElementById('rec-btn');
+
+            if (!isVoiceRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    voiceRecorder = new MediaRecorder(stream);
+                    voiceChunks = [];
+
+                    voiceRecorder.ondataavailable = e => { if (e.data.size > 0) voiceChunks.push(e.data); };
+                    voiceRecorder.onstop = () => {
+                        const audioBlob = new Blob(voiceChunks, { type: 'audio/webm' });
+                        const reader = new FileReader();
+                        reader.onloadend = () => publishPayload({ type: 'audio', content: reader.result });
+                        reader.readAsDataURL(audioBlob);
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+
+                    voiceRecorder.start();
+                    isVoiceRecording = true;
+                    btn.classList.add('recording');
+                } catch(e) { alert("Ошибка доступа к микрофону!"); }
+            } else {
+                isVoiceRecording = false;
+                btn.classList.remove('recording');
+                if (voiceRecorder && voiceRecorder.state === 'recording') voiceRecorder.stop();
+            }
+        }
+
+        function playAudio(btn, src) {
+            unlockAudio();
+            const container = btn.closest('.audio-player');
+
+            if (activeAudio && activeAudioContainer === container) {
+                if (!activeAudio.paused) {
+                    activeAudio.pause();
+                    container.classList.remove('playing');
+                    btn.innerHTML = '<i data-lucide="play" style="width:16px;"></i>';
+                } else {
+                    activeAudio.play();
+                    container.classList.add('playing');
+                    btn.innerHTML = '<i data-lucide="pause" style="width:16px;"></i>';
+                }
+                refreshIcons();
+                return;
+            }
+
+            if (activeAudio) {
+                activeAudio.pause();
+                if (activeAudioContainer) {
+                    activeAudioContainer.classList.remove('playing');
+                    const oldBtn = activeAudioContainer.querySelector('.audio-play-btn');
+                    if (oldBtn) oldBtn.innerHTML = '<i data-lucide="play" style="width:16px;"></i>';
+                }
+            }
+
+            activeAudio = new Audio(src);
+            activeAudioContainer = container;
+
+            btn.innerHTML = '<i data-lucide="pause" style="width:16px;"></i>';
+            container.classList.add('playing');
+            refreshIcons();
+
+            activeAudio.play().catch(e => console.error(e));
+
+            activeAudio.onended = () => {
+                btn.innerHTML = '<i data-lucide="play" style="width:16px;"></i>';
+                container.classList.remove('playing');
+                activeAudio = null;
+                activeAudioContainer = null;
+                refreshIcons();
+            };
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (file.type.startsWith('image/')) {
+                compressAndSendImage(file);
+            } else if (file.type.startsWith('video/')) {
+                if (file.size > 10 * 1024 * 1024) return alert("Видео до 10 МБ!");
+                const reader = new FileReader();
+                reader.onload = (evt) => publishPayload({ type: 'video', content: evt.target.result });
+                reader.readAsDataURL(file);
+            }
+            e.target.value = '';
+        }
+
+        function compressAndSendImage(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let w = img.width, h = img.height, max = 1200;
+                    if (w > max || h > max) {
+                        if (w > h) { h = Math.round((h * max) / w); w = max; }
+                        else { w = Math.round((w * max) / h); h = max; }
+                    }
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    publishPayload({ type: 'image', content: canvas.toDataURL('image/jpeg', 0.75) });
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        /* ================= 8. РЕНДЕР СООБЩЕНИЙ ================= */
+        function publishPayload(data) {
+            if (!mqttClient || !mqttClient.connected) return;
+            const fullPayload = {
+                id: 'm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                uid: myUserId,
+                sender: myUsername,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                ...data
+            };
+            mqttClient.publish(`metro/webrtc/v11/${currentRoom}`, JSON.stringify(fullPayload), { qos: 1 });
+        }
+
+        function handleKeyPress(e) { if (e.key === 'Enter') sendTextMessage(); }
+
+        function sendTextMessage() {
+            const input = document.getElementById('chat-message-input');
+            const text = input.value.trim();
+            if (!text) return;
+            publishPayload({ type: 'text', content: text });
+            input.value = '';
+        }
+
+        const renderedMsgs = new Set();
+
+        function renderIncomingMessage(data) {
+            if (data.id && renderedMsgs.has(data.id)) return;
+            if (data.id) renderedMsgs.add(data.id);
+
+            const box = document.getElementById('chat-messages');
+
+            if (data.type === 'system') {
+                const sysDiv = document.createElement('div');
+                sysDiv.className = 'msg system';
+                sysDiv.innerText = data.content;
+                box.appendChild(sysDiv);
+                box.scrollTop = box.scrollHeight;
+                return;
+            }
+
+            const isSelf = data.uid === myUserId;
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `msg ${isSelf ? 'self' : 'other'}`;
+
+            let contentHTML = '';
+            if (data.type === 'text') {
+                contentHTML = `<div class="msg-text">${escapeHTML(data.content)}</div>`;
+            } else if (data.type === 'image') {
+                contentHTML = `
+                    <div class="msg-media-preview" onclick="openMediaModal('image', '${data.content}')">
+                        <img src="${data.content}">
+                        <div class="msg-media-preview-badge"><i data-lucide="maximize-2" style="width:12px;"></i> УВЕЛИЧИТЬ</div>
+                    </div>
+                `;
+            } else if (data.type === 'video') {
+                contentHTML = `
+                    <div class="msg-media-preview" onclick="openMediaModal('video', '${data.content}')">
+                        <video src="${data.content}"></video>
+                        <div class="msg-media-preview-badge"><i data-lucide="play" style="width:12px;"></i> ВОСПРОИЗВЕСТИ</div>
+                    </div>
+                `;
+            } else if (data.type === 'audio') {
+                contentHTML = `
+                    <div class="audio-player">
+                        <button class="audio-play-btn" onclick="playAudio(this, '${data.content}')">
+                            <i data-lucide="play" style="width:16px;"></i>
+                        </button>
+                        <div class="audio-wave-bars">
+                            <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                            <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                        </div>
+                        <span style="font-size:10px; color:var(--metro-muted); font-weight:bold;">ГОЛОСОВОЕ</span>
+                    </div>
+                `;
+            }
+
+            msgDiv.innerHTML = `
+                <div class="msg-meta">
+                    <span class="msg-sender">${escapeHTML(data.sender)}</span>
+                    <span class="msg-time">${data.timestamp}</span>
+                </div>
+                ${contentHTML}
+            `;
+
+            box.appendChild(msgDiv);
+            box.scrollTop = box.scrollHeight;
+            refreshIcons();
+        }
+
+        function copyInviteLink() {
+            navigator.clipboard.writeText(window.location.href);
+            const toast = document.getElementById('toast');
+            toast.style.display = 'block';
+            setTimeout(() => toast.style.display = 'none', 2000);
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+        }
+    </script>
+</body>
+</html>
