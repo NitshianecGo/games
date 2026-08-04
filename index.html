@@ -521,503 +521,526 @@
         </div>
     </div>
 
-    <script>
-        /* ================= 1. ЗВУКОВОЙ ДВИЖОК И ЭФФЕКТЫ ================= */
-        class MetroSoundEngine {
-            constructor() { this.ctx = null; }
-            init() {
-                if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-                if (this.ctx.state === 'suspended') this.ctx.resume();
-            }
-            playClick() {
-                this.init();
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(60, this.ctx.currentTime + 0.05);
-                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
-                osc.connect(gain); gain.connect(this.ctx.destination);
-                osc.start(); osc.stop(this.ctx.currentTime + 0.05);
-            }
-            playPTTStart() {
-                this.init();
-                const now = this.ctx.currentTime;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(800, now);
-                osc.frequency.setValueAtTime(1200, now + 0.04);
-                gain.gain.setValueAtTime(0.08, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
-                osc.connect(gain); gain.connect(this.ctx.destination);
-                osc.start(now); osc.stop(now + 0.09);
-            }
-            playPTTEnd() {
-                this.init();
-                const now = this.ctx.currentTime;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(600, now);
-                osc.frequency.setValueAtTime(400, now + 0.06);
-                gain.gain.setValueAtTime(0.06, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-                osc.connect(gain); gain.connect(this.ctx.destination);
-                osc.start(now); osc.stop(now + 0.12);
-            }
+    /* ================= 1. ЗВУКОВОЙ ДВИЖОК И ЭФФЕКТЫ ================= */
+class MetroSoundEngine {
+    constructor() { this.ctx = null; }
+    init() {
+        if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+    }
+    playClick() {
+        this.init();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(60, this.ctx.currentTime + 0.05);
+        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.05);
+    }
+    playPTTStart() {
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.setValueAtTime(1200, now + 0.04);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.09);
+    }
+    playPTTEnd() {
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.setValueAtTime(400, now + 0.06);
+        gain.gain.setValueAtTime(0.06, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.12);
+    }
+}
+
+const audioEngine = new MetroSoundEngine();
+
+/* ================= 2. СОСТОЯНИЕ И МЕТРИКИ ================= */
+// Брокеры с поддержкой обхода блокировок (включая порт 443)
+const BROKERS = [
+    'wss://broker.emqx.io:8084/mqtt',
+    'wss://test.mosquitto.org:8081/mqtt',
+    'wss://broker.hivemq.com:8884/mqtt'
+];
+let currentBrokerIdx = 0;
+let mqttClient = null;
+
+let myUserId = localStorage.getItem('metro_uid') || 'u_' + Math.random().toString(36).substr(2, 7);
+localStorage.setItem('metro_uid', myUserId);
+
+let myUsername = localStorage.getItem('metro_uname') || '';
+let rawRoom = new URLSearchParams(window.location.search).get('room') || localStorage.getItem('metro_room') || '';
+
+function cleanRoomName(str) {
+    if (!str) return '';
+    try { str = decodeURIComponent(str); } catch(e){}
+    return str.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+}
+
+let currentRoom = cleanRoomName(rawRoom);
+
+let isVoiceRecording = false;
+let voiceRecorder = null;
+let voiceChunks = [];
+
+let activeAudio = null;
+let activeAudioBtn = null;
+
+/* PTT Переменные */
+let isPTTTransmitting = false;
+let pttStreamId = null;
+let pttAudioCtx = null;
+let pttMicStream = null;
+let pttProcessor = null;
+
+let rxAudioCtx = null;
+let nextStartTime = 0;
+let remoteSampleRate = 16000; // Частота входящего потока
+
+/* ================= 3. ИНИЦИАЛИЗАЦИЯ ================= */
+window.onload = () => {
+    setupPTTEvents();
+    setTimeout(() => {
+        document.getElementById('screen-loading').classList.remove('active');
+        document.getElementById('screen-login').classList.add('active');
+
+        if (myUsername) document.getElementById('username-input').value = myUsername;
+        if (!currentRoom) currentRoom = 'metro-' + Math.random().toString(36).substr(2, 6);
+        document.getElementById('room-input').value = currentRoom;
+
+        if (myUsername && new URLSearchParams(window.location.search).get('room')) {
+            startSession();
         }
+    }, 800);
+};
 
-        const audioEngine = new MetroSoundEngine();
+/* ================= 4. ПОДКЛЮЧЕНИЕ К MQTT ================= */
+function startSession() {
+    audioEngine.playClick();
+    const unameInput = document.getElementById('username-input').value.trim();
+    const roomInput = cleanRoomName(document.getElementById('room-input').value.trim());
 
-        /* ================= 2. СОСТОЯНИЕ И МЕТРИКИ ================= */
-        const BROKERS = ['wss://broker.hivemq.com:8884/mqtt', 'wss://broker.emqx.io:8084/mqtt'];
-        let currentBrokerIdx = 0;
-        let mqttClient = null;
+    if (!unameInput || !roomInput) return alert("Укажите позывной и корректный номер частоты!");
 
-        let myUserId = localStorage.getItem('metro_uid') || 'u_' + Math.random().toString(36).substr(2, 7);
-        localStorage.setItem('metro_uid', myUserId);
+    myUsername = unameInput;
+    currentRoom = roomInput;
 
-        let myUsername = localStorage.getItem('metro_uname') || '';
-        let currentRoom = new URLSearchParams(window.location.search).get('room') || localStorage.getItem('metro_room') || '';
+    localStorage.setItem('metro_uname', myUsername);
+    localStorage.setItem('metro_room', currentRoom);
 
-        let isVoiceRecording = false;
-        let voiceRecorder = null;
-        let voiceChunks = [];
+    window.history.replaceState({}, '', `?room=${encodeURIComponent(currentRoom)}`);
 
-        let activeAudio = null;
-        let activeAudioBtn = null;
+    document.getElementById('screen-login').classList.remove('active');
+    document.getElementById('screen-loading').classList.add('active');
+    document.getElementById('loading-status').innerText = `ПОДКЛЮЧЕНИЕ К ЧАСТОТЕ #${currentRoom}...`;
 
-        /* PTT Переменные (PCM Streaming) */
-        let isPTTTransmitting = false;
-        let pttStreamId = null;
-        let pttAudioCtx = null;
-        let pttMicStream = null;
-        let pttProcessor = null;
+    connectMQTT();
+}
 
-        let rxAudioCtx = null;
-        let nextStartTime = 0;
+function connectMQTT() {
+    const clientId = 'metro_' + myUserId + '_' + Math.random().toString(36).substr(2, 4);
 
-        /* ================= 3. ИНИЦИАЛИЗАЦИЯ ================= */
-        window.onload = () => {
-            setupPTTEvents();
-            setTimeout(() => {
-                document.getElementById('screen-loading').classList.remove('active');
-                document.getElementById('screen-login').classList.add('active');
+    try {
+        mqttClient = mqtt.connect(BROKERS[currentBrokerIdx], {
+            clientId: clientId, keepalive: 30, reconnectPeriod: 3000
+        });
 
-                if (myUsername) document.getElementById('username-input').value = myUsername;
-                if (!currentRoom) currentRoom = 'metro-' + Math.random().toString(36).substr(2, 6);
-                document.getElementById('room-input').value = currentRoom;
-
-                if (myUsername && new URLSearchParams(window.location.search).get('room')) {
-                    startSession();
+        mqttClient.on('connect', () => {
+            const topic = `metro/channel/v6/${currentRoom}`;
+            mqttClient.subscribe(topic, { qos: 1 }, (err) => {
+                if (!err) {
+                    showChatScreen();
+                    publishPayload({ type: 'system', content: `Сталкер [${myUsername}] вышел в эфир.` });
                 }
-            }, 800);
+            });
+        });
+
+        mqttClient.on('message', (topic, message) => {
+            try {
+                const payload = JSON.parse(message.toString());
+                if (payload.type.startsWith('ptt_')) {
+                    handlePTTIncoming(payload);
+                } else {
+                    renderIncomingMessage(payload);
+                }
+            } catch(e) { console.error(e); }
+        });
+
+        mqttClient.on('error', () => switchBroker());
+        mqttClient.on('offline', () => document.getElementById('conn-status').classList.add('disconnected'));
+    } catch(e) {
+        switchBroker();
+    }
+}
+
+function switchBroker() {
+    document.getElementById('conn-status').classList.add('disconnected');
+    if (mqttClient) { try { mqttClient.end(true); } catch(e){} }
+    currentBrokerIdx = (currentBrokerIdx + 1) % BROKERS.length;
+    setTimeout(connectMQTT, 2000);
+}
+
+function showChatScreen() {
+    document.getElementById('screen-loading').classList.remove('active');
+    document.getElementById('screen-chat').classList.add('active');
+    document.getElementById('display-user').innerText = myUsername;
+    document.getElementById('display-room').innerText = '#' + currentRoom;
+    document.getElementById('conn-status').classList.remove('disconnected');
+}
+
+/* ================= 5. ДВИЖОК РАЦИИ (С АВТО-ЧАСТОТОЙ И АНТИ-ЭХО) ================= */
+function setupPTTEvents() {
+    const btn = document.getElementById('ptt-button');
+
+    btn.addEventListener('mousedown', startPTT);
+    btn.addEventListener('mouseup', stopPTT);
+    btn.addEventListener('mouseleave', stopPTT);
+
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); startPTT(); }, { passive: false });
+    btn.addEventListener('touchend', (e) => { e.preventDefault(); stopPTT(); }, { passive: false });
+    btn.addEventListener('touchcancel', (e) => { e.preventDefault(); stopPTT(); }, { passive: false });
+}
+
+async function startPTT() {
+    if (isPTTTransmitting) return;
+    audioEngine.init();
+    audioEngine.playPTTStart();
+
+    try {
+        pttMicStream = await navigator.mediaDevices.getUserMedia({ 
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } 
+        });
+        isPTTTransmitting = true;
+        pttStreamId = 'stream_' + Date.now();
+
+        const btn = document.getElementById('ptt-button');
+        btn.classList.add('transmitting');
+        btn.innerText = '🔴 ЭФИР ОТКРЫТ (ГОВОРИТЕ)';
+
+        pttAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const source = pttAudioCtx.createMediaStreamSource(pttMicStream);
+        pttProcessor = pttAudioCtx.createScriptProcessor(2048, 1, 1);
+
+        // Передаем реальную частоту микрофона устройства
+        publishPayload({ 
+            type: 'ptt_start', 
+            streamId: pttStreamId, 
+            sampleRate: pttAudioCtx.sampleRate 
+        });
+
+        pttProcessor.onaudioprocess = (e) => {
+            if (!isPTTTransmitting) return;
+            const inputData = e.inputBuffer.getChannelData(0);
+            
+            const pttInt16 = new Int16Array(inputData.length);
+            for (let i = 0; i < inputData.length; i++) {
+                let s = Math.max(-1, Math.min(1, inputData[i]));
+                pttInt16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            }
+
+            let binary = '';
+            const bytes = new Uint8Array(pttInt16.buffer);
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+
+            publishPayload({
+                type: 'ptt_chunk',
+                streamId: pttStreamId,
+                chunk: btoa(binary)
+            });
         };
 
-        /* ================= 4. ПОДКЛЮЧЕНИЕ К MQTT ================= */
-        function startSession() {
-            audioEngine.playClick();
-            const unameInput = document.getElementById('username-input').value.trim();
-            const roomInput = document.getElementById('room-input').value.trim();
+        source.connect(pttProcessor);
+        pttProcessor.connect(pttAudioCtx.destination);
 
-            if (!unameInput || !roomInput) return alert("Укажите позывной и номер частоты!");
+    } catch (err) {
+        isPTTTransmitting = false;
+        alert("Ошибка рации: Нет доступа к микрофону!");
+    }
+}
 
-            myUsername = unameInput;
-            currentRoom = roomInput;
+function stopPTT() {
+    if (!isPTTTransmitting) return;
+    isPTTTransmitting = false;
 
-            localStorage.setItem('metro_uname', myUsername);
-            localStorage.setItem('metro_room', currentRoom);
+    const btn = document.getElementById('ptt-button');
+    btn.classList.remove('transmitting');
+    btn.innerText = '🎙️ ЗАЖМИ И ГОВОРИ (РАЦИЯ)';
 
-            window.history.replaceState({}, '', `?room=${encodeURIComponent(currentRoom)}`);
+    audioEngine.playPTTEnd();
 
-            document.getElementById('screen-login').classList.remove('active');
-            document.getElementById('screen-loading').classList.add('active');
-            document.getElementById('loading-status').innerText = `ПОДКЛЮЧЕНИЕ К ЧАСТОТЕ #${currentRoom}...`;
+    if (pttProcessor) { pttProcessor.disconnect(); pttProcessor = null; }
+    if (pttAudioCtx) { pttAudioCtx.close(); pttAudioCtx = null; }
+    if (pttMicStream) { pttMicStream.getTracks().forEach(t => t.stop()); pttMicStream = null; }
 
-            connectMQTT();
+    publishPayload({ type: 'ptt_end', streamId: pttStreamId });
+}
+
+function handlePTTIncoming(data) {
+    if (data.uid === myUserId) return;
+
+    const banner = document.getElementById('ptt-banner');
+    const speakerTag = document.getElementById('ptt-speaker-name');
+
+    if (data.type === 'ptt_start') {
+        speakerTag.innerText = data.sender;
+        banner.classList.add('active');
+        audioEngine.playPTTStart();
+
+        // Сохраняем частоту собеседника
+        remoteSampleRate = data.sampleRate || 16000;
+
+        if (!rxAudioCtx) rxAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (rxAudioCtx.state === 'suspended') rxAudioCtx.resume();
+        
+        // Добавляем буфер 60мс для устранения эха и задержек сетевых пакетов
+        nextStartTime = rxAudioCtx.currentTime + 0.06;
+
+    } else if (data.type === 'ptt_chunk') {
+        if (!rxAudioCtx) return;
+
+        const binary = atob(data.chunk);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        const int16 = new Int16Array(bytes.buffer);
+
+        const float32 = new Float32Array(int16.length);
+        for (let i = 0; i < int16.length; i++) {
+            float32[i] = int16[i] / (int16[i] < 0 ? 0x8000 : 0x7FFF);
         }
 
-        function connectMQTT() {
-            const clientId = 'metro_' + myUserId + '_' + Math.random().toString(36).substr(2, 4);
+        // Создаем буфер с ИСХОДНОЙ частотой отправителя
+        const audioBuffer = rxAudioCtx.createBuffer(1, float32.length, remoteSampleRate);
+        audioBuffer.getChannelData(0).set(float32);
 
-            try {
-                mqttClient = mqtt.connect(BROKERS[currentBrokerIdx], {
-                    clientId: clientId, keepalive: 60, reconnectPeriod: 3000
-                });
+        const source = rxAudioCtx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(rxAudioCtx.destination);
 
-                mqttClient.on('connect', () => {
-                    const topic = `metro/channel/v4/${currentRoom}`;
-                    mqttClient.subscribe(topic, { qos: 1 }, (err) => {
-                        if (!err) {
-                            showChatScreen();
-                            publishPayload({ type: 'system', content: `Сталкер [${myUsername}] вышел в эфир.` });
-                        }
-                    });
-                });
-
-                mqttClient.on('message', (topic, message) => {
-                    try {
-                        const payload = JSON.parse(message.toString());
-                        if (payload.type.startsWith('ptt_')) {
-                            handlePTTIncoming(payload);
-                        } else {
-                            renderIncomingMessage(payload);
-                        }
-                    } catch(e) { console.error(e); }
-                });
-
-                mqttClient.on('error', () => document.getElementById('conn-status').classList.add('disconnected'));
-                mqttClient.on('offline', () => document.getElementById('conn-status').classList.add('disconnected'));
-            } catch(e) {
-                currentBrokerIdx = (currentBrokerIdx + 1) % BROKERS.length;
-                setTimeout(connectMQTT, 1500);
-            }
+        // Ровное воспроизведение без наложения
+        if (nextStartTime < rxAudioCtx.currentTime) {
+            nextStartTime = rxAudioCtx.currentTime + 0.02;
         }
+        source.start(nextStartTime);
+        nextStartTime += audioBuffer.duration;
 
-        function showChatScreen() {
-            document.getElementById('screen-loading').classList.remove('active');
-            document.getElementById('screen-chat').classList.add('active');
-            document.getElementById('display-user').innerText = myUsername;
-            document.getElementById('display-room').innerText = '#' + currentRoom;
-            document.getElementById('conn-status').classList.remove('disconnected');
-        }
-
-        /* ================= 5. ДВИЖОК РАЦИИ (PCM STREAMING) ================= */
-        function setupPTTEvents() {
-            const btn = document.getElementById('ptt-button');
-
-            btn.addEventListener('mousedown', startPTT);
-            btn.addEventListener('mouseup', stopPTT);
-            btn.addEventListener('mouseleave', stopPTT);
-
-            btn.addEventListener('touchstart', (e) => { e.preventDefault(); startPTT(); }, { passive: false });
-            btn.addEventListener('touchend', (e) => { e.preventDefault(); stopPTT(); }, { passive: false });
-            btn.addEventListener('touchcancel', (e) => { e.preventDefault(); stopPTT(); }, { passive: false });
-        }
-
-        async function startPTT() {
-            if (isPTTTransmitting) return;
-            audioEngine.init();
-            audioEngine.playPTTStart();
-
-            try {
-                pttMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                isPTTTransmitting = true;
-                pttStreamId = 'stream_' + Date.now();
-
-                const btn = document.getElementById('ptt-button');
-                btn.classList.add('transmitting');
-                btn.innerText = '🔴 ЭФИР ОТКРЫТ (ГОВОРИТЕ)';
-
-                // Считываем звук с частотой 16000 Гц (стандарт портативных раций)
-                pttAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-                const source = pttAudioCtx.createMediaStreamSource(pttMicStream);
-                
-                // Процессор обработки буфера звука
-                pttProcessor = pttAudioCtx.createScriptProcessor(2048, 1, 1);
-
-                publishPayload({ type: 'ptt_start', streamId: pttStreamId });
-
-                pttProcessor.onaudioprocess = (e) => {
-                    if (!isPTTTransmitting) return;
-                    const inputData = e.inputBuffer.getChannelData(0);
-                    
-                    // Сжимаем Float32 в Int16 PCM для экономии трафика
-                    const pttInt16 = new Int16Array(inputData.length);
-                    for (let i = 0; i < inputData.length; i++) {
-                        let s = Math.max(-1, Math.min(1, inputData[i]));
-                        pttInt16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-                    }
-
-                    // Кодируем в Base64
-                    let binary = '';
-                    const bytes = new Uint8Array(pttInt16.buffer);
-                    for (let i = 0; i < bytes.byteLength; i++) {
-                        binary += String.fromCharCode(bytes[i]);
-                    }
-
-                    publishPayload({
-                        type: 'ptt_chunk',
-                        streamId: pttStreamId,
-                        chunk: btoa(binary)
-                    });
-                };
-
-                source.connect(pttProcessor);
-                pttProcessor.connect(pttAudioCtx.destination);
-
-            } catch (err) {
-                isPTTTransmitting = false;
-                alert("Ошибка рации: Нет доступа к микрофону!");
-            }
-        }
-
-        function stopPTT() {
-            if (!isPTTTransmitting) return;
-            isPTTTransmitting = false;
-
-            const btn = document.getElementById('ptt-button');
-            btn.classList.remove('transmitting');
-            btn.innerText = '🎙️ ЗАЖМИ И ГОВОРИ (РАЦИЯ)';
-
+    } else if (data.type === 'ptt_end') {
+        setTimeout(() => {
+            banner.classList.remove('active');
             audioEngine.playPTTEnd();
+        }, 300);
+    }
+}
 
-            if (pttProcessor) { pttProcessor.disconnect(); pttProcessor = null; }
-            if (pttAudioCtx) { pttAudioCtx.close(); pttAudioCtx = null; }
-            if (pttMicStream) { pttMicStream.getTracks().forEach(t => t.stop()); pttMicStream = null; }
-
-            publishPayload({ type: 'ptt_end', streamId: pttStreamId });
-        }
-
-        /* Прием и бесшовное воспроизведение PCM пакетов */
-        function handlePTTIncoming(data) {
-            if (data.uid === myUserId) return;
-
-            const banner = document.getElementById('ptt-banner');
-            const speakerTag = document.getElementById('ptt-speaker-name');
-
-            if (data.type === 'ptt_start') {
-                speakerTag.innerText = data.sender;
-                banner.classList.add('active');
-                audioEngine.playPTTStart();
-
-                if (!rxAudioCtx) rxAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-                if (rxAudioCtx.state === 'suspended') rxAudioCtx.resume();
-                nextStartTime = rxAudioCtx.currentTime;
-
-            } else if (data.type === 'ptt_chunk') {
-                if (!rxAudioCtx) return;
-
-                // Декодируем Base64 в Int16 PCM
-                const binary = atob(data.chunk);
-                const bytes = new Uint8Array(binary.length);
-                for (let i = 0; i < binary.length; i++) {
-                    bytes[i] = binary.charCodeAt(i);
-                }
-                const int16 = new Int16Array(bytes.buffer);
-
-                // Преобразуем в Float32 для Web Audio API
-                const float32 = new Float32Array(int16.length);
-                for (let i = 0; i < int16.length; i++) {
-                    float32[i] = int16[i] / (int16[i] < 0 ? 0x8000 : 0x7FFF);
-                }
-
-                // Создаем и проигрываем сэмпл без задержек
-                const audioBuffer = rxAudioCtx.createBuffer(1, float32.length, 16000);
-                audioBuffer.getChannelData(0).set(float32);
-
-                const source = rxAudioCtx.createBufferSource();
-                source.buffer = audioBuffer;
-                source.connect(rxAudioCtx.destination);
-
-                if (nextStartTime < rxAudioCtx.currentTime) {
-                    nextStartTime = rxAudioCtx.currentTime;
-                }
-                source.start(nextStartTime);
-                nextStartTime += audioBuffer.duration;
-
-            } else if (data.type === 'ptt_end') {
-                setTimeout(() => {
-                    banner.classList.remove('active');
-                    audioEngine.playPTTEnd();
-                }, 300);
-            }
-        }
-
-        /* ================= 6. ГОЛОСОВЫЕ СООБЩЕНИЯ ================= */
-        function playAudio(btn, src) {
-            if (activeAudio && activeAudioBtn === btn) {
-                if (!activeAudio.paused) {
-                    activeAudio.pause();
-                    btn.innerText = '▶';
-                } else {
-                    activeAudio.play();
-                    btn.innerText = '❚❚';
-                }
-                return;
-            }
-
-            if (activeAudio) {
-                activeAudio.pause();
-                if (activeAudioBtn) activeAudioBtn.innerText = '▶';
-            }
-
-            activeAudio = new Audio(src);
-            activeAudioBtn = btn;
-            const progress = btn.parentElement.querySelector('.audio-progress');
-
+/* ================= 6. ГОЛОСОВЫЕ СООБЩЕНИЯ ================= */
+function playAudio(btn, src) {
+    if (activeAudio && activeAudioBtn === btn) {
+        if (!activeAudio.paused) {
+            activeAudio.pause();
+            btn.innerText = '▶';
+        } else {
+            activeAudio.play();
             btn.innerText = '❚❚';
-            activeAudio.play().catch(e => console.error("Audio error:", e));
-
-            activeAudio.ontimeupdate = () => {
-                if (activeAudio && activeAudio.duration) {
-                    const pct = (activeAudio.currentTime / activeAudio.duration) * 100;
-                    progress.style.width = pct + '%';
-                }
-            };
-
-            activeAudio.onended = () => {
-                btn.innerText = '▶';
-                progress.style.width = '0%';
-                activeAudio = null;
-                activeAudioBtn = null;
-            };
         }
+        return;
+    }
 
-        async function toggleVoiceRecord() {
-            const btn = document.getElementById('rec-btn');
-            audioEngine.init();
+    if (activeAudio) {
+        activeAudio.pause();
+        if (activeAudioBtn) activeAudioBtn.innerText = '▶';
+    }
 
-            if (!isVoiceRecording) {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    voiceRecorder = new MediaRecorder(stream);
-                    voiceChunks = [];
+    activeAudio = new Audio(src);
+    activeAudioBtn = btn;
+    const progress = btn.parentElement.querySelector('.audio-progress');
 
-                    voiceRecorder.ondataavailable = e => { if (e.data.size > 0) voiceChunks.push(e.data); };
-                    voiceRecorder.onstop = () => {
-                        const audioBlob = new Blob(voiceChunks, { type: 'audio/webm' });
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                            publishPayload({ type: 'audio', content: reader.result });
-                        };
-                        reader.readAsDataURL(audioBlob);
-                        stream.getTracks().forEach(track => track.stop());
-                    };
+    btn.innerText = '❚❚';
+    activeAudio.play().catch(e => console.error("Audio error:", e));
 
-                    voiceRecorder.start();
-                    isVoiceRecording = true;
-                    btn.classList.add('recording');
-                } catch(e) { alert("Ошибка микрофона: " + e.message); }
-            } else {
-                isVoiceRecording = false;
-                btn.classList.remove('recording');
-                if (voiceRecorder && voiceRecorder.state === 'recording') voiceRecorder.stop();
-            }
+    activeAudio.ontimeupdate = () => {
+        if (activeAudio && activeAudio.duration) {
+            const pct = (activeAudio.currentTime / activeAudio.duration) * 100;
+            progress.style.width = pct + '%';
         }
+    };
 
-        /* ================= 7. ОТПРАВКА И РЕНДЕР СООБЩЕНИЙ ================= */
-        function publishPayload(data) {
-            if (!mqttClient || !mqttClient.connected) return;
-            const fullPayload = {
-                id: 'm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                uid: myUserId,
-                sender: myUsername,
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                ...data
-            };
-            mqttClient.publish(`metro/channel/v4/${currentRoom}`, JSON.stringify(fullPayload), { qos: 1 });
-        }
+    activeAudio.onended = () => {
+        btn.innerText = '▶';
+        progress.style.width = '0%';
+        activeAudio = null;
+        activeAudioBtn = null;
+    };
+}
 
-        function handleKeyPress(e) { if (e.key === 'Enter') sendTextMessage(); }
+async function toggleVoiceRecord() {
+    const btn = document.getElementById('rec-btn');
+    audioEngine.init();
 
-        function sendTextMessage() {
-            const input = document.getElementById('chat-message-input');
-            const text = input.value.trim();
-            if (!text) return;
-            publishPayload({ type: 'text', content: text });
-            input.value = '';
-        }
+    if (!isVoiceRecording) {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            voiceRecorder = new MediaRecorder(stream);
+            voiceChunks = [];
 
-        function handleFileSelect(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            if (file.type.startsWith('image/')) {
-                compressAndSendImage(file);
-            } else if (file.type.startsWith('video/')) {
-                if (file.size > 8 * 1024 * 1024) return alert("Видео до 8 МБ!");
+            voiceRecorder.ondataavailable = e => { if (e.data.size > 0) voiceChunks.push(e.data); };
+            voiceRecorder.onstop = () => {
+                const audioBlob = new Blob(voiceChunks, { type: 'audio/webm' });
                 const reader = new FileReader();
-                reader.onload = (evt) => publishPayload({ type: 'video', content: evt.target.result });
-                reader.readAsDataURL(file);
-            }
-            e.target.value = '';
-        }
-
-        function compressAndSendImage(file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let w = img.width, h = img.height, max = 900;
-                    if (w > max || h > max) {
-                        if (w > h) { h = Math.round((h * max) / w); w = max; }
-                        else { w = Math.round((w * max) / h); h = max; }
-                    }
-                    canvas.width = w; canvas.height = h;
-                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                    publishPayload({ type: 'image', content: canvas.toDataURL('image/jpeg', 0.6) });
+                reader.onloadend = () => {
+                    publishPayload({ type: 'audio', content: reader.result });
                 };
-                img.src = e.target.result;
+                reader.readAsDataURL(audioBlob);
+                stream.getTracks().forEach(track => track.stop());
             };
-            reader.readAsDataURL(file);
-        }
 
-        const renderedMsgs = new Set();
+            voiceRecorder.start();
+            isVoiceRecording = true;
+            btn.classList.add('recording');
+        } catch(e) { alert("Ошибка микрофона: " + e.message); }
+    } else {
+        isVoiceRecording = false;
+        btn.classList.remove('recording');
+        if (voiceRecorder && voiceRecorder.state === 'recording') voiceRecorder.stop();
+    }
+}
 
-        function renderIncomingMessage(data) {
-            if (data.id && renderedMsgs.has(data.id)) return;
-            if (data.id) renderedMsgs.add(data.id);
+/* ================= 7. ОТПРАВКА И РЕНДЕР СООБЩЕНИЙ ================= */
+function publishPayload(data) {
+    if (!mqttClient || !mqttClient.connected) return;
+    const fullPayload = {
+        id: 'm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        uid: myUserId,
+        sender: myUsername,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        ...data
+    };
+    mqttClient.publish(`metro/channel/v6/${currentRoom}`, JSON.stringify(fullPayload), { qos: 1 });
+}
 
-            const box = document.getElementById('chat-messages');
+function handleKeyPress(e) { if (e.key === 'Enter') sendTextMessage(); }
 
-            if (data.type === 'system') {
-                const sysDiv = document.createElement('div');
-                sysDiv.className = 'msg system';
-                sysDiv.innerText = data.content;
-                box.appendChild(sysDiv);
-                box.scrollTop = box.scrollHeight;
-                return;
+function sendTextMessage() {
+    const input = document.getElementById('chat-message-input');
+    const text = input.value.trim();
+    if (!text) return;
+    publishPayload({ type: 'text', content: text });
+    input.value = '';
+}
+
+function handleFileSelect(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.type.startsWith('image/')) {
+        compressAndSendImage(file);
+    } else if (file.type.startsWith('video/')) {
+        if (file.size > 8 * 1024 * 1024) return alert("Видео до 8 МБ!");
+        const reader = new FileReader();
+        reader.onload = (evt) => publishPayload({ type: 'video', content: evt.target.result });
+        reader.readAsDataURL(file);
+    }
+    e.target.value = '';
+}
+
+function compressAndSendImage(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let w = img.width, h = img.height, max = 900;
+            if (w > max || h > max) {
+                if (w > h) { h = Math.round((h * max) / w); w = max; }
+                else { w = Math.round((w * max) / h); h = max; }
             }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            publishPayload({ type: 'image', content: canvas.toDataURL('image/jpeg', 0.6) });
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
 
-            const isSelf = data.uid === myUserId;
+const renderedMsgs = new Set();
 
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `msg ${isSelf ? 'self' : 'other'}`;
+function renderIncomingMessage(data) {
+    if (data.id && renderedMsgs.has(data.id)) return;
+    if (data.id) renderedMsgs.add(data.id);
 
-            let contentHTML = '';
-            if (data.type === 'text') {
-                contentHTML = `<div class="msg-text">${escapeHTML(data.content)}</div>`;
-            } else if (data.type === 'image') {
-                contentHTML = `<div class="msg-media"><img src="${data.content}"></div>`;
-            } else if (data.type === 'video') {
-                contentHTML = `<div class="msg-media"><video src="${data.content}" controls></video></div>`;
-            } else if (data.type === 'audio') {
-                contentHTML = `
-                    <div class="audio-player">
-                        <button class="audio-play-btn" onclick="playAudio(this, '${data.content}')">▶</button>
-                        <div class="audio-wave"><div class="audio-progress"></div></div>
-                        <span style="font-size:10px; color:var(--metro-muted);">ГОЛОСОВОЕ</span>
-                    </div>
-                `;
-            }
+    const box = document.getElementById('chat-messages');
 
-            msgDiv.innerHTML = `
-                <div class="msg-meta">
-                    <span class="msg-sender">${escapeHTML(data.sender)}</span>
-                    <span class="msg-time">${data.timestamp}</span>
-                </div>
-                ${contentHTML}
-            `;
+    if (data.type === 'system') {
+        const sysDiv = document.createElement('div');
+        sysDiv.className = 'msg system';
+        sysDiv.innerText = data.content;
+        box.appendChild(sysDiv);
+        box.scrollTop = box.scrollHeight;
+        return;
+    }
 
-            box.appendChild(msgDiv);
-            box.scrollTop = box.scrollHeight;
-        }
+    const isSelf = data.uid === myUserId;
 
-        function copyInviteLink() {
-            audioEngine.playClick();
-            navigator.clipboard.writeText(window.location.href);
-            const toast = document.getElementById('toast');
-            toast.style.display = 'block';
-            setTimeout(() => toast.style.display = 'none', 2000);
-        }
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `msg ${isSelf ? 'self' : 'other'}`;
 
-        function escapeHTML(str) {
-            return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
-        }
-    </script>
+    let contentHTML = '';
+    if (data.type === 'text') {
+        contentHTML = `<div class="msg-text">${escapeHTML(data.content)}</div>`;
+    } else if (data.type === 'image') {
+        contentHTML = `<div class="msg-media"><img src="${data.content}"></div>`;
+    } else if (data.type === 'video') {
+        contentHTML = `<div class="msg-media"><video src="${data.content}" controls></video></div>`;
+    } else if (data.type === 'audio') {
+        contentHTML = `
+            <div class="audio-player">
+                <button class="audio-play-btn" onclick="playAudio(this, '${data.content}')">▶</button>
+                <div class="audio-wave"><div class="audio-progress"></div></div>
+                <span style="font-size:10px; color:var(--metro-muted);">ГОЛОСОВОЕ</span>
+            </div>
+        `;
+    }
+
+    msgDiv.innerHTML = `
+        <div class="msg-meta">
+            <span class="msg-sender">${escapeHTML(data.sender)}</span>
+            <span class="msg-time">${data.timestamp}</span>
+        </div>
+        ${contentHTML}
+    `;
+
+    box.appendChild(msgDiv);
+    box.scrollTop = box.scrollHeight;
+}
+
+function copyInviteLink() {
+    audioEngine.playClick();
+    navigator.clipboard.writeText(window.location.href);
+    const toast = document.getElementById('toast');
+    toast.style.display = 'block';
+    setTimeout(() => toast.style.display = 'none', 2000);
+}
+
+function escapeHTML(str) {
+    return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+}
 </body>
 </html>
