@@ -3,412 +3,999 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>METRO NET // СЕКРЕТНЫЙ КАНАЛ</title>
-    <!-- Шрифты для стиля Metro -->
+    <title>METRO NET // РАДИОСТАНЦИЯ ЭКСПЕДИЦИИ</title>
+    <!-- Шрифт терминала Metro -->
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
-    <!-- Библиотека PeerJS для связи без сервера -->
-    <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
+    <!-- MQTT.js через CDN для гарантии подключения через любой интернет (WebSockets) -->
+    <script src="https://unpkg.com/mqtt@5.3.0/dist/mqtt.min.js"></script>
     <style>
         :root {
-            --metro-orange: #ff5a00;
-            --metro-dark: #0a0a0a;
-            --metro-gray: #1f1f1f;
-            --text-color: #d3d3d3;
+            --metro-amber: #ff7700;
+            --metro-amber-glow: rgba(255, 119, 0, 0.4);
+            --metro-green: #33ff66;
+            --metro-red: #ff3333;
+            --metro-dark: #0a0d0f;
+            --metro-panel: #141a1f;
+            --metro-border: #2c3842;
+            --metro-text: #c8d6e0;
+            --metro-muted: #627785;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        body {
-            background-color: var(--metro-dark);
-            color: var(--text-color);
-            font-family: 'Share Tech Mono', monospace;
-            height: 100vh;
-            overflow: hidden;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
             user-select: none;
         }
 
-        /* Эффект старого монитора (Scanlines) */
+        body {
+            background-color: var(--metro-dark);
+            color: var(--metro-text);
+            font-family: 'Share Tech Mono', monospace;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Эффект ЭЛТ-монитора (Scanlines) */
         .crt::before {
-            content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            z-index: 999; background-size: 100% 2px, 3px 100%; pointer-events: none;
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            z-index: 999;
+            background-size: 100% 3px, 6px 100%;
+            pointer-events: none;
         }
 
-        /* Экраны */
+        .crt::after {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: rgba(255, 119, 0, 0.02);
+            opacity: 0;
+            z-index: 998;
+            pointer-events: none;
+            animation: flicker 0.15s infinite;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.02; }
+            50% { opacity: 0.05; }
+            100% { opacity: 0.02; }
+        }
+
+        /* Экранные контейнеры */
         .screen {
-            display: none; height: 100%; width: 100%; flex-direction: column;
-            justify-content: center; align-items: center; position: relative; z-index: 10;
+            display: none;
+            width: 100%;
+            max-width: 900px;
+            height: 100vh;
+            flex-direction: column;
+            position: relative;
+            z-index: 10;
+            padding: 15px;
         }
-        .screen.active { display: flex; }
 
-        /* Загрузка */
-        #loading-screen { background: #000; }
-        .spinner { width: 50px; height: 50px; border: 3px solid transparent; border-top-color: var(--metro-orange); border-radius: 50%; animation: spin 1s linear infinite; }
+        .screen.active {
+            display: flex;
+        }
+
+        /* Загрузочный экран */
+        #screen-loading {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: #050708;
+        }
+
+        .metro-loader {
+            width: 70px;
+            height: 70px;
+            border: 4px solid var(--metro-border);
+            border-top: 4px solid var(--metro-amber);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            box-shadow: 0 0 15px var(--metro-amber-glow);
+            margin-bottom: 25px;
+        }
+
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        /* Типографика и кнопки */
-        h1 { color: var(--metro-orange); text-shadow: 0 0 10px var(--metro-orange); margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; }
-        
-        input, button {
-            font-family: 'Share Tech Mono', monospace; font-size: 16px;
-            background: var(--metro-gray); color: var(--metro-orange);
-            border: 1px solid var(--metro-orange); padding: 10px 15px; margin: 10px 0; outline: none;
+        .loading-title {
+            color: var(--metro-amber);
+            font-size: 22px;
+            letter-spacing: 3px;
+            text-shadow: 0 0 10px var(--metro-amber);
+            margin-bottom: 10px;
         }
-        input:focus { box-shadow: 0 0 8px var(--metro-orange); }
-        
-        button { cursor: pointer; text-transform: uppercase; transition: 0.2s; position: relative; overflow: hidden; }
-        button:hover { background: var(--metro-orange); color: var(--metro-dark); box-shadow: 0 0 15px var(--metro-orange); }
-        
-        /* Чат интерфейс */
-        #chat-container { width: 100%; max-width: 800px; height: 100%; display: flex; flex-direction: column; padding: 20px; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--metro-orange); padding-bottom: 10px; margin-bottom: 10px; }
-        
-        .chat-box { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 10px; }
-        .chat-box::-webkit-scrollbar { width: 5px; }
-        .chat-box::-webkit-scrollbar-thumb { background: var(--metro-orange); }
 
-        .message { max-width: 80%; padding: 10px; border: 1px solid #333; background: #111; animation: fadeIn 0.3s ease-out; }
-        .message.self { align-self: flex-end; border-color: var(--metro-orange); color: var(--metro-orange); }
-        .message.other { align-self: flex-start; border-color: #555; }
-        .msg-name { font-size: 12px; opacity: 0.7; margin-bottom: 5px; }
-        
-        .media-content img, .media-content video { max-width: 100%; border: 1px solid var(--metro-orange); margin-top: 5px; }
-        .media-content audio { height: 30px; margin-top: 5px; outline: none; }
+        .loading-status {
+            color: var(--metro-muted);
+            font-size: 14px;
+        }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Меню входа */
+        #screen-login {
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-card {
+            background: var(--metro-panel);
+            border: 2px solid var(--metro-border);
+            padding: 30px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 0 25px rgba(0,0,0,0.8), inset 0 0 15px rgba(255,119,0,0.05);
+            position: relative;
+        }
+
+        .login-card::before {
+            content: "ПОДПОЛЬНАЯ ЧАСТОТА METRO-v4";
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            background: var(--metro-dark);
+            padding: 0 10px;
+            color: var(--metro-amber);
+            font-size: 12px;
+            letter-spacing: 1px;
+            border: 1px solid var(--metro-border);
+        }
+
+        .metro-title {
+            color: var(--metro-amber);
+            font-size: 24px;
+            text-align: center;
+            margin-bottom: 25px;
+            text-shadow: 0 0 10px var(--metro-amber);
+            letter-spacing: 2px;
+        }
+
+        .field-group {
+            margin-bottom: 20px;
+        }
+
+        .field-group label {
+            display: block;
+            font-size: 13px;
+            color: var(--metro-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .metro-input {
+            width: 100%;
+            background: #0b0e11;
+            border: 1px solid var(--metro-border);
+            color: var(--metro-amber);
+            padding: 12px 15px;
+            font-family: inherit;
+            font-size: 16px;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        .metro-input:focus {
+            border-color: var(--metro-amber);
+            box-shadow: 0 0 10px var(--metro-amber-glow);
+        }
+
+        .metro-btn {
+            width: 100%;
+            background: var(--metro-panel);
+            color: var(--metro-amber);
+            border: 1px solid var(--metro-amber);
+            padding: 14px;
+            font-family: inherit;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: 0.2s;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .metro-btn:hover {
+            background: var(--metro-amber);
+            color: var(--metro-dark);
+            box-shadow: 0 0 20px var(--metro-amber);
+        }
+
+        .metro-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Главный экран чата */
+        #screen-chat {
+            padding: 10px;
+            max-width: 950px;
+        }
+
+        .chat-header {
+            background: var(--metro-panel);
+            border: 1px solid var(--metro-border);
+            padding: 12px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .channel-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--metro-green);
+            box-shadow: 0 0 8px var(--metro-green);
+        }
+
+        .status-dot.disconnected {
+            background: var(--metro-red);
+            box-shadow: 0 0 8px var(--metro-red);
+        }
+
+        .user-tag {
+            color: var(--metro-amber);
+            font-weight: bold;
+        }
+
+        .copy-btn {
+            background: transparent;
+            border: 1px solid var(--metro-border);
+            color: var(--metro-text);
+            padding: 6px 12px;
+            font-family: inherit;
+            font-size: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .copy-btn:hover {
+            border-color: var(--metro-amber);
+            color: var(--metro-amber);
+        }
+
+        /* Область сообщений */
+        .chat-body {
+            flex: 1;
+            background: #07090b;
+            border: 1px solid var(--metro-border);
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .chat-body::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-body::-webkit-scrollbar-thumb {
+            background: var(--metro-border);
+        }
+        .chat-body::-webkit-scrollbar-thumb:hover {
+            background: var(--metro-amber);
+        }
+
+        /* Сообщения */
+        .msg {
+            max-width: 75%;
+            padding: 10px 14px;
+            border: 1px solid var(--metro-border);
+            background: var(--metro-panel);
+            position: relative;
+            animation: msgIn 0.25s ease-out;
+            word-wrap: break-word;
+        }
+
+        @keyframes msgIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .msg.self {
+            align-self: flex-end;
+            border-color: rgba(255, 119, 0, 0.4);
+            background: #1c150e;
+        }
+
+        .msg.other {
+            align-self: flex-start;
+            border-color: #2a343d;
+        }
+
+        .msg.system {
+            align-self: center;
+            max-width: 90%;
+            background: transparent;
+            border: none;
+            color: var(--metro-muted);
+            font-size: 13px;
+            text-align: center;
+            padding: 4px;
+        }
+
+        .msg-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--metro-muted);
+            margin-bottom: 6px;
+            gap: 15px;
+        }
+
+        .msg.self .msg-sender {
+            color: var(--metro-amber);
+        }
+
+        .msg-time {
+            font-size: 10px;
+            opacity: 0.7;
+        }
+
+        .msg-text {
+            font-size: 15px;
+            line-height: 1.4;
+            color: var(--metro-text);
+            user-select: text;
+        }
+
+        .msg-media img, .msg-media video {
+            max-width: 100%;
+            max-height: 300px;
+            border: 1px solid var(--metro-border);
+            margin-top: 6px;
+            cursor: pointer;
+            border-radius: 2px;
+        }
+
+        /* Аудио плеер в Metro стиле */
+        .audio-player {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 6px;
+            background: #0b0e11;
+            padding: 8px 12px;
+            border: 1px solid var(--metro-border);
+        }
+
+        .audio-play-btn {
+            background: var(--metro-amber);
+            color: var(--metro-dark);
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .audio-wave {
+            flex: 1;
+            height: 4px;
+            background: var(--metro-border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .audio-progress {
+            height: 100%;
+            width: 0%;
+            background: var(--metro-amber);
+        }
 
         /* Панель ввода */
-        .input-panel { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
-        #msg-input { flex: 1; margin: 0; }
-        .icon-btn { padding: 10px; font-weight: bold; font-size: 18px; width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; }
-        .recording { background: #ff0000; color: white; border-color: #ff0000; animation: pulse 1s infinite; }
-        
-        @keyframes pulse { 0% { box-shadow: 0 0 5px red; } 50% { box-shadow: 0 0 20px red; } 100% { box-shadow: 0 0 5px red; } }
+        .chat-input-panel {
+            background: var(--metro-panel);
+            border: 1px solid var(--metro-border);
+            padding: 10px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
 
-        .hidden-input { display: none; }
-        #invite-link-box { font-size: 12px; color: #888; margin-top: 5px; text-align: center; cursor: pointer; }
+        .input-btn {
+            background: #0b0e11;
+            border: 1px solid var(--metro-border);
+            color: var(--metro-amber);
+            width: 46px;
+            height: 46px;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: 0.2s;
+            flex-shrink: 0;
+        }
+
+        .input-btn:hover {
+            border-color: var(--metro-amber);
+            box-shadow: 0 0 10px var(--metro-amber-glow);
+        }
+
+        .input-btn.recording {
+            background: var(--metro-red);
+            color: white;
+            border-color: var(--metro-red);
+            animation: pulseRec 1s infinite;
+        }
+
+        @keyframes pulseRec {
+            0% { box-shadow: 0 0 5px var(--metro-red); }
+            50% { box-shadow: 0 0 20px var(--metro-red); }
+            100% { box-shadow: 0 0 5px var(--metro-red); }
+        }
+
+        #chat-message-input {
+            flex: 1;
+            margin: 0;
+            height: 46px;
+        }
+
+        /* Модалка просмотра изображений */
+        #image-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        #image-modal img {
+            max-width: 90%;
+            max-height: 90%;
+            border: 2px solid var(--metro-amber);
+            box-shadow: 0 0 30px var(--metro-amber-glow);
+        }
+
+        /* Уведомление-тоаст */
+        #toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--metro-amber);
+            color: var(--metro-dark);
+            padding: 8px 20px;
+            font-weight: bold;
+            box-shadow: 0 0 15px var(--metro-amber);
+            display: none;
+            z-index: 1000;
+            letter-spacing: 1px;
+        }
     </style>
 </head>
 <body class="crt">
 
-    <!-- Экран загрузки -->
-    <div id="loading-screen" class="screen active">
-        <div class="spinner"></div>
-        <p style="margin-top: 20px; color: var(--metro-orange);" id="loading-text">ИНИЦИАЛИЗАЦИЯ СИСТЕМЫ...</p>
+    <div id="toast">КООРДИНАТЫ СКОПИРОВАНЫ</div>
+
+    <!-- 1. Экран Загрузки -->
+    <div id="screen-loading" class="screen active">
+        <div class="metro-loader"></div>
+        <div class="loading-title">METRO-NET v4.2</div>
+        <div id="loading-status" class="loading-status">ПОДКЛЮЧЕНИЕ К ЧАСТОТАМ WEBSOCKETS...</div>
     </div>
 
-    <!-- Экран входа / Создания комнаты -->
-    <div id="login-screen" class="screen">
-        <h1>ТЕРМИНАЛ СВЯЗИ</h1>
-        <input type="text" id="username" placeholder="ВВЕДИТЕ ПОЗЫВНОЙ" autocomplete="off" maxlength="15">
-        <button id="btn-action" onclick="joinOrCreateRoom()">ПОДКЛЮЧЕНИЕ</button>
-    </div>
-
-    <!-- Экран чата -->
-    <div id="chat-screen" class="screen">
-        <div id="chat-container">
-            <div class="header">
-                <div>ПОЗЫВНОЙ: <span id="display-name" style="color: var(--metro-orange);"></span></div>
-                <button onclick="copyInviteLink()" style="padding: 5px 10px; font-size: 12px;">СКОПИРОВАТЬ КООРДИНАТЫ (LINK)</button>
+    <!-- 2. Экран Входа -->
+    <div id="screen-login" class="screen">
+        <div class="login-card">
+            <div class="metro-title">РАДИОСТАНЦИЯ</div>
+            <div class="field-group">
+                <label for="username-input">Позывной сталкера</label>
+                <input type="text" id="username-input" class="metro-input" placeholder="например: Артем" maxlength="15" autocomplete="off">
             </div>
-            <div id="invite-link-box"></div>
-            
-            <div class="chat-box" id="chat-box">
-                <div class="message other"><div class="msg-name">СИСТЕМА</div>Канал связи установлен. Ожидание ответа...</div>
+            <div class="field-group">
+                <label for="room-input">Номер частоты (Канал)</label>
+                <input type="text" id="room-input" class="metro-input" placeholder="канал..." maxlength="20" autocomplete="off">
             </div>
-
-            <div class="input-panel">
-                <button class="icon-btn" onclick="document.getElementById('file-input').click()">📎</button>
-                <input type="file" id="file-input" class="hidden-input" accept="image/*,video/*" onchange="handleFileUpload(event)">
-                
-                <input type="text" id="msg-input" placeholder="Введите сообщение..." onkeypress="handleEnter(event)">
-                
-                <button class="icon-btn" id="record-btn" onmousedown="startRecording()" onmouseup="stopRecording()" onmouseleave="stopRecording()" ontouchstart="startRecording()" ontouchend="stopRecording()">🎤</button>
-                <button class="icon-btn" onclick="sendTextMessage()">➤</button>
-            </div>
+            <button class="metro-btn" onclick="startSession()">
+                <span>ВЫЙТИ В ЭФИР</span> ➤
+            </button>
         </div>
     </div>
 
-   <script>
-    /* ================= ЗВУКОВОЙ ДВИЖОК (Web Audio API) ================= */
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    function playClick() {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.type = 'square'; osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-    }
+    <!-- 3. Экран Чата -->
+    <div id="screen-chat" class="screen">
+        <div class="chat-header">
+            <div class="channel-info">
+                <div id="conn-status" class="status-dot"></div>
+                <div>
+                    <div>ПОЗЫВНОЙ: <span id="display-user" class="user-tag">---</span></div>
+                    <div style="font-size: 11px; color: var(--metro-muted);">ЧАСТОТА: <span id="display-room" style="color:var(--metro-amber);">---</span></div>
+                </div>
+            </div>
+            <button class="copy-btn" onclick="copyInviteLink()">🔗 СКОПИРОВАТЬ ССЫЛКУ</button>
+        </div>
 
-    /* ================= ПЕРЕМЕННЫЕ ================= */
-    let peer = null;
-    let connections = [];
-    let myName = localStorage.getItem('metro_name') || '';
-    let roomId = new URLSearchParams(window.location.search).get('room');
-    let isHost = !roomId;
-    
-    let mediaRecorder;
-    let audioChunks = [];
-    let recordTimeout;
+        <div id="chat-messages" class="chat-body">
+            <div class="msg system">Канал связи защищен протоколом WSS. Ожидание сигнала...</div>
+        </div>
 
-    /* ================= ИНИЦИАЛИЗАЦИЯ ================= */
-    window.onload = () => {
-        setTimeout(() => {
-            document.getElementById('loading-screen').classList.remove('active');
-            document.getElementById('login-screen').classList.add('active');
-            
-            if (myName) document.getElementById('username').value = myName;
-            
-            if (isHost) {
-                document.getElementById('btn-action').innerText = "СОЗДАТЬ КОМНАТУ";
-            } else {
-                document.getElementById('btn-action').innerText = "ВОЙТИ В КАНАЛ";
+        <div class="chat-input-panel">
+            <button class="input-btn" onclick="document.getElementById('file-picker').click()" title="Отправить фото/видео">📎</button>
+            <input type="file" id="file-picker" style="display:none;" accept="image/*,video/*" onchange="handleFileSelect(event)">
+
+            <input type="text" id="chat-message-input" class="metro-input" placeholder="Сообщение в эфир..." onkeypress="handleKeyPress(event)">
+
+            <button id="rec-btn" class="input-btn" onclick="toggleRecording()" title="Голосовое сообщение (до 1 мин)">🎤</button>
+            <button class="input-btn" onclick="sendTextMessage()" title="Отправить">➤</button>
+        </div>
+    </div>
+
+    <!-- Модалка просмотра фото -->
+    <div id="image-modal" onclick="this.style.display='none'">
+        <img id="modal-img" src="" alt="preview">
+    </div>
+
+    <script>
+        /* ================= 1. ЗВУКОВОЙ ДВИЖОК (Web Audio API) ================= */
+        class MetroSoundEngine {
+            constructor() {
+                this.ctx = null;
             }
-        }, 1200);
-    };
-
-    /* ================= ЛОГИКА КОМНАТЫ И PEERJS ================= */
-    function joinOrCreateRoom() {
-        playClick();
-        const nameInput = document.getElementById('username').value.trim();
-        if (!nameInput) return alert("Введите позывной!");
-        
-        myName = nameInput;
-        localStorage.setItem('metro_name', myName);
-        
-        document.getElementById('login-screen').classList.remove('active');
-        document.getElementById('loading-screen').classList.add('active');
-        document.getElementById('loading-text').innerText = "ПОИСК ЧАСТОТЫ (STUN)...";
-
-        if (isHost) {
-            roomId = 'metro-' + Math.random().toString(36).substr(2, 9);
-            initPeer(roomId, () => {
-                window.history.replaceState({}, '', `?room=${roomId}`);
-                showChat();
-            });
-        } else {
-            initPeer(null, () => {
-                document.getElementById('loading-text').innerText = "ПОДКЛЮЧЕНИЕ К ХОСТУ...";
-                const conn = peer.connect(roomId, { reliable: true });
-                setupConnection(conn);
-                showChat();
-            });
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+            playClick() {
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(320, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.05);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.05);
+            }
+            playReceive() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(880, now);
+                osc.frequency.setValueAtTime(1320, now + 0.08);
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            }
+            playSend() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.setValueAtTime(660, now + 0.05);
+                gain.gain.setValueAtTime(0.06, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            }
+            playRecStart() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.linearRampToValueAtTime(1000, now + 0.12);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.12);
+            }
         }
-    }
 
-    function initPeer(id, callback) {
-        // Конфигурация со STUN-серверами Google для пробития NAT/роутеров
-        const peerConfig = {
-            config: {
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' },
-                    { urls: 'stun:stun3.l.google.com:19302' },
-                    { urls: 'stun:stun4.l.google.com:19302' }
-                ]
-            }
+        const audioEngine = new MetroSoundEngine();
+
+        /* ================= 2. СОСТОЯНИЕ И ПЕРЕМЕННЫЕ ================= */
+        const BROKERS = [
+            'wss://broker.hivemq.com:8884/mqtt',
+            'wss://broker.emqx.io:8084/mqtt'
+        ];
+        let currentBrokerIdx = 0;
+        let mqttClient = null;
+
+        let myUserId = localStorage.getItem('metro_uid') || 'u_' + Math.random().toString(36).substr(2, 7);
+        localStorage.setItem('metro_uid', myUserId);
+
+        let myUsername = localStorage.getItem('metro_uname') || '';
+        let currentRoom = new URLSearchParams(window.location.search).get('room') || localStorage.getItem('metro_room') || '';
+
+        let isRecording = false;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let recTimer = null;
+        let recSeconds = 0;
+
+        /* ================= 3. ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ ================= */
+        window.onload = () => {
+            // Эмуляция старта терминала
+            setTimeout(() => {
+                document.getElementById('screen-loading').classList.remove('active');
+                document.getElementById('screen-login').classList.add('active');
+
+                if (myUsername) document.getElementById('username-input').value = myUsername;
+                
+                if (!currentRoom) {
+                    currentRoom = 'metro-' + Math.random().toString(36).substr(2, 6);
+                }
+                document.getElementById('room-input').value = currentRoom;
+
+                // Авто-вход если пользователь уже был в комнате
+                if (myUsername && new URLSearchParams(window.location.search).get('room')) {
+                    startSession();
+                }
+            }, 1000);
         };
 
-        peer = id ? new Peer(id, peerConfig) : new Peer(peerConfig);
+        /* ================= 4. ЛОГИКА ПОДКЛЮЧЕНИЯ MQTT ================= */
+        function startSession() {
+            audioEngine.playClick();
+            const unameInput = document.getElementById('username-input').value.trim();
+            const roomInput = document.getElementById('room-input').value.trim();
 
-        peer.on('open', (peerId) => {
-            console.log('Узел инициализирован ID:', peerId);
-            callback();
-        });
+            if (!unameInput) return alert("Введите ваш позывной!");
+            if (!roomInput) return alert("Укажите номер частоты!");
 
-        peer.on('connection', (conn) => {
-            setupConnection(conn);
-        });
+            myUsername = unameInput;
+            currentRoom = roomInput;
 
-        peer.on('error', (err) => {
-            console.error('PeerJS Error:', err);
-            document.getElementById('loading-screen').classList.remove('active');
-            document.getElementById('login-screen').classList.add('active');
-            
-            if (err.type === 'peer-unavailable') {
-                alert("ОШИБКА: Комната не найдена или Создатель вышел из сети.");
-            } else {
-                alert("Ошибка соединения: " + err.type);
-            }
-        });
-    }
+            localStorage.setItem('metro_uname', myUsername);
+            localStorage.setItem('metro_room', currentRoom);
 
-    function setupConnection(conn) {
-        conn.on('open', () => {
-            if (!connections.some(c => c.peer === conn.peer)) {
-                connections.push(conn);
-            }
-            addSystemMessage(`Сталкер вошел в канал.`);
-        });
+            // Обновляем URL без перезагрузки
+            window.history.replaceState({}, '', `?room=${encodeURIComponent(currentRoom)}`);
 
-        conn.on('data', (data) => {
-            displayMessage(data.name, data.type, data.content, false);
-            // Если мы создатель (хост), ретранслируем сообщение другим участникам
-            if (isHost) {
-                broadcast(data, conn.peer);
-            }
-        });
+            document.getElementById('screen-login').classList.remove('active');
+            document.getElementById('screen-loading').classList.add('active');
+            document.getElementById('loading-status').innerText = `ПОДКЛЮЧЕНИЕ К ЧАСТОТЕ #${currentRoom}...`;
 
-        conn.on('close', () => {
-            connections = connections.filter(c => c.peer !== conn.peer);
-            addSystemMessage("Сталкер покинул частоту.");
-        });
-
-        conn.on('error', (err) => {
-            console.error("Ошибка канала:", err);
-        });
-    }
-
-    function broadcast(data, excludePeerId = null) {
-        connections.forEach(conn => {
-            if (conn.peer !== excludePeerId && conn.open) {
-                conn.send(data);
-            }
-        });
-    }
-
-    /* ================= ИНТЕРФЕЙС ЧАТА ================= */
-    function showChat() {
-        document.getElementById('loading-screen').classList.remove('active');
-        document.getElementById('chat-screen').classList.add('active');
-        document.getElementById('display-name').innerText = myName;
-        
-        const link = window.location.href;
-        document.getElementById('invite-link-box').innerText = "КООРДИНАТЫ (URL): " + link;
-    }
-
-    function copyInviteLink() {
-        playClick();
-        navigator.clipboard.writeText(window.location.href);
-        alert("Координаты скопированы! Отправьте ссылку другу.");
-    }
-
-    function addSystemMessage(text) {
-        const box = document.getElementById('chat-box');
-        box.innerHTML += `<div class="message other"><div class="msg-name">СИСТЕМА</div>${text}</div>`;
-        box.scrollTop = box.scrollHeight;
-    }
-
-    /* ================= ОТПРАВКА ДАННЫХ ================= */
-    function handleEnter(e) { if (e.key === 'Enter') sendTextMessage(); }
-
-    function sendTextMessage() {
-        const input = document.getElementById('msg-input');
-        const text = input.value.trim();
-        if (!text) return;
-        
-        if (connections.length === 0) {
-            alert("Нет активных подключений! Подождите или пригласите друга по ссылке.");
-            return;
+            connectMQTT();
         }
 
-        playClick();
-        const data = { name: myName, type: 'text', content: text };
-        broadcast(data);
-        displayMessage(myName, 'text', text, true);
-        input.value = '';
-    }
+        function connectMQTT() {
+            const brokerUrl = BROKERS[currentBrokerIdx];
+            console.log("Подключение к брокеру:", brokerUrl);
 
-    function handleFileUpload(e) {
-        const file = e.target.files[0];
-        if (!file) return;
+            const clientId = 'metro_client_' + myUserId + '_' + Math.random().toString(36).substr(2, 4);
 
-        if (connections.length === 0) {
-            alert("Нет активных подключений в канале.");
-            return;
+            try {
+                mqttClient = mqtt.connect(brokerUrl, {
+                    clientId: clientId,
+                    keepalive: 60,
+                    reconnectPeriod: 3000,
+                    connectTimeout: 10000
+                });
+
+                mqttClient.on('connect', () => {
+                    console.log('MQTT Подключено!');
+                    const topic = `metro/channel/v4/${currentRoom}`;
+                    
+                    mqttClient.subscribe(topic, { qos: 1 }, (err) => {
+                        if (!err) {
+                            showChatScreen();
+                            // Отправляем сообщение о входе
+                            publishPayload({
+                                type: 'system',
+                                content: `Сталкер [${myUsername}] вышел на частоту.`
+                            });
+                        }
+                    });
+                });
+
+                mqttClient.on('message', (topic, message) => {
+                    try {
+                        const payload = JSON.parse(message.toString());
+                        renderIncomingMessage(payload);
+                    } catch(e) {
+                        console.error("Ошибка парсинга сообщения:", e);
+                    }
+                });
+
+                mqttClient.on('error', (err) => {
+                    console.error("MQTT Ошибка:", err);
+                    document.getElementById('conn-status').classList.add('disconnected');
+                });
+
+                mqttClient.on('offline', () => {
+                    document.getElementById('conn-status').classList.add('disconnected');
+                });
+
+            } catch(e) {
+                console.error("Исключение при подключении:", e);
+                switchBroker();
+            }
         }
 
-        if (file.size > 10 * 1024 * 1024) {
-            alert("Файл слишком большой. Максимум 10MB.");
-            return;
+        function switchBroker() {
+            if (mqttClient) mqttClient.end(true);
+            currentBrokerIdx = (currentBrokerIdx + 1) % BROKERS.length;
+            setTimeout(connectMQTT, 1500);
         }
 
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const type = file.type.startsWith('image') ? 'image' : 'video';
-            const data = { name: myName, type: type, content: event.target.result };
-            broadcast(data);
-            displayMessage(myName, type, event.target.result, true);
-        };
-        reader.readAsDataURL(file);
-    }
+        function showChatScreen() {
+            document.getElementById('screen-loading').classList.remove('active');
+            document.getElementById('screen-chat').classList.add('active');
 
-    /* ================= ЗАПИСЬ АУДИО ================= */
-    async function startRecording() {
-        if (connections.length === 0) {
-            alert("Нет активных подключений в канале.");
-            return;
+            document.getElementById('display-user').innerText = myUsername;
+            document.getElementById('display-room').innerText = '#' + currentRoom;
+            document.getElementById('conn-status').classList.remove('disconnected');
         }
 
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            audioChunks = [];
-            
-            document.getElementById('record-btn').classList.add('recording');
+        /* ================= 5. ОТПРАВКА И ПОЛУЧЕНИЕ ================= */
+        function publishPayload(data) {
+            if (!mqttClient || !mqttClient.connected) {
+                alert("Нет связи с радиовышкой! Переподключение...");
+                return;
+            }
 
-            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-            mediaRecorder.onstop = () => {
-                document.getElementById('record-btn').classList.remove('recording');
-                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    const data = { name: myName, type: 'audio', content: event.target.result };
-                    broadcast(data);
-                    displayMessage(myName, 'audio', event.target.result, true);
-                };
-                reader.readAsDataURL(audioBlob);
-                
-                stream.getTracks().forEach(track => track.stop());
+            const fullPayload = {
+                id: 'm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                uid: myUserId,
+                sender: myUsername,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                ...data
             };
 
-            mediaRecorder.start();
-            
-            recordTimeout = setTimeout(() => {
-                if (mediaRecorder.state === 'recording') stopRecording();
-            }, 60000);
-
-        } catch (err) {
-            alert("Ошибка микрофона: проверьте разрешения браузера.");
-        }
-    }
-
-    function stopRecording() {
-        if (mediaRecorder && mediaRecorder.state === 'recording') {
-            mediaRecorder.stop();
-            clearTimeout(recordTimeout);
-        }
-    }
-
-    /* ================= ОТОБРАЖЕНИЕ СООБЩЕНИЙ ================= */
-    function displayMessage(name, type, content, isSelf) {
-        const box = document.getElementById('chat-box');
-        const alignmentClass = isSelf ? 'self' : 'other';
-        let innerHTML = `<div class="msg-name">${name}</div>`;
-
-        if (type === 'text') {
-            innerHTML += `<div>${content}</div>`;
-        } else if (type === 'image') {
-            innerHTML += `<div class="media-content"><img src="${content}"></div>`;
-        } else if (type === 'video') {
-            innerHTML += `<div class="media-content"><video src="${content}" controls></video></div>`;
-        } else if (type === 'audio') {
-            innerHTML += `<div class="media-content"><audio src="${content}" controls></audio></div>`;
+            const topic = `metro/channel/v4/${currentRoom}`;
+            mqttClient.publish(topic, JSON.stringify(fullPayload), { qos: 1 });
         }
 
-        const msgDiv = document.createElement('div');
-        msgDiv.className = `message ${alignmentClass}`;
-        msgDiv.innerHTML = innerHTML;
-        
-        box.appendChild(msgDiv);
-        box.scrollTop = box.scrollHeight;
-    }
-</script>
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') sendTextMessage();
+        }
+
+        function sendTextMessage() {
+            const input = document.getElementById('chat-message-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            audioEngine.playSend();
+            publishPayload({ type: 'text', content: text });
+            input.value = '';
+        }
+
+        /* Обработка изображений и сжатие на Canvas */
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (file.type.startsWith('image/')) {
+                compressAndSendImage(file);
+            } else if (file.type.startsWith('video/')) {
+                if (file.size > 8 * 1024 * 1024) {
+                    return alert("Видео файл слишком большой! Максимум 8 МБ.");
+                }
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    audioEngine.playSend();
+                    publishPayload({ type: 'video', content: evt.target.result });
+                };
+                reader.readAsDataURL(file);
+            }
+            e.target.value = '';
+        }
+
+        function compressAndSendImage(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const maxDim = 1000;
+
+                    if (width > maxDim || height > maxDim) {
+                        if (width > height) {
+                            height = Math.round((height * maxDim) / width);
+                            width = maxDim;
+                        } else {
+                            width = Math.round((width * maxDim) / height);
+                            height = maxDim;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.65);
+                    audioEngine.playSend();
+                    publishPayload({ type: 'image', content: compressedBase64 });
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        /* Голосовые сообщения */
+        async function toggleRecording() {
+            const btn = document.getElementById('rec-btn');
+
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+                    recSeconds = 0;
+
+                    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            audioEngine.playSend();
+                            publishPayload({ type: 'audio', content: reader.result });
+                        };
+                        reader.readAsDataURL(audioBlob);
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+
+                    mediaRecorder.start();
+                    isRecording = true;
+                    btn.classList.add('recording');
+                    audioEngine.playRecStart();
+
+                    recTimer = setInterval(() => {
+                        recSeconds++;
+                        if (recSeconds >= 60) {
+                            toggleRecording(); // Лимит 1 минута
+                        }
+                    }, 1000);
+
+                } catch(e) {
+                    alert("Ошибка доступа к микрофону: " + e.message);
+                }
+            } else {
+                isRecording = false;
+                btn.classList.remove('recording');
+                clearInterval(recTimer);
+                if (mediaRecorder && mediaRecorder.state === 'recording') {
+                    mediaRecorder.stop();
+                }
+            }
+        }
+
+        /* ================= 6. ОТОБРАЖЕНИЕ В ИНТЕРФЕЙСЕ ================= */
+        const renderedMsgs = new Set();
+
+        function renderIncomingMessage(data) {
+            if (data.id && renderedMsgs.has(data.id)) return;
+            if (data.id) renderedMsgs.add(data.id);
+
+            const box = document.getElementById('chat-messages');
+
+            if (data.type === 'system') {
+                const sysDiv = document.createElement('div');
+                sysDiv.className = 'msg system';
+                sysDiv.innerText = data.content;
+                box.appendChild(sysDiv);
+                box.scrollTop = box.scrollHeight;
+                return;
+            }
+
+            const isSelf = data.uid === myUserId;
+            if (!isSelf) audioEngine.playReceive();
+
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `msg ${isSelf ? 'self' : 'other'}`;
+
+            let contentHTML = '';
+            if (data.type === 'text') {
+                contentHTML = `<div class="msg-text">${escapeHTML(data.content)}</div>`;
+            } else if (data.type === 'image') {
+                contentHTML = `<div class="msg-media"><img src="${data.content}" onclick="openModal('${data.content}')"></div>`;
+            } else if (data.type === 'video') {
+                contentHTML = `<div class="msg-media"><video src="${data.content}" controls></video></div>`;
+            } else if (data.type === 'audio') {
+                contentHTML = `
+                    <div class="audio-player">
+                        <button class="audio-play-btn" onclick="playAudio(this, '${data.content}')">▶</button>
+                        <div class="audio-wave"><div class="audio-progress"></div></div>
+                        <span style="font-size:11px; color:var(--metro-muted);">ГОЛОСОВОЕ</span>
+                    </div>
+                `;
+            }
+
+            msgDiv.innerHTML = `
+                <div class="msg-meta">
+                    <span class="msg-sender">${escapeHTML(data.sender)}</span>
+                    <span class="msg-time">${data.timestamp}</span>
+                </div>
+                ${contentHTML}
+            `;
+
+            box.appendChild(msgDiv);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function playAudio(btn, src) {
+            const audio = new Audio(src);
+            const progress = btn.parentElement.querySelector('.audio-progress');
+
+            btn.innerText = '❚❚';
+            audio.play();
+
+            audio.ontimeupdate = () => {
+                const pct = (audio.currentTime / audio.duration) * 100;
+                progress.style.width = pct + '%';
+            };
+
+            audio.onended = () => {
+                btn.innerText = '▶';
+                progress.style.width = '0%';
+            };
+        }
+
+        function openModal(src) {
+            document.getElementById('modal-img').src = src;
+            document.getElementById('image-modal').style.display = 'flex';
+        }
+
+        function copyInviteLink() {
+            audioEngine.playClick();
+            navigator.clipboard.writeText(window.location.href);
+
+            const toast = document.getElementById('toast');
+            toast.style.display = 'block';
+            setTimeout(() => toast.style.display = 'none', 2000);
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+    </script>
 </body>
 </html>
