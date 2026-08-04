@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>METRO NET // АУДИОЗВОНОК И ЧАТ</title>
+    <title>METRO NET // ПРЯМАЯ ЛИНИЯ СВЯЗИ (WEBRTC)</title>
     <!-- Шрифт терминала Metro -->
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
-    <!-- MQTT.js CDN -->
+    <!-- MQTT.js для быстрых сигналов -->
     <script src="https://unpkg.com/mqtt@5.3.0/dist/mqtt.min.js"></script>
     <style>
         :root {
@@ -28,7 +28,6 @@
             padding: 0;
             user-select: none;
             -webkit-user-select: none;
-            -webkit-touch-callout: none;
         }
 
         body {
@@ -43,7 +42,6 @@
             align-items: center;
         }
 
-        /* Эффект ЭЛТ-монитора */
         .crt::before {
             content: " ";
             display: block;
@@ -68,11 +66,8 @@
             padding: 6px;
         }
 
-        .screen.active {
-            display: flex;
-        }
+        .screen.active { display: flex; }
 
-        /* Загрузка */
         #screen-loading {
             justify-content: center;
             align-items: center;
@@ -101,16 +96,9 @@
             margin-bottom: 8px;
         }
 
-        .loading-status {
-            color: var(--metro-muted);
-            font-size: 13px;
-        }
+        .loading-status { color: var(--metro-muted); font-size: 13px; }
 
-        /* Логин */
-        #screen-login {
-            justify-content: center;
-            align-items: center;
-        }
+        #screen-login { justify-content: center; align-items: center; }
 
         .login-card {
             background: var(--metro-panel);
@@ -130,10 +118,7 @@
             letter-spacing: 2px;
         }
 
-        .field-group {
-            margin-bottom: 14px;
-        }
-
+        .field-group { margin-bottom: 14px; }
         .field-group label {
             display: block;
             font-size: 11px;
@@ -172,10 +157,7 @@
             gap: 8px;
         }
 
-        /* Главный экран */
-        #screen-chat {
-            padding: 6px;
-        }
+        #screen-chat { padding: 6px; }
 
         .chat-header {
             background: var(--metro-panel);
@@ -189,35 +171,18 @@
             flex-shrink: 0;
         }
 
-        .channel-info {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 12px;
-        }
+        .channel-info { display: flex; align-items: center; gap: 8px; font-size: 12px; }
 
         .status-dot {
-            width: 8px;
-            height: 8px;
+            width: 8px; height: 8px;
             border-radius: 50%;
             background: var(--metro-green);
             box-shadow: 0 0 8px var(--metro-green);
         }
 
-        .status-dot.disconnected {
-            background: var(--metro-red);
-            box-shadow: 0 0 8px var(--metro-red);
-        }
+        .status-dot.disconnected { background: var(--metro-red); box-shadow: 0 0 8px var(--metro-red); }
 
-        .user-tag {
-            color: var(--metro-amber);
-            font-weight: bold;
-        }
-
-        .header-actions {
-            display: flex;
-            gap: 6px;
-        }
+        .user-tag { color: var(--metro-amber); font-weight: bold; }
 
         .copy-btn {
             background: transparent;
@@ -227,16 +192,14 @@
             font-family: inherit;
             font-size: 11px;
             cursor: pointer;
-            white-space: nowrap;
         }
 
-        /* Индикатор работы Звонка */
-        .ptt-status-banner {
+        .call-banner {
             display: none;
             background: rgba(51, 255, 102, 0.15);
             border: 1px solid var(--metro-green);
             color: var(--metro-green);
-            padding: 6px;
+            padding: 8px;
             text-align: center;
             font-size: 12px;
             margin-bottom: 6px;
@@ -244,14 +207,8 @@
             animation: pulse 1s infinite alternate;
         }
 
-        @keyframes pulse {
-            0% { opacity: 0.6; }
-            100% { opacity: 1; }
-        }
-
-        .ptt-status-banner.active {
-            display: block;
-        }
+        @keyframes pulse { 0% { opacity: 0.6; } 100% { opacity: 1; } }
+        .call-banner.active { display: block; }
 
         .chat-body {
             flex: 1;
@@ -260,15 +217,11 @@
             border: 1px solid var(--metro-border);
             padding: 10px;
             overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
             display: flex;
             flex-direction: column;
             gap: 8px;
             margin-bottom: 6px;
         }
-
-        .chat-body::-webkit-scrollbar { width: 4px; }
-        .chat-body::-webkit-scrollbar-thumb { background: var(--metro-border); }
 
         .msg {
             max-width: 85%;
@@ -278,17 +231,8 @@
             word-wrap: break-word;
         }
 
-        .msg.self {
-            align-self: flex-end;
-            border-color: rgba(255, 119, 0, 0.4);
-            background: #1c150e;
-        }
-
-        .msg.other {
-            align-self: flex-start;
-            border-color: #2a343d;
-        }
-
+        .msg.self { align-self: flex-end; border-color: rgba(255, 119, 0, 0.4); background: #1c150e; }
+        .msg.other { align-self: flex-start; border-color: #2a343d; }
         .msg.system {
             align-self: center;
             max-width: 95%;
@@ -297,74 +241,11 @@
             color: var(--metro-muted);
             font-size: 11px;
             text-align: center;
-            padding: 2px;
         }
 
-        .msg-meta {
-            display: flex;
-            justify-content: space-between;
-            font-size: 10px;
-            color: var(--metro-muted);
-            margin-bottom: 4px;
-            gap: 10px;
-        }
-
+        .msg-meta { display: flex; justify-content: space-between; font-size: 10px; color: var(--metro-muted); margin-bottom: 4px; gap: 10px; }
         .msg.self .msg-sender { color: var(--metro-amber); }
-
-        .msg-text {
-            font-size: 13px;
-            line-height: 1.3;
-            color: var(--metro-text);
-            user-select: text;
-            -webkit-user-select: text;
-        }
-
-        .msg-media img, .msg-media video {
-            max-width: 100%;
-            max-height: 200px;
-            border: 1px solid var(--metro-border);
-            margin-top: 4px;
-        }
-
-        .audio-player {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 4px;
-            background: #0b0e11;
-            padding: 6px 10px;
-            border: 1px solid var(--metro-border);
-        }
-
-        .audio-play-btn {
-            background: var(--metro-amber);
-            color: var(--metro-dark);
-            border: none;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-weight: bold;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 12px;
-            flex-shrink: 0;
-        }
-
-        .audio-wave {
-            flex: 1;
-            height: 4px;
-            background: var(--metro-border);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .audio-progress {
-            height: 100%;
-            width: 0%;
-            background: var(--metro-amber);
-        }
+        .msg-text { font-size: 13px; line-height: 1.3; color: var(--metro-text); user-select: text; }
 
         .chat-input-panel {
             background: var(--metro-panel);
@@ -376,39 +257,21 @@
             flex-shrink: 0;
         }
 
-        .input-row {
-            display: flex;
-            gap: 6px;
-            align-items: center;
-        }
+        .input-row { display: flex; gap: 6px; align-items: center; }
 
         .input-btn {
             background: #0b0e11;
             border: 1px solid var(--metro-border);
             color: var(--metro-amber);
-            width: 38px;
-            height: 38px;
+            width: 38px; height: 38px;
             font-size: 16px;
             cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            display: flex; justify-content: center; align-items: center;
             flex-shrink: 0;
         }
 
-        .input-btn.recording {
-            background: var(--metro-red);
-            color: white;
-            border-color: var(--metro-red);
-        }
+        #chat-message-input { flex: 1; height: 38px; font-size: 13px; }
 
-        #chat-message-input {
-            flex: 1;
-            height: 38px;
-            font-size: 13px;
-        }
-
-        /* Кнопка Включения Звонка */
         .call-btn {
             width: 100%;
             height: 48px;
@@ -424,7 +287,6 @@
             justify-content: center;
             align-items: center;
             gap: 8px;
-            touch-action: manipulation;
             box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
             transition: all 0.2s ease;
         }
@@ -434,18 +296,11 @@
             border-color: var(--metro-red);
             color: white;
             box-shadow: 0 0 15px rgba(255, 51, 51, 0.6);
-            animation: pulse-call 1.5s infinite alternate;
-        }
-
-        @keyframes pulse-call {
-            0% { box-shadow: 0 0 5px rgba(255, 51, 51, 0.4); }
-            100% { box-shadow: 0 0 20px rgba(255, 51, 51, 0.8); }
         }
 
         #toast {
             position: fixed;
-            bottom: 80px;
-            left: 50%;
+            bottom: 80px; left: 50%;
             transform: translateX(-50%);
             background: var(--metro-amber);
             color: var(--metro-dark);
@@ -461,17 +316,20 @@
 
     <div id="toast">СКОПИРОВАНО В БУФЕР</div>
 
+    <!-- Скрытый элемент для воспроизведения чистейшего голоса -->
+    <audio id="remote-audio" autoplay style="display:none;"></audio>
+
     <!-- 1. Экран Загрузки -->
     <div id="screen-loading" class="screen active">
         <div class="metro-loader"></div>
-        <div class="loading-title">METRO-NET v6.0</div>
-        <div id="loading-status" class="loading-status">ПОДКЛЮЧЕНИЕ К ЧАСТОТАМ...</div>
+        <div class="loading-title">METRO-NET WebRTC</div>
+        <div id="loading-status" class="loading-status">ПОДКЛЮЧЕНИЕ К СЕТИ...</div>
     </div>
 
     <!-- 2. Экран Входа -->
     <div id="screen-login" class="screen">
         <div class="login-card">
-            <div class="metro-title">ЛИНИЯ СВЯЗИ</div>
+            <div class="metro-title">ПРЯМАЯ ЛИНИЯ</div>
             <div class="field-group">
                 <label for="username-input">Позывной сталкера</label>
                 <input type="text" id="username-input" class="metro-input" placeholder="Артем" maxlength="15" autocomplete="off">
@@ -496,88 +354,41 @@
                     <span style="color:var(--metro-muted); margin-left: 4px;">[<span id="display-room" style="color:var(--metro-amber);">---</span>]</span>
                 </div>
             </div>
-            <div class="header-actions">
-                <button class="copy-btn" onclick="copyInviteLink()">🔗 ССЫЛКА</button>
-            </div>
+            <button class="copy-btn" onclick="copyInviteLink()">🔗 ССЫЛКА</button>
         </div>
 
-        <!-- Индикатор радиоэфира -->
-        <div id="ptt-banner" class="ptt-status-banner">
-            📞 ИДЕТ РАЗГОВОР В ЭФИРЕС: <strong id="ptt-speaker-name">---</strong>
+        <div id="call-banner" class="call-banner">
+            📞 АКТИВНОЕ СОЕДИНЕНИЕ WEBRTC (ПРЯМОЙ ЭФИР)
         </div>
 
         <div id="chat-messages" class="chat-body">
-            <div class="msg system">Канал связи защищен. Нажмите «НАЧАТЬ АУДИОЗВОНОК» для разговора без рук.</div>
+            <div class="msg system">Канал без VPN. Нажмите «НАЧАТЬ ЗВОНОК» — у собеседника автоматически включится аудиосвязь.</div>
         </div>
 
         <div class="chat-input-panel">
             <button id="call-toggle-btn" class="call-btn" onclick="toggleCall()">
-                📞 НАЧАТЬ АУДИОЗВОНОК (БЕЗ РУК)
+                📞 НАЧАТЬ ЗВОНОК (БЕЗ VPN)
             </button>
 
             <div class="input-row">
-                <button class="input-btn" onclick="document.getElementById('file-picker').click()" title="Файл">📎</button>
-                <input type="file" id="file-picker" style="display:none;" accept="image/*,video/*" onchange="handleFileSelect(event)">
-
                 <input type="text" id="chat-message-input" class="metro-input" placeholder="Сообщение..." onkeypress="handleKeyPress(event)">
-
-                <button id="rec-btn" class="input-btn" onclick="toggleVoiceRecord()" title="Записать аудиосообщение">🎙️</button>
                 <button class="input-btn" onclick="sendTextMessage()">➤</button>
             </div>
         </div>
     </div>
 
     <script>
-        /* ================= 1. ЗВУКОВОЙ ДВИЖОК И ЭФФЕКТЫ ================= */
-        class MetroSoundEngine {
-            constructor() { this.ctx = null; }
-            init() {
-                if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-                if (this.ctx.state === 'suspended') this.ctx.resume();
-            }
-            playClick() {
-                this.init();
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(60, this.ctx.currentTime + 0.05);
-                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
-                osc.connect(gain); gain.connect(this.ctx.destination);
-                osc.start(); osc.stop(this.ctx.currentTime + 0.05);
-            }
-            playPTTStart() {
-                this.init();
-                const now = this.ctx.currentTime;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(800, now);
-                osc.frequency.setValueAtTime(1200, now + 0.04);
-                gain.gain.setValueAtTime(0.08, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
-                osc.connect(gain); gain.connect(this.ctx.destination);
-                osc.start(now); osc.stop(now + 0.09);
-            }
-            playPTTEnd() {
-                this.init();
-                const now = this.ctx.currentTime;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(600, now);
-                osc.frequency.setValueAtTime(400, now + 0.06);
-                gain.gain.setValueAtTime(0.06, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-                osc.connect(gain); gain.connect(this.ctx.destination);
-                osc.start(now); osc.stop(now + 0.12);
-            }
-        }
+        /* ================= 1. КОНФИГУРАЦИЯ И СЕРВЕРЫ ОБХОДА БЛОКИРОВОК ================= */
+        // Публичные STUN-серверы Google & Twilio для создания прямого P2P соединения РФ-США
+        const iceServersConfig = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' },
+                { urls: 'stun:global.stun.twilio.com:3478' }
+            ]
+        };
 
-        const audioEngine = new MetroSoundEngine();
-
-        /* ================= 2. СОСТОЯНИЕ И МЕТРИКИ ================= */
         const BROKERS = [
             'wss://broker.emqx.io:8084/mqtt',
             'wss://test.mosquitto.org:8081/mqtt',
@@ -600,25 +411,12 @@
 
         let currentRoom = cleanRoomName(rawRoom);
 
-        let isVoiceRecording = false;
-        let voiceRecorder = null;
-        let voiceChunks = [];
-
-        let activeAudio = null;
-        let activeAudioBtn = null;
-
-        /* Состояние Аудиозвонка (Full Duplex) */
+        /* WebRTC переменные */
+        let peerConnection = null;
+        let localStream = null;
         let isInCall = false;
-        let pttStreamId = null;
-        let pttAudioCtx = null;
-        let pttMicStream = null;
-        let pttProcessor = null;
 
-        let rxAudioCtx = null;
-        let nextStartTime = 0;
-        let remoteSampleRate = 16000;
-
-        /* ================= 3. ИНИЦИАЛИЗАЦИЯ ================= */
+        /* ================= 2. ИНИЦИАЛИЗАЦИЯ ================= */
         window.onload = () => {
             setTimeout(() => {
                 document.getElementById('screen-loading').classList.remove('active');
@@ -634,13 +432,11 @@
             }, 800);
         };
 
-        /* ================= 4. ПОДКЛЮЧЕНИЕ К MQTT ================= */
         function startSession() {
-            audioEngine.playClick();
             const unameInput = document.getElementById('username-input').value.trim();
             const roomInput = cleanRoomName(document.getElementById('room-input').value.trim());
 
-            if (!unameInput || !roomInput) return alert("Укажите позывной и корректный номер частоты!");
+            if (!unameInput || !roomInput) return alert("Укажите позывной и корректную частоту!");
 
             myUsername = unameInput;
             currentRoom = roomInput;
@@ -657,20 +453,19 @@
             connectMQTT();
         }
 
+        /* ================= 3. МГНОВЕННАЯ СИГНАЛИЗАЦИЯ СВЯЗИ ================= */
         function connectMQTT() {
             const clientId = 'metro_' + myUserId + '_' + Math.random().toString(36).substr(2, 4);
 
             try {
-                mqttClient = mqtt.connect(BROKERS[currentBrokerIdx], {
-                    clientId: clientId, keepalive: 30, reconnectPeriod: 3000
-                });
+                mqttClient = mqtt.connect(BROKERS[currentBrokerIdx], { clientId: clientId, keepalive: 30 });
 
                 mqttClient.on('connect', () => {
-                    const topic = `metro/channel/v6/${currentRoom}`;
+                    const topic = `metro/webrtc/v7/${currentRoom}`;
                     mqttClient.subscribe(topic, { qos: 1 }, (err) => {
                         if (!err) {
                             showChatScreen();
-                            publishPayload({ type: 'system', content: `Сталкер [${myUsername}] вышел в эфир.` });
+                            publishPayload({ type: 'system', content: `Сталкер [${myUsername}] подключился.` });
                         }
                     });
                 });
@@ -678,26 +473,24 @@
                 mqttClient.on('message', (topic, message) => {
                     try {
                         const payload = JSON.parse(message.toString());
-                        if (payload.type.startsWith('ptt_')) {
-                            handlePTTIncoming(payload);
-                        } else {
-                            renderIncomingMessage(payload);
-                        }
+                        if (payload.uid === myUserId) return; // Игнорируем свои сообщения
+
+                        if (payload.type === 'rtc_offer') handleOffer(payload);
+                        else if (payload.type === 'rtc_answer') handleAnswer(payload);
+                        else if (payload.type === 'rtc_candidate') handleCandidate(payload);
+                        else if (payload.type === 'rtc_end') stopCall(false);
+                        else renderIncomingMessage(payload);
                     } catch(e) { console.error(e); }
                 });
 
                 mqttClient.on('error', () => switchBroker());
-                mqttClient.on('offline', () => document.getElementById('conn-status').classList.add('disconnected'));
-            } catch(e) {
-                switchBroker();
-            }
+            } catch(e) { switchBroker(); }
         }
 
         function switchBroker() {
-            document.getElementById('conn-status').classList.add('disconnected');
             if (mqttClient) { try { mqttClient.end(true); } catch(e){} }
             currentBrokerIdx = (currentBrokerIdx + 1) % BROKERS.length;
-            setTimeout(connectMQTT, 2000);
+            setTimeout(connectMQTT, 1500);
         }
 
         function showChatScreen() {
@@ -705,237 +498,122 @@
             document.getElementById('screen-chat').classList.add('active');
             document.getElementById('display-user').innerText = myUsername;
             document.getElementById('display-room').innerText = '#' + currentRoom;
-            document.getElementById('conn-status').classList.remove('disconnected');
         }
 
-        /* ================= 5. РЕЖИМ АУДИОЗВОНКА ПО КЛИКУ (FULL DUPLEX) ================= */
-        function toggleCall() {
+        /* ================= 4. ДВИЖОК WEBRTC (ПРЯМОЙ ЭФИР РЕСПУБЛИКА-США) ================= */
+        async function toggleCall() {
             if (!isInCall) {
-                startCall(true); // Запускаем у себя и отправляем сигнал другому
+                await startCall(true);
             } else {
-                stopCall(true);  // Отключаем у себя и отправляем сигнал об остановке
+                stopCall(true);
             }
         }
 
-        async function startCall(sendSignal = true) {
-            if (isInCall) return;
-            audioEngine.init();
-            audioEngine.playPTTStart();
+        async function createPeerConnection() {
+            peerConnection = new RTCPeerConnection(iceServersConfig);
 
-            try {
-                // Подавление эха и шума при открытом микрофоне
-                pttMicStream = await navigator.mediaDevices.getUserMedia({ 
-                    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } 
-                });
-                isInCall = true;
-                pttStreamId = 'stream_' + Date.now();
+            // Получаем доступ к микрофону с шумоподавлением и эхоподавлением
+            localStream = await navigator.mediaDevices.getUserMedia({
+                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+            });
 
-                const btn = document.getElementById('call-toggle-btn');
-                btn.classList.add('active-call');
-                btn.innerText = '🔴 В ЭФИРЕ (НАЖМИТЕ ЧТОБЫ ЗАВЕРШИТЬ)';
+            // Добавляем микрофон в прямой поток
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
-                pttAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const source = pttAudioCtx.createMediaStreamSource(pttMicStream);
-                pttProcessor = pttAudioCtx.createScriptProcessor(2048, 1, 1);
+            // Когда прилетает голос собеседника -> выводим в динамики
+            peerConnection.ontrack = (event) => {
+                const remoteAudio = document.getElementById('remote-audio');
+                remoteAudio.srcObject = event.streams[0];
+            };
 
-                if (sendSignal) {
-                    publishPayload({ 
-                        type: 'ptt_start', 
-                        streamId: pttStreamId, 
-                        sampleRate: pttAudioCtx.sampleRate 
-                    });
+            // Пересылаем сетевые данные (ICE) второму абоненту
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    publishPayload({ type: 'rtc_candidate', candidate: event.candidate });
                 }
+            };
+        }
 
-                pttProcessor.onaudioprocess = (e) => {
-                    if (!isInCall) return;
-                    const inputData = e.inputBuffer.getChannelData(0);
-                    
-                    const pttInt16 = new Int16Array(inputData.length);
-                    for (let i = 0; i < inputData.length; i++) {
-                        let s = Math.max(-1, Math.min(1, inputData[i]));
-                        pttInt16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-                    }
+        async function startCall(isInitiator) {
+            try {
+                isInCall = true;
+                updateCallUI(true);
+                await createPeerConnection();
 
-                    let binary = '';
-                    const bytes = new Uint8Array(pttInt16.buffer);
-                    for (let i = 0; i < bytes.byteLength; i++) {
-                        binary += String.fromCharCode(bytes[i]);
-                    }
+                if (isInitiator) {
+                    const offer = await peerConnection.createOffer();
+                    await peerConnection.setLocalDescription(offer);
+                    publishPayload({ type: 'rtc_offer', offer: offer });
+                }
+            } catch (e) {
+                alert("Ошибка доступа к микрофону!");
+                stopCall(false);
+            }
+        }
 
-                    publishPayload({
-                        type: 'ptt_chunk',
-                        streamId: pttStreamId,
-                        chunk: btoa(binary)
-                    });
-                };
+        async function handleOffer(payload) {
+            if (!isInCall) {
+                isInCall = true;
+                updateCallUI(true);
+                await createPeerConnection();
+            }
 
-                source.connect(pttProcessor);
-                pttProcessor.connect(pttAudioCtx.destination);
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(payload.offer));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            publishPayload({ type: 'rtc_answer', answer: answer });
+        }
 
-            } catch (err) {
-                isInCall = false;
-                alert("Ошибка микрофона: Не удалось получить доступ к устройству!");
+        async function handleAnswer(payload) {
+            if (peerConnection) {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(payload.answer));
+            }
+        }
+
+        async function handleCandidate(payload) {
+            if (peerConnection) {
+                try {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(payload.candidate));
+                } catch(e) {}
             }
         }
 
         function stopCall(sendSignal = true) {
-            if (!isInCall) return;
             isInCall = false;
+            updateCallUI(false);
 
+            if (sendSignal) publishPayload({ type: 'rtc_end' });
+
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+
+            const remoteAudio = document.getElementById('remote-audio');
+            remoteAudio.srcObject = null;
+        }
+
+        function updateCallUI(active) {
             const btn = document.getElementById('call-toggle-btn');
-            btn.classList.remove('active-call');
-            btn.innerText = '📞 НАЧАТЬ АУДИОЗВОНОК (БЕЗ РУК)';
+            const banner = document.getElementById('call-banner');
 
-            audioEngine.playPTTEnd();
-
-            if (pttProcessor) { pttProcessor.disconnect(); pttProcessor = null; }
-            if (pttAudioCtx) { pttAudioCtx.close(); pttAudioCtx = null; }
-            if (pttMicStream) { pttMicStream.getTracks().forEach(t => t.stop()); pttMicStream = null; }
-
-            if (sendSignal) {
-                publishPayload({ type: 'ptt_end', streamId: pttStreamId });
-            }
-            
-            document.getElementById('ptt-banner').classList.remove('active');
-        }
-
-        function handlePTTIncoming(data) {
-            if (data.uid === myUserId) return;
-
-            const banner = document.getElementById('ptt-banner');
-            const speakerTag = document.getElementById('ptt-speaker-name');
-
-            if (data.type === 'ptt_start') {
-                speakerTag.innerText = data.sender;
+            if (active) {
+                btn.classList.add('active-call');
+                btn.innerText = '🔴 В ЭФИРЕ (НАЖМИТЕ ЧТОБЫ ЗАВЕРШИТЬ)';
                 banner.classList.add('active');
-                audioEngine.playPTTStart();
-
-                remoteSampleRate = data.sampleRate || 16000;
-
-                if (!rxAudioCtx) rxAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                if (rxAudioCtx.state === 'suspended') rxAudioCtx.resume();
-                
-                nextStartTime = rxAudioCtx.currentTime + 0.06;
-
-                // Автоматически подключаем второго пользователя к диалогу
-                if (!isInCall) {
-                    startCall(false); 
-                }
-
-            } else if (data.type === 'ptt_chunk') {
-                if (!rxAudioCtx) return;
-
-                const binary = atob(data.chunk);
-                const bytes = new Uint8Array(binary.length);
-                for (let i = 0; i < binary.length; i++) {
-                    bytes[i] = binary.charCodeAt(i);
-                }
-                const int16 = new Int16Array(bytes.buffer);
-
-                const float32 = new Float32Array(int16.length);
-                for (let i = 0; i < int16.length; i++) {
-                    float32[i] = int16[i] / (int16[i] < 0 ? 0x8000 : 0x7FFF);
-                }
-
-                const audioBuffer = rxAudioCtx.createBuffer(1, float32.length, remoteSampleRate);
-                audioBuffer.getChannelData(0).set(float32);
-
-                const source = rxAudioCtx.createBufferSource();
-                source.buffer = audioBuffer;
-                source.connect(rxAudioCtx.destination);
-
-                if (nextStartTime < rxAudioCtx.currentTime) {
-                    nextStartTime = rxAudioCtx.currentTime + 0.02;
-                }
-                source.start(nextStartTime);
-                nextStartTime += audioBuffer.duration;
-
-            } else if (data.type === 'ptt_end') {
-                setTimeout(() => {
-                    banner.classList.remove('active');
-                    audioEngine.playPTTEnd();
-                }, 300);
-
-                // Если собеседник повесил трубку, выключаем микрофон у себя
-                if (isInCall) {
-                    stopCall(false);
-                }
-            }
-        }
-
-        /* ================= 6. ГОЛОСОВЫЕ СООБЩЕНИЯ ================= */
-        function playAudio(btn, src) {
-            if (activeAudio && activeAudioBtn === btn) {
-                if (!activeAudio.paused) {
-                    activeAudio.pause();
-                    btn.innerText = '▶';
-                } else {
-                    activeAudio.play();
-                    btn.innerText = '❚❚';
-                }
-                return;
-            }
-
-            if (activeAudio) {
-                activeAudio.pause();
-                if (activeAudioBtn) activeAudioBtn.innerText = '▶';
-            }
-
-            activeAudio = new Audio(src);
-            activeAudioBtn = btn;
-            const progress = btn.parentElement.querySelector('.audio-progress');
-
-            btn.innerText = '❚❚';
-            activeAudio.play().catch(e => console.error("Audio error:", e));
-
-            activeAudio.ontimeupdate = () => {
-                if (activeAudio && activeAudio.duration) {
-                    const pct = (activeAudio.currentTime / activeAudio.duration) * 100;
-                    progress.style.width = pct + '%';
-                }
-            };
-
-            activeAudio.onended = () => {
-                btn.innerText = '▶';
-                progress.style.width = '0%';
-                activeAudio = null;
-                activeAudioBtn = null;
-            };
-        }
-
-        async function toggleVoiceRecord() {
-            const btn = document.getElementById('rec-btn');
-            audioEngine.init();
-
-            if (!isVoiceRecording) {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    voiceRecorder = new MediaRecorder(stream);
-                    voiceChunks = [];
-
-                    voiceRecorder.ondataavailable = e => { if (e.data.size > 0) voiceChunks.push(e.data); };
-                    voiceRecorder.onstop = () => {
-                        const audioBlob = new Blob(voiceChunks, { type: 'audio/webm' });
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                            publishPayload({ type: 'audio', content: reader.result });
-                        };
-                        reader.readAsDataURL(audioBlob);
-                        stream.getTracks().forEach(track => track.stop());
-                    };
-
-                    voiceRecorder.start();
-                    isVoiceRecording = true;
-                    btn.classList.add('recording');
-                } catch(e) { alert("Ошибка микрофона: " + e.message); }
             } else {
-                isVoiceRecording = false;
-                btn.classList.remove('recording');
-                if (voiceRecorder && voiceRecorder.state === 'recording') voiceRecorder.stop();
+                btn.classList.remove('active-call');
+                btn.innerText = '📞 НАЧАТЬ ЗВОНОК (БЕЗ VPN)';
+                banner.classList.remove('active');
             }
         }
 
-        /* ================= 7. ОТПРАВКА И РЕНДЕР СООБЩЕНИЙ ================= */
+        /* ================= 5. ЧАТ И СООБЩЕНИЯ ================= */
         function publishPayload(data) {
             if (!mqttClient || !mqttClient.connected) return;
             const fullPayload = {
@@ -945,7 +623,7 @@
                 timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 ...data
             };
-            mqttClient.publish(`metro/channel/v6/${currentRoom}`, JSON.stringify(fullPayload), { qos: 1 });
+            mqttClient.publish(`metro/webrtc/v7/${currentRoom}`, JSON.stringify(fullPayload), { qos: 1 });
         }
 
         function handleKeyPress(e) { if (e.key === 'Enter') sendTextMessage(); }
@@ -956,41 +634,6 @@
             if (!text) return;
             publishPayload({ type: 'text', content: text });
             input.value = '';
-        }
-
-        function handleFileSelect(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            if (file.type.startsWith('image/')) {
-                compressAndSendImage(file);
-            } else if (file.type.startsWith('video/')) {
-                if (file.size > 8 * 1024 * 1024) return alert("Видео до 8 МБ!");
-                const reader = new FileReader();
-                reader.onload = (evt) => publishPayload({ type: 'video', content: evt.target.result });
-                reader.readAsDataURL(file);
-            }
-            e.target.value = '';
-        }
-
-        function compressAndSendImage(file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let w = img.width, h = img.height, max = 900;
-                    if (w > max || h > max) {
-                        if (w > h) { h = Math.round((h * max) / w); w = max; }
-                        else { w = Math.round((w * max) / h); h = max; }
-                    }
-                    canvas.width = w; canvas.height = h;
-                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                    publishPayload({ type: 'image', content: canvas.toDataURL('image/jpeg', 0.6) });
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
         }
 
         const renderedMsgs = new Set();
@@ -1011,33 +654,15 @@
             }
 
             const isSelf = data.uid === myUserId;
-
             const msgDiv = document.createElement('div');
             msgDiv.className = `msg ${isSelf ? 'self' : 'other'}`;
-
-            let contentHTML = '';
-            if (data.type === 'text') {
-                contentHTML = `<div class="msg-text">${escapeHTML(data.content)}</div>`;
-            } else if (data.type === 'image') {
-                contentHTML = `<div class="msg-media"><img src="${data.content}"></div>`;
-            } else if (data.type === 'video') {
-                contentHTML = `<div class="msg-media"><video src="${data.content}" controls></video></div>`;
-            } else if (data.type === 'audio') {
-                contentHTML = `
-                    <div class="audio-player">
-                        <button class="audio-play-btn" onclick="playAudio(this, '${data.content}')">▶</button>
-                        <div class="audio-wave"><div class="audio-progress"></div></div>
-                        <span style="font-size:10px; color:var(--metro-muted);">ГОЛОСОВОЕ</span>
-                    </div>
-                `;
-            }
 
             msgDiv.innerHTML = `
                 <div class="msg-meta">
                     <span class="msg-sender">${escapeHTML(data.sender)}</span>
                     <span class="msg-time">${data.timestamp}</span>
                 </div>
-                ${contentHTML}
+                <div class="msg-text">${escapeHTML(data.content)}</div>
             `;
 
             box.appendChild(msgDiv);
@@ -1045,7 +670,6 @@
         }
 
         function copyInviteLink() {
-            audioEngine.playClick();
             navigator.clipboard.writeText(window.location.href);
             const toast = document.getElementById('toast');
             toast.style.display = 'block';
