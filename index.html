@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>METRO NET // ГЛОБАЛЬНАЯ СВЯЗЬ (WEBRTC + TURN)</title>
+    <title>METRO NET // РАЦИЯ И МЕДИА ВЬЮЕР</title>
     <!-- Шрифт терминала Metro -->
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <!-- MQTT.js CDN -->
@@ -14,6 +14,8 @@
             --metro-amber-glow: rgba(255, 119, 0, 0.4);
             --metro-green: #33ff66;
             --metro-green-glow: rgba(51, 255, 102, 0.4);
+            --metro-blue: #00bfff;
+            --metro-blue-glow: rgba(0, 191, 255, 0.4);
             --metro-red: #ff3333;
             --metro-dark: #0a0d0f;
             --metro-panel: #141a1f;
@@ -174,15 +176,42 @@
 
         .channel-info { display: flex; align-items: center; gap: 8px; font-size: 12px; }
 
-        .status-dot {
-            width: 8px; height: 8px;
-            border-radius: 50%;
-            background: var(--metro-green);
-            box-shadow: 0 0 8px var(--metro-green);
+        /* Газоразрядная Лампочка */
+        .gas-lamp-box {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #080b0d;
+            padding: 3px 8px;
+            border: 1px solid var(--metro-border);
+            border-radius: 4px;
         }
 
-        .status-dot.disconnected { background: var(--metro-red); box-shadow: 0 0 8px var(--metro-red); }
+        .gas-lamp-bulb {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: #220000;
+            transition: all 0.3s ease;
+        }
 
+        .gas-lamp-bulb.green {
+            background: var(--metro-green);
+            box-shadow: 0 0 10px var(--metro-green), 0 0 15px var(--metro-green-glow), inset 0 0 3px #ffffff;
+        }
+
+        .gas-lamp-bulb.blue {
+            background: var(--metro-blue);
+            box-shadow: 0 0 10px var(--metro-blue), 0 0 15px var(--metro-blue-glow), inset 0 0 3px #ffffff;
+        }
+
+        .gas-lamp-bulb.red {
+            background: var(--metro-red);
+            box-shadow: 0 0 10px var(--metro-red), 0 0 15px rgba(255, 51, 51, 0.6), inset 0 0 3px #ffffff;
+        }
+
+        .lamp-text { font-size: 10px; color: var(--metro-muted); font-weight: bold; }
         .user-tag { color: var(--metro-amber); font-weight: bold; }
 
         .copy-btn {
@@ -248,12 +277,33 @@
         .msg.self .msg-sender { color: var(--metro-amber); }
         .msg-text { font-size: 13px; line-height: 1.3; color: var(--metro-text); user-select: text; }
 
-        .msg-media img, .msg-media video {
+        /* Медиа элементы в чате */
+        .msg-media-preview {
+            position: relative;
+            cursor: pointer;
+            margin-top: 4px;
+            display: inline-block;
+            max-width: 100%;
+        }
+
+        .msg-media-preview img, .msg-media-preview video {
             max-width: 100%;
             max-height: 220px;
             border: 1px solid var(--metro-border);
-            margin-top: 4px;
             display: block;
+            border-radius: 2px;
+        }
+
+        .msg-media-preview::after {
+            content: '🔍 УВЕЛИЧИТЬ';
+            position: absolute;
+            bottom: 4px; right: 4px;
+            background: rgba(0,0,0,0.75);
+            color: var(--metro-amber);
+            font-size: 9px;
+            padding: 2px 6px;
+            border: 1px solid var(--metro-border);
+            pointer-events: none;
         }
 
         .audio-player {
@@ -306,7 +356,7 @@
         }
 
         .mode-btn {
-            height: 46px;
+            height: 48px;
             background: #0b0e11;
             border: 1px solid var(--metro-border);
             color: var(--metro-amber);
@@ -319,15 +369,16 @@
             text-align: center;
             padding: 4px;
             box-shadow: inset 0 0 8px rgba(0,0,0,0.8);
-            transition: all 0.15s ease;
+            transition: all 0.1s ease;
             touch-action: manipulation;
         }
 
         .mode-btn.ptt-mode { border-color: var(--metro-amber); }
         .mode-btn.ptt-mode.active-ptt {
-            background: var(--metro-amber);
-            color: var(--metro-dark);
-            box-shadow: 0 0 15px var(--metro-amber-glow);
+            background: var(--metro-amber) !important;
+            color: var(--metro-dark) !important;
+            box-shadow: 0 0 20px var(--metro-amber-glow) !important;
+            transform: scale(0.98);
         }
 
         .mode-btn.call-mode { border-color: #33aaff; color: #33aaff; }
@@ -336,10 +387,7 @@
             border-color: var(--metro-red);
             color: white;
             box-shadow: 0 0 15px rgba(255, 51, 51, 0.6);
-            animation: pulse-call 1.5s infinite alternate;
         }
-
-        @keyframes pulse-call { 0% { opacity: 0.8; } 100% { opacity: 1; } }
 
         .input-row { display: flex; gap: 6px; align-items: center; }
 
@@ -363,6 +411,81 @@
 
         #chat-message-input { flex: 1; height: 38px; font-size: 13px; }
 
+        /* ПОЛНОЭКРАННЫЙ ВЬЮЕР (LIGHTBOX) */
+        #media-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(5, 7, 9, 0.96);
+            z-index: 10000;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+        }
+
+        #media-modal.active { display: flex; }
+
+        .modal-top-bar {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10001;
+        }
+
+        .modal-close-btn {
+            background: #141a1f;
+            border: 1px solid var(--metro-amber);
+            color: var(--metro-amber);
+            padding: 8px 16px;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .modal-body {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: auto;
+            position: relative;
+        }
+
+        .modal-body img, .modal-body video {
+            max-width: 95vw;
+            max-height: 80vh;
+            object-fit: contain;
+            border: 1px solid var(--metro-amber);
+            box-shadow: 0 0 20px var(--metro-amber-glow);
+        }
+
+        .modal-bottom-bar {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            padding-top: 10px;
+        }
+
+        .download-btn {
+            background: var(--metro-amber);
+            color: var(--metro-dark);
+            border: none;
+            padding: 12px 24px;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 0 15px var(--metro-amber-glow);
+        }
+
         #toast {
             position: fixed;
             bottom: 80px; left: 50%;
@@ -381,13 +504,26 @@
 
     <div id="toast">СКОПИРОВАНО В БУФЕР</div>
 
-    <!-- Воспроизведение звука с автоматической поддержкой Safari / Южной Кореи -->
     <audio id="remote-audio" autoplay playsinline style="display:none;"></audio>
+
+    <!-- ПОЛНОЭКРАННЫЙ LIGHTBOX ДЛЯ ФОТО И ВИДЕО -->
+    <div id="media-modal">
+        <div class="modal-top-bar">
+            <span style="color:var(--metro-amber); font-size: 12px;">ПРОСМОТР МЕДИAФАЙЛА</span>
+            <button class="modal-close-btn" onclick="closeMediaModal()">✕ ЗАКРЫТЬ</button>
+        </div>
+        <div class="modal-body" id="modal-container">
+            <!-- Сюда вставляется img или video -->
+        </div>
+        <div class="modal-bottom-bar">
+            <button class="download-btn" onclick="downloadCurrentMedia()">💾 СОХРАНИТЬ В ПАМЯТЬ</button>
+        </div>
+    </div>
 
     <!-- 1. Экран Загрузки -->
     <div id="screen-loading" class="screen active">
         <div class="metro-loader"></div>
-        <div class="loading-title">METRO-NET WebRTC+TURN</div>
+        <div class="loading-title">METRO-NET WebRTC</div>
         <div id="loading-status" class="loading-status">ПОДКЛЮЧЕНИЕ К СЕТИ...</div>
     </div>
 
@@ -409,14 +545,18 @@
         </div>
     </div>
 
-    <!-- 3. Экран Чата и Управления -->
+    <!-- 3. Экран Чата -->
     <div id="screen-chat" class="screen">
         <div class="chat-header">
             <div class="channel-info">
-                <div id="conn-status" class="status-dot"></div>
+                <!-- Газоразрядная Лампа -->
+                <div class="gas-lamp-box" title="Зеленый=P2P, Синий=TURN, Красный=Плохой сигнал">
+                    <div id="gas-lamp" class="gas-lamp-bulb red"></div>
+                    <span id="gas-lamp-text" class="lamp-text">OFF</span>
+                </div>
                 <div>
-                    <span>ПОЗЫВНОЙ: <strong id="display-user" class="user-tag">---</strong></span>
-                    <span style="color:var(--metro-muted); margin-left: 4px;">[<span id="display-room" style="color:var(--metro-amber);">---</span>]</span>
+                    <span><strong id="display-user" class="user-tag">---</strong></span>
+                    <span style="color:var(--metro-muted); margin-left: 2px;">[<span id="display-room" style="color:var(--metro-amber);">---</span>]</span>
                 </div>
             </div>
             <button class="copy-btn" onclick="copyInviteLink()">🔗 ССЫЛКА</button>
@@ -427,57 +567,44 @@
         </div>
 
         <div id="chat-messages" class="chat-body">
-            <div class="msg system">Защищенная линия Корея ⇄ РФ ⇄ США активна без VPN.</div>
+            <div class="msg system">Канал связи настроен. Нажмите на любое фото/видео для увеличения и сохранения.</div>
         </div>
 
         <div class="chat-input-panel">
-            <!-- 2 КНОПКИ ГОЛОСОВОЙ СВЯЗИ -->
+            <!-- Управление Рацией и Звонком -->
             <div class="controls-row">
                 <button id="ptt-btn" class="mode-btn ptt-mode">
-                    📻 РАЦИЯ<br>(ЗАЖАТЬ)
+                    📻 РАЦИЯ<br>(ЗАЖАТЬ И ДЕРЖАТЬ)
                 </button>
                 <button id="call-toggle-btn" class="mode-btn call-mode" onclick="toggleCall()">
                     📞 ЗВОНОК<br>(1 НАЖАТИЕ)
                 </button>
             </div>
 
-            <!-- СТРОКА ВВОДА С КНОПКАМИ МЕДИА (СКРЕПКА И ГОЛОСОВОЕ) -->
+            <!-- Ввод сообщений и файла -->
             <div class="input-row">
                 <button class="input-btn" onclick="document.getElementById('file-picker').click()" title="Фото/Видео">📎</button>
                 <input type="file" id="file-picker" style="display:none;" accept="image/*,video/*" onchange="handleFileSelect(event)">
 
                 <input type="text" id="chat-message-input" class="metro-input" placeholder="Сообщение..." onkeypress="handleKeyPress(event)">
 
-                <button id="rec-btn" class="input-btn" onclick="toggleVoiceRecord()" title="Записать голосовое сообщение">🎙️</button>
+                <button id="rec-btn" class="input-btn" onclick="toggleVoiceRecord()" title="Записать аудио">🎙️</button>
                 <button class="input-btn" onclick="sendTextMessage()">➤</button>
             </div>
         </div>
     </div>
 
     <script>
-        /* ================= 1. СЕРВЕРЫ ОБХОДА (STUN + TURN ДЛЯ ЮЖНОЙ КОРЕИ И РФ) ================= */
-        // TURN-серверы необходимы для обхода Symmetric NAT мобильных операторов Кореи (SKT/KT/LGU+)
+        /* ================= CONFIGURATION & SERVERS ================= */
         const iceServersConfig = {
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' },
                 { urls: 'stun:stun2.l.google.com:19302' },
                 { urls: 'stun:global.stun.twilio.com:3478' },
-                {
-                    urls: "turn:openrelay.metered.ca:80",
-                    username: "openrelay",
-                    credential: "openrelay"
-                },
-                {
-                    urls: "turn:openrelay.metered.ca:443",
-                    username: "openrelay",
-                    credential: "openrelay"
-                },
-                {
-                    urls: "turn:openrelay.metered.ca:443?transport=tcp",
-                    username: "openrelay",
-                    credential: "openrelay"
-                }
+                { urls: "turn:openrelay.metered.ca:80", username: "openrelay", credential: "openrelay" },
+                { urls: "turn:openrelay.metered.ca:443", username: "openrelay", credential: "openrelay" },
+                { urls: "turn:openrelay.metered.ca:443?transport=tcp", username: "openrelay", credential: "openrelay" }
             ]
         };
 
@@ -503,20 +630,25 @@
 
         let currentRoom = cleanRoomName(rawRoom);
 
-        /* WebRTC & Звуковое Состояние */
+        /* WebRTC & Media State */
         let peerConnection = null;
         let localStream = null;
         let isPTTActive = false;
         let isCallActive = false;
 
-        /* Запись Голосовых Сообщений */
+        /* Lightbox State */
+        let activeMediaSrc = '';
+        let activeMediaType = '';
+
+        /* Audio Recording State */
         let isVoiceRecording = false;
         let voiceRecorder = null;
         let voiceChunks = [];
         let activeAudio = null;
         let activeAudioBtn = null;
+        let statsInterval = null;
 
-        /* Звуковые эффекты терминала */
+        /* Sound FX */
         class MetroSoundEngine {
             constructor() { this.ctx = null; }
             init() {
@@ -524,29 +656,30 @@
                 if (this.ctx.state === 'suspended') this.ctx.resume();
             }
             playBeep(freq1, freq2, duration) {
-                this.init();
-                const now = this.ctx.currentTime;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(freq1, now);
-                if (freq2) osc.frequency.setValueAtTime(freq2, now + duration / 2);
-                gain.gain.setValueAtTime(0.08, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-                osc.connect(gain); gain.connect(this.ctx.destination);
-                osc.start(now); osc.stop(now + duration);
+                try {
+                    this.init();
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq1, now);
+                    if (freq2) osc.frequency.setValueAtTime(freq2, now + duration / 2);
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.start(now); osc.stop(now + duration);
+                } catch(e){}
             }
         }
         const audioEngine = new MetroSoundEngine();
 
-        /* Разблокировка мобильного аудио */
         function unlockAudio() {
             const remoteAudio = document.getElementById('remote-audio');
             remoteAudio.play().then(() => remoteAudio.pause()).catch(() => {});
             audioEngine.init();
         }
 
-        /* ================= 2. ИНИЦИАЛИЗАЦИЯ ================= */
+        /* ================= 1. INITIALIZATION & PTT SETUP ================= */
         window.onload = () => {
             setTimeout(() => {
                 document.getElementById('screen-loading').classList.remove('active');
@@ -559,17 +692,30 @@
                 if (myUsername && new URLSearchParams(window.location.search).get('room')) {
                     startSession();
                 }
-            }, 800);
+            }, 600);
 
-            // Настройка Зажатия для Кнопки 1 (Рация)
+            // ВОССТАНОВЛЕНИЕ НАДЕЖНЫХ НАЖАТИЙ РАЦИИ PTT
             const pttBtn = document.getElementById('ptt-btn');
-            pttBtn.addEventListener('mousedown', (e) => { unlockAudio(); startPTT(); });
-            pttBtn.addEventListener('mouseup', stopPTT);
-            pttBtn.addEventListener('mouseleave', stopPTT);
 
-            pttBtn.addEventListener('touchstart', (e) => { e.preventDefault(); unlockAudio(); startPTT(); }, { passive: false });
-            pttBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopPTT(); }, { passive: false });
-            pttBtn.addEventListener('touchcancel', (e) => { e.preventDefault(); stopPTT(); }, { passive: false });
+            pttBtn.addEventListener('mousedown', (e) => { e.preventDefault(); unlockAudio(); startPTT(); });
+            pttBtn.addEventListener('mouseup', (e) => { e.preventDefault(); stopPTT(); });
+            pttBtn.addEventListener('mouseleave', (e) => { e.preventDefault(); stopPTT(); });
+
+            pttBtn.addEventListener('touchstart', (e) => {
+                if (e.cancelable) e.preventDefault();
+                unlockAudio();
+                startPTT();
+            }, { passive: false });
+
+            pttBtn.addEventListener('touchend', (e) => {
+                if (e.cancelable) e.preventDefault();
+                stopPTT();
+            }, { passive: false });
+
+            pttBtn.addEventListener('touchcancel', (e) => {
+                if (e.cancelable) e.preventDefault();
+                stopPTT();
+            }, { passive: false });
         };
 
         function startSession() {
@@ -577,7 +723,7 @@
             const unameInput = document.getElementById('username-input').value.trim();
             const roomInput = cleanRoomName(document.getElementById('room-input').value.trim());
 
-            if (!unameInput || !roomInput) return alert("Укажите позывной и корректную частоту!");
+            if (!unameInput || !roomInput) return alert("Заполните позывной и канал!");
 
             myUsername = unameInput;
             currentRoom = roomInput;
@@ -591,10 +737,67 @@
             document.getElementById('screen-loading').classList.add('active');
             document.getElementById('loading-status').innerText = `ПОДКЛЮЧЕНИЕ К ЧАСТОТЕ #${currentRoom}...`;
 
+            // Предварительная подготовка аудио при входе
+            initAudioStream();
             connectMQTT();
         }
 
-        /* ================= 3. СИГНАЛИЗАЦИЯ ================= */
+        /* Инициализация микрофона */
+        async function initAudioStream() {
+            if (!localStream) {
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia({
+                        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+                    });
+                    setMicEnabled(false);
+                } catch(e) {
+                    console.error("Ошибка микрофона:", e);
+                }
+            }
+        }
+
+        /* ================= 2. ЛАМПОЧКА И МОНИТОРИНГ ================= */
+        function updateGasLamp(color, text) {
+            const lamp = document.getElementById('gas-lamp');
+            const lampText = document.getElementById('gas-lamp-text');
+            lamp.className = `gas-lamp-bulb ${color}`;
+            lampText.innerText = text;
+        }
+
+        function monitorConnectionQuality() {
+            if (!peerConnection) {
+                updateGasLamp('red', 'OFF');
+                return;
+            }
+
+            const state = peerConnection.iceConnectionState;
+            if (state === 'disconnected' || state === 'failed' || state === 'closed') {
+                updateGasLamp('red', 'BAD');
+                return;
+            }
+
+            peerConnection.getStats(null).then(stats => {
+                let foundPair = false;
+                stats.forEach(report => {
+                    if (report.type === 'candidate-pair' && (report.nominated || report.selected || report.state === 'succeeded')) {
+                        foundPair = true;
+                        const localCand = stats.get(report.localCandidateId);
+                        const remoteCand = stats.get(report.remoteCandidateId);
+
+                        const isRelay = (localCand && localCand.candidateType === 'relay') || 
+                                        (remoteCand && remoteCand.candidateType === 'relay');
+
+                        updateGasLamp(isRelay ? 'blue' : 'green', isRelay ? 'TURN' : 'P2P');
+                    }
+                });
+
+                if (!foundPair) {
+                    updateGasLamp((state === 'connected' || state === 'completed') ? 'green' : 'red', (state === 'connected' || state === 'completed') ? 'P2P' : 'WAIT');
+                }
+            }).catch(() => updateGasLamp('red', 'ERR'));
+        }
+
+        /* ================= 3. MQTT СИГНАЛИЗАЦИЯ ================= */
         function connectMQTT() {
             const clientId = 'metro_' + myUserId + '_' + Math.random().toString(36).substr(2, 4);
 
@@ -602,11 +805,11 @@
                 mqttClient = mqtt.connect(BROKERS[currentBrokerIdx], { clientId: clientId, keepalive: 30 });
 
                 mqttClient.on('connect', () => {
-                    const topic = `metro/webrtc/v9/${currentRoom}`;
+                    const topic = `metro/webrtc/v11/${currentRoom}`;
                     mqttClient.subscribe(topic, { qos: 1 }, (err) => {
                         if (!err) {
                             showChatScreen();
-                            publishPayload({ type: 'system', content: `Сталкер [${myUsername}] подключился к эфиру.` });
+                            publishPayload({ type: 'system', content: `Сталкер [${myUsername}] вышел на частоту.` });
                         }
                     });
                 });
@@ -614,20 +817,13 @@
                 mqttClient.on('message', (topic, message) => {
                     try {
                         const payload = JSON.parse(message.toString());
-
-                        // Сигналы WebRTC игнорируют свои же отправители
-                        if (payload.type.startsWith('rtc_') || payload.type === 'status_update') {
-                            if (payload.uid === myUserId) return;
-                        }
+                        if (payload.uid === myUserId && (payload.type.startsWith('rtc_') || payload.type === 'status_update')) return;
 
                         if (payload.type === 'rtc_offer') handleOffer(payload);
                         else if (payload.type === 'rtc_answer') handleAnswer(payload);
                         else if (payload.type === 'rtc_candidate') handleCandidate(payload);
                         else if (payload.type === 'status_update') handleRemoteStatus(payload);
-                        else {
-                            // Все сообщения (текст, фото, видео, голосовые, системы) отображаются ДЛЯ ВСЕХ
-                            renderIncomingMessage(payload);
-                        }
+                        else renderIncomingMessage(payload);
                     } catch(e) { console.error(e); }
                 });
 
@@ -646,47 +842,42 @@
             document.getElementById('screen-chat').classList.add('active');
             document.getElementById('display-user').innerText = myUsername;
             document.getElementById('display-room').innerText = '#' + currentRoom;
+
+            if (!statsInterval) statsInterval = setInterval(monitorConnectionQuality, 2000);
         }
 
-        /* ================= 4. WEBRTC РАЦИЯ И ЗВОНОК ================= */
-        async function ensureAudioInit() {
-            if (!localStream) {
-                localStream = await navigator.mediaDevices.getUserMedia({
-                    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-                });
-                setMicEnabled(false);
-            }
+        /* ================= 4. WEBRTC & РАЦИЯ PTT ================= */
+        async function setupPeerConnection() {
+            if (peerConnection) return;
 
-            if (!peerConnection) {
-                peerConnection = new RTCPeerConnection(iceServersConfig);
+            peerConnection = new RTCPeerConnection(iceServersConfig);
+            peerConnection.oniceconnectionstatechange = () => monitorConnectionQuality();
 
+            await initAudioStream();
+            if (localStream) {
                 localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-                peerConnection.ontrack = (event) => {
-                    const remoteAudio = document.getElementById('remote-audio');
-                    remoteAudio.srcObject = event.streams[0];
-                    remoteAudio.play().catch(() => {});
-                };
-
-                peerConnection.onicecandidate = (event) => {
-                    if (event.candidate) {
-                        publishPayload({ type: 'rtc_candidate', candidate: event.candidate });
-                    }
-                };
-
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-                publishPayload({ type: 'rtc_offer', offer: offer });
             }
+
+            peerConnection.ontrack = (event) => {
+                const remoteAudio = document.getElementById('remote-audio');
+                remoteAudio.srcObject = event.streams[0];
+                remoteAudio.play().catch(() => {});
+            };
+
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    publishPayload({ type: 'rtc_candidate', candidate: event.candidate });
+                }
+            };
         }
 
         function setMicEnabled(enabled) {
             if (localStream && localStream.getAudioTracks().length > 0) {
-                localStream.getAudioTracks()[0].enabled = enabled;
+                localStream.getAudioTracks().forEach(track => { track.enabled = enabled; });
             }
         }
 
-        /* --- КНОПКА 1: РАЦИЯ (PUSH-TO-TALK) --- */
+        /* PTT - НАЖАЛ И ДЕРЖИШЬ */
         async function startPTT() {
             if (isPTTActive || isCallActive) return;
             isPTTActive = true;
@@ -694,8 +885,14 @@
             document.getElementById('ptt-btn').classList.add('active-ptt');
             audioEngine.playBeep(800, 1200, 0.08);
 
-            await ensureAudioInit();
+            await setupPeerConnection();
             setMicEnabled(true);
+
+            if (peerConnection && peerConnection.signalingState === 'stable') {
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                publishPayload({ type: 'rtc_offer', offer: offer });
+            }
 
             updateBanner(true, `РАЦИЯ: ${myUsername} говорит...`);
             publishPayload({ type: 'status_update', mode: 'ptt', active: true, speaker: myUsername });
@@ -716,7 +913,7 @@
             publishPayload({ type: 'status_update', mode: 'ptt', active: false, speaker: myUsername });
         }
 
-        /* --- КНОПКА 2: ЗВОНОК (TOGGLE CALL) --- */
+        /* ЗВОНОК (1 НАЖАТИЕ) */
         async function toggleCall() {
             unlockAudio();
             if (!isCallActive) {
@@ -725,8 +922,14 @@
                 document.getElementById('call-toggle-btn').innerHTML = '🔴 ЗВОНОК<br>(В ЭФИРЕ)';
                 audioEngine.playBeep(900, 1400, 0.12);
 
-                await ensureAudioInit();
+                await setupPeerConnection();
                 setMicEnabled(true);
+
+                if (peerConnection) {
+                    const offer = await peerConnection.createOffer();
+                    await peerConnection.setLocalDescription(offer);
+                    publishPayload({ type: 'rtc_offer', offer: offer });
+                }
 
                 updateBanner(true, `АУДИОЗВОНОК (АКТИВЕН)`);
                 publishPayload({ type: 'status_update', mode: 'call', active: true, speaker: myUsername });
@@ -746,31 +949,7 @@
         }
 
         async function handleOffer(payload) {
-            if (!peerConnection) {
-                peerConnection = new RTCPeerConnection(iceServersConfig);
-
-                if (!localStream) {
-                    localStream = await navigator.mediaDevices.getUserMedia({
-                        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-                    });
-                    setMicEnabled(false);
-                }
-
-                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-                peerConnection.ontrack = (event) => {
-                    const remoteAudio = document.getElementById('remote-audio');
-                    remoteAudio.srcObject = event.streams[0];
-                    remoteAudio.play().catch(() => {});
-                };
-
-                peerConnection.onicecandidate = (event) => {
-                    if (event.candidate) {
-                        publishPayload({ type: 'rtc_candidate', candidate: event.candidate });
-                    }
-                };
-            }
-
+            await setupPeerConnection();
             await peerConnection.setRemoteDescription(new RTCSessionDescription(payload.offer));
             const answer = await peerConnection.createAnswer();
             await peerConnection.setLocalDescription(answer);
@@ -795,9 +974,7 @@
                 updateBanner(true, `${modeName}: говорит ${payload.speaker}`);
                 audioEngine.playBeep(800, 1000, 0.06);
             } else {
-                if (!isCallActive && !isPTTActive) {
-                    updateBanner(false);
-                }
+                if (!isCallActive && !isPTTActive) updateBanner(false);
             }
         }
 
@@ -812,7 +989,49 @@
             }
         }
 
-        /* ================= 5. ГОЛОСОВЫЕ СООБЩЕНИЯ И МЕДИА ================= */
+        /* ================= 5. ПОЛНОЭКРАННЫЙ LIGHTBOX ДЛЯ МЕДИА ================= */
+        function openMediaModal(type, src) {
+            activeMediaSrc = src;
+            activeMediaType = type;
+
+            const modal = document.getElementById('media-modal');
+            const container = document.getElementById('modal-container');
+            container.innerHTML = '';
+
+            if (type === 'image') {
+                const img = document.createElement('img');
+                img.src = src;
+                container.appendChild(img);
+            } else if (type === 'video') {
+                const vid = document.createElement('video');
+                vid.src = src;
+                vid.controls = true;
+                vid.autoplay = true;
+                container.appendChild(vid);
+            }
+
+            modal.classList.add('active');
+        }
+
+        function closeMediaModal() {
+            const modal = document.getElementById('media-modal');
+            const container = document.getElementById('modal-container');
+            container.innerHTML = '';
+            modal.classList.remove('active');
+        }
+
+        function downloadCurrentMedia() {
+            if (!activeMediaSrc) return;
+            const a = document.createElement('a');
+            a.href = activeMediaSrc;
+            const ext = activeMediaType === 'image' ? 'jpg' : 'mp4';
+            a.download = `metro_media_${Date.now()}.${ext}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        /* ================= 6. ГОЛОСОВЫЕ И ФАЙЛЫ ================= */
         async function toggleVoiceRecord() {
             unlockAudio();
             const btn = document.getElementById('rec-btn');
@@ -827,9 +1046,7 @@
                     voiceRecorder.onstop = () => {
                         const audioBlob = new Blob(voiceChunks, { type: 'audio/webm' });
                         const reader = new FileReader();
-                        reader.onloadend = () => {
-                            publishPayload({ type: 'audio', content: reader.result });
-                        };
+                        reader.onloadend = () => publishPayload({ type: 'audio', content: reader.result });
                         reader.readAsDataURL(audioBlob);
                         stream.getTracks().forEach(track => track.stop());
                     };
@@ -892,7 +1109,7 @@
             if (file.type.startsWith('image/')) {
                 compressAndSendImage(file);
             } else if (file.type.startsWith('video/')) {
-                if (file.size > 8 * 1024 * 1024) return alert("Видео до 8 МБ!");
+                if (file.size > 10 * 1024 * 1024) return alert("Видео до 10 МБ!");
                 const reader = new FileReader();
                 reader.onload = (evt) => publishPayload({ type: 'video', content: evt.target.result });
                 reader.readAsDataURL(file);
@@ -906,21 +1123,21 @@
                 const img = new Image();
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    let w = img.width, h = img.height, max = 900;
+                    let w = img.width, h = img.height, max = 1200;
                     if (w > max || h > max) {
                         if (w > h) { h = Math.round((h * max) / w); w = max; }
                         else { w = Math.round((w * max) / h); h = max; }
                     }
                     canvas.width = w; canvas.height = h;
                     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                    publishPayload({ type: 'image', content: canvas.toDataURL('image/jpeg', 0.6) });
+                    publishPayload({ type: 'image', content: canvas.toDataURL('image/jpeg', 0.75) });
                 };
                 img.src = e.target.result;
             };
             reader.readAsDataURL(file);
         }
 
-        /* ================= 6. ЧАТ И СООБЩЕНИЯ ================= */
+        /* ================= 7. СООБЩЕНИЯ И ОТРЕЙДЕРИВАНИЕ ================= */
         function publishPayload(data) {
             if (!mqttClient || !mqttClient.connected) return;
             const fullPayload = {
@@ -930,7 +1147,7 @@
                 timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 ...data
             };
-            mqttClient.publish(`metro/webrtc/v9/${currentRoom}`, JSON.stringify(fullPayload), { qos: 1 });
+            mqttClient.publish(`metro/webrtc/v11/${currentRoom}`, JSON.stringify(fullPayload), { qos: 1 });
         }
 
         function handleKeyPress(e) { if (e.key === 'Enter') sendTextMessage(); }
@@ -968,9 +1185,17 @@
             if (data.type === 'text') {
                 contentHTML = `<div class="msg-text">${escapeHTML(data.content)}</div>`;
             } else if (data.type === 'image') {
-                contentHTML = `<div class="msg-media"><img src="${data.content}"></div>`;
+                contentHTML = `
+                    <div class="msg-media-preview" onclick="openMediaModal('image', '${data.content}')">
+                        <img src="${data.content}">
+                    </div>
+                `;
             } else if (data.type === 'video') {
-                contentHTML = `<div class="msg-media"><video src="${data.content}" controls></video></div>`;
+                contentHTML = `
+                    <div class="msg-media-preview" onclick="openMediaModal('video', '${data.content}')">
+                        <video src="${data.content}"></video>
+                    </div>
+                `;
             } else if (data.type === 'audio') {
                 contentHTML = `
                     <div class="audio-player">
