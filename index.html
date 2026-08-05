@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ICQ Messenger</title>
     
-    <!-- Подключаем Firebase SDK (Работает мгновенно без VPN) -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
@@ -41,7 +41,7 @@
 
         .icq-app {
             width: 100%;
-            max-width: 460px;
+            max-width: 480px;
             height: 100%;
             height: 100dvh;
             background: var(--icq-green-bg);
@@ -207,12 +207,13 @@
             padding: 4px 8px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             border-bottom: 1px solid #bce6ba;
+            overflow-x: auto;
         }
 
         .tool-btn {
-            padding: 3px 8px;
+            padding: 3px 6px;
             background: #ffffff;
             border: 1px solid #a3dc9d;
             border-radius: 4px;
@@ -222,6 +223,7 @@
             gap: 4px;
             font-weight: bold;
             color: #24571f;
+            white-space: nowrap;
         }
 
         #chat-screen {
@@ -250,11 +252,11 @@
         }
 
         .chat-right-side {
-            width: 95px;
+            width: 105px;
             padding: 6px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
             align-items: center;
             border-left: 1px solid #d0ebd0;
             flex-shrink: 0;
@@ -270,6 +272,7 @@
             justify-content: center;
             border-radius: 6px;
             font-size: 36px;
+            overflow: hidden;
         }
 
         .avatar-info {
@@ -278,7 +281,33 @@
             color: #22591d;
             text-align: center;
             word-break: break-all;
-            max-width: 85px;
+            max-width: 95px;
+        }
+
+        /* Видеоокно рации */
+        .video-stream-box {
+            width: 90px;
+            height: 90px;
+            border: 2px solid #57ad4e;
+            background: #000;
+            border-radius: 6px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .video-stream-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .video-placeholder {
+            color: #888;
+            font-size: 9px;
+            text-align: center;
         }
 
         .messages-box {
@@ -358,16 +387,18 @@
             flex-shrink: 0;
         }
 
-        /* РАЦИЯ PTT */
+        /* ДВОЙНАЯ ПАНЕЛЬ РАЦИИ (ГОЛОС И ВИДЕО) */
         .ptt-bar {
             padding: 4px 6px;
             background: #d8f3d6;
             border-top: 1px solid #a3dc9d;
             flex-shrink: 0;
+            display: flex;
+            gap: 6px;
         }
 
         .ptt-button {
-            width: 100%;
+            flex: 1;
             padding: 6px;
             background: var(--icq-btn-grad);
             border: 1px solid #237a1b;
@@ -383,7 +414,6 @@
             border-color: #660000;
         }
 
-        /* МОДАЛЬНЫЕ ОКНА */
         .modal-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -519,16 +549,21 @@
                     <div class="avatar-box" title="Создатель">🌵</div>
                     <div class="avatar-info" id="creator-name-tag">Создатель</div>
 
-                    <div style="flex:1;"></div>
+                    <!-- Окно потока Видео-рации -->
+                    <div class="video-stream-box" id="peer-video-container">
+                        <div class="video-placeholder" id="video-placeholder">Рация выкл</div>
+                        <img id="peer-video-img" style="display:none;">
+                    </div>
 
                     <div class="avatar-box" title="Подключившийся">🐼</div>
                     <div class="avatar-info" id="joined-name-tag">Собеседник</div>
                 </div>
             </div>
 
-            <!-- PTT РАЦИЯ -->
+            <!-- ДВОЙНАЯ ПАНЕЛЬ: ГОЛОСОВАЯ РАЦИЯ И ВИДЕО-РАЦИЯ -->
             <div class="ptt-bar">
-                <button id="ptt-button" class="ptt-button">🎙️ ЗАЖМИ И ГОВОРИ (PTT РАЦИЯ)</button>
+                <button id="ptt-button" class="ptt-button">🎙️ РАЦИЯ (ГОЛОС)</button>
+                <button id="vptt-button" class="ptt-button" style="background: linear-gradient(180deg, #4ca6ff 0%, #1a66cc 100%); border-color: #004499;">📹 ВИДЕО-РАЦИЯ</button>
             </div>
         </div>
 
@@ -556,10 +591,14 @@
         </div>
     </div>
 
+    <!-- Скрытый холст и элемент видео для быстрой съемки кадров видео-рации -->
+    <canvas id="vptt-canvas" style="display:none;" width="160" height="120"></canvas>
+    <video id="vptt-source" autoplay playsinline style="display:none;"></video>
+
     <script>
-        /* 1. КОНФИГУРАЦИЯ FIREBASE (ЗАМЕНИТЕ НА СВОИ ДАННЫЕ ИЗ CONSOLE.FIREBASE.GOOGLE.COM) */
+        /* 1. КОНФИГУРАЦИЯ FIREBASE */
         const firebaseConfig = {
-          apiKey: "AIzaSyDo3LytnfDm-hAPL2RxTpz3VteGmTcSmAc",
+           apiKey: "AIzaSyDo3LytnfDm-hAPL2RxTpz3VteGmTcSmAc",
   authDomain: "icqnovpn.firebaseapp.com",
   projectId: "icqnovpn",
   storageBucket: "icqnovpn.firebasestorage.app",
@@ -589,7 +628,7 @@
         let isVoiceRecording = false, voiceRecorder = null, voiceChunks = [];
         let cameraStream = null;
 
-        /* PTT Состояние */
+        /* PTT Голосовая Рация */
         let isPTTTransmitting = false;
         let pttMicStream = null;
         let pttAudioCtx = null;
@@ -597,8 +636,14 @@
         let rxAudioCtx = null;
         let nextStartTime = 0;
 
+        /* PTT Видео Рация */
+        let isVPTTTransmitting = false;
+        let vpttStream = null;
+        let vpttInterval = null;
+
         window.addEventListener('load', () => {
             setupPTTEvents();
+            setupVPTTEvents();
 
             setTimeout(() => {
                 const loader = document.getElementById('loading-screen');
@@ -636,14 +681,16 @@
             document.getElementById('chat-screen').classList.add('active');
             document.getElementById('exit-btn').style.display = 'block';
 
-            // Подключение к комнате в Firebase
+            // Подключение к комнате
             roomRef = database.ref('rooms/' + currentRoom + '/messages');
             
-            // Слушаем входящие сообщения и сигнал рации в реальном времени
+            // Слушаем входящие сообщения
             roomRef.limitToLast(50).on('child_added', (snapshot) => {
                 const data = snapshot.val();
                 if (data.type && data.type.startsWith('ptt_')) {
                     handlePTTIncoming(data);
+                } else if (data.type && data.type.startsWith('vptt_')) {
+                    handleVPTTIncoming(data);
                 } else {
                     renderIncomingMessage(data);
                 }
@@ -704,7 +751,7 @@
             box.scrollTop = box.scrollHeight;
         }
 
-        /* ================= PTT РАЦИЯ ================= */
+        /* ================= 1. PTT ГОЛОСОВАЯ РАЦИЯ ================= */
         function setupPTTEvents() {
             const btn = document.getElementById('ptt-button');
             if (!btn) return;
@@ -722,7 +769,7 @@
 
                 const btn = document.getElementById('ptt-button');
                 btn.classList.add('active');
-                btn.innerText = '🔴 ПЕРЕДАЧА...';
+                btn.innerText = '🔴 ГОВОРИ...';
 
                 pttAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
                 const source = pttAudioCtx.createMediaStreamSource(pttMicStream);
@@ -756,7 +803,7 @@
 
             const btn = document.getElementById('ptt-button');
             btn.classList.remove('active');
-            btn.innerText = '🎙️ ЗАЖМИ И ГОВОРИ (PTT РАЦИЯ)';
+            btn.innerText = '🎙️ РАЦИЯ (ГОЛОС)';
 
             if (pttProcessor) { pttProcessor.disconnect(); pttProcessor = null; }
             if (pttAudioCtx) { pttAudioCtx.close(); pttAudioCtx = null; }
@@ -789,6 +836,76 @@
                 if (nextStartTime < rxAudioCtx.currentTime) nextStartTime = rxAudioCtx.currentTime;
                 source.start(nextStartTime);
                 nextStartTime += audioBuffer.duration;
+            }
+        }
+
+        /* ================= 2. PTT ВИДЕО-РАЦИЯ ================= */
+        function setupVPTTEvents() {
+            const btn = document.getElementById('vptt-button');
+            if (!btn) return;
+            btn.addEventListener('mousedown', startVPTT);
+            btn.addEventListener('mouseup', stopVPTT);
+            btn.addEventListener('touchstart', (e) => { e.preventDefault(); startVPTT(); }, { passive: false });
+            btn.addEventListener('touchend', (e) => { e.preventDefault(); stopVPTT(); }, { passive: false });
+        }
+
+        async function startVPTT() {
+            if (isVPTTTransmitting) return;
+            try {
+                vpttStream = await navigator.mediaDevices.getUserMedia({ video: { width: 160, height: 120 } });
+                const videoSource = document.getElementById('vptt-source');
+                videoSource.srcObject = vpttStream;
+
+                isVPTTTransmitting = true;
+                const btn = document.getElementById('vptt-button');
+                btn.classList.add('active');
+                btn.innerText = '🔴 ПЕРЕДАЧА ВИДЕО...';
+
+                const canvas = document.getElementById('vptt-canvas');
+                const ctx = canvas.getContext('2d');
+
+                sendMessagePayload({ type: 'vptt_start' });
+
+                // Отправка кадров в режиме рации (4 кадра в секунду)
+                vpttInterval = setInterval(() => {
+                    if (!isVPTTTransmitting) return;
+                    ctx.drawImage(videoSource, 0, 0, canvas.width, canvas.height);
+                    const frameData = canvas.toDataURL('image/jpeg', 0.4);
+                    sendMessagePayload({ type: 'vptt_chunk', frame: frameData });
+                }, 250);
+
+            } catch(e) { isVPTTTransmitting = false; }
+        }
+
+        function stopVPTT() {
+            if (!isVPTTTransmitting) return;
+            isVPTTTransmitting = false;
+
+            const btn = document.getElementById('vptt-button');
+            btn.classList.remove('active');
+            btn.innerText = '📹 ВИДЕО-РАЦИЯ';
+
+            if (vpttInterval) { clearInterval(vpttInterval); vpttInterval = null; }
+            if (vpttStream) { vpttStream.getTracks().forEach(t => t.stop()); vpttStream = null; }
+
+            sendMessagePayload({ type: 'vptt_end' });
+        }
+
+        function handleVPTTIncoming(data) {
+            if (data.uid === myUserId) return; // Игнорируем собственное видео
+
+            const img = document.getElementById('peer-video-img');
+            const placeholder = document.getElementById('video-placeholder');
+
+            if (data.type === 'vptt_start') {
+                placeholder.style.display = 'none';
+                img.style.display = 'block';
+            } else if (data.type === 'vptt_chunk') {
+                img.src = data.frame; // Обновляем изображение собеседника
+            } else if (data.type === 'vptt_end') {
+                img.style.display = 'none';
+                placeholder.style.display = 'block';
+                placeholder.innerText = 'Рация выкл';
             }
         }
 
