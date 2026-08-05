@@ -284,7 +284,7 @@
             max-width: 95px;
         }
 
-        /* Окно стрима WebRTC */
+        /* Окно стрима Видео-рации */
         .video-stream-box {
             width: 90px;
             height: 90px;
@@ -296,12 +296,25 @@
             align-items: center;
             justify-content: center;
             position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
 
         .video-stream-box video {
             width: 100%;
             height: 100%;
             object-fit: cover;
+        }
+
+        /* Полноэкранный режим при тапе на видео */
+        .video-stream-box.fullscreen {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: 300;
+            border-radius: 0;
+            border: none;
         }
 
         .video-placeholder {
@@ -550,8 +563,8 @@
                     <div class="avatar-box" title="Создатель">🌵</div>
                     <div class="avatar-info" id="creator-name-tag">Создатель</div>
 
-                    <!-- Окно потока Видео-рации WebRTC -->
-                    <div class="video-stream-box" id="peer-video-container">
+                    <!-- Окно видео с поддержкой клика для полноэкранного режима -->
+                    <div class="video-stream-box" id="peer-video-container" onclick="toggleFullscreenVideo()">
                         <div class="video-placeholder" id="video-placeholder">Рация выкл</div>
                         <video id="peer-video-element" autoplay playsinline style="display:none;"></video>
                     </div>
@@ -561,10 +574,10 @@
                 </div>
             </div>
 
-            <!-- ДВОЙНАЯ ПАНЕЛЬ: ГОЛОСОВАЯ РАЦИЯ И ВИДЕО-РАЦИЯ -->
+            <!-- ДВОЙНАЯ ПАНЕЛЬ: ВЛЮЧЕНИЕ ПО 1 КЛИКУ -->
             <div class="ptt-bar">
-                <button id="ptt-button" class="ptt-button">🎙️ РАЦИЯ (ГОЛОС)</button>
-                <button id="vptt-button" class="ptt-button" style="background: linear-gradient(180deg, #4ca6ff 0%, #1a66cc 100%); border-color: #004499;">📹 ВИДЕО-РАЦИЯ</button>
+                <button id="ptt-button" class="ptt-button" onclick="toggleAudioPTT()">🎙️ РАЦИЯ (ГОЛОС)</button>
+                <button id="vptt-button" class="ptt-button" style="background: linear-gradient(180deg, #4ca6ff 0%, #1a66cc 100%); border-color: #004499;" onclick="toggleVideoPTT()">📹 ВИДЕО-РАЦИЯ</button>
             </div>
         </div>
 
@@ -587,12 +600,15 @@
                     <button class="tool-btn" onclick="closeCamera()">✕</button>
                 </div>
                 <video id="camera-video" autoplay playsinline></video>
-                <button class="btn-green-rounded" style="padding:6px;" onclick="takePhotoAndSend()">Сделать снимок и отправить</button>
+                <div style="display:flex; gap:6px;">
+                    <button class="tool-btn" style="flex:1; justify-content:center;" onclick="switchCameraMode()">🔄 Сменить камеру</button>
+                    <button class="btn-green-rounded" style="flex:1; padding:6px;" onclick="takePhotoAndSend()">Сделать снимок</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Аудио элемент для динамиков WebRTC -->
+    <!-- Элемент аудио для трансляции звука рации -->
     <audio id="peer-audio-element" autoplay style="display:none;"></audio>
 
     <script>
@@ -609,7 +625,6 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        /* Звуковой движок ICQ */
         class ICQSoundEngine {
             playUhOh() {
                 const audio = new Audio('https://www.myinstants.com/media/sounds/icq-uh-oh.mp3');
@@ -626,13 +641,17 @@
         let roomRef = null;
         let signalRef = null;
         let isVoiceRecording = false, voiceRecorder = null, voiceChunks = [];
+        
+        /* Состояние камеры */
         let cameraStream = null;
+        let cameraFacingMode = 'user'; // 'user' - селфи, 'environment' - основная
 
-        /* WebRTC Соединение без задержек и без эхо */
+        /* Состояние раций */
+        let isAudioPTTActive = false;
+        let isVideoPTTActive = false;
         let peerConnection = null;
         let localStream = null;
 
-        // Общедоступные серверы WebRTC (не блокируются в РФ)
         const rtcServers = {
             iceServers: [
                 { urls: "stun:stun.l.google.com:19302" },
@@ -641,9 +660,6 @@
         };
 
         window.addEventListener('load', () => {
-            setupPTTEvents();
-            setupVPTTEvents();
-
             setTimeout(() => {
                 const loader = document.getElementById('loading-screen');
                 if (loader) {
@@ -680,16 +696,13 @@
             document.getElementById('chat-screen').classList.add('active');
             document.getElementById('exit-btn').style.display = 'block';
 
-            // Путь к сообщениям и WebRTC-сигналам
             roomRef = database.ref('rooms/' + currentRoom + '/messages');
             signalRef = database.ref('rooms/' + currentRoom + '/signal/' + myUserId);
 
-            // Слушаем чат
             roomRef.limitToLast(50).on('child_added', (snapshot) => {
                 renderIncomingMessage(snapshot.val());
             });
 
-            // Слушаем WebRTC-сигналы от собеседников
             const allSignalsRef = database.ref('rooms/' + currentRoom + '/signal');
             allSignalsRef.on('child_added', (snapshot) => {
                 if (snapshot.key !== myUserId) {
@@ -752,13 +765,12 @@
             box.scrollTop = box.scrollHeight;
         }
 
-        /* ================= WebRTC ДВИЖОК ДЛЯ РАЦИИ БЕЗ ЭХО И ЗАДЕРЖЕК ================= */
+        /* ================= WebRTC РАЦИЯ БЕЗ ЗАДЕРЖЕК ================= */
         function initPeerConnection() {
             if (peerConnection) return;
 
             peerConnection = new RTCPeerConnection(rtcServers);
 
-            // Обработка входящего медиапотока (голос/видео напрямую от друга)
             peerConnection.ontrack = (event) => {
                 const videoEl = document.getElementById('peer-video-element');
                 const audioEl = document.getElementById('peer-audio-element');
@@ -800,37 +812,63 @@
             }
         }
 
-        /* 1. ГОЛОСОВАЯ РАЦИЯ (WebRTC) */
-        function setupPTTEvents() {
+        /* 1. ГОЛОСОВАЯ РАЦИЯ (1 КЛИК ВКЛ/ВЫКЛ) */
+        async function toggleAudioPTT() {
+            if (isVideoPTTActive) stopPTTAll();
+
             const btn = document.getElementById('ptt-button');
-            if (!btn) return;
-            btn.addEventListener('mousedown', startPTT);
-            btn.addEventListener('mouseup', stopPTT);
-            btn.addEventListener('touchstart', (e) => { e.preventDefault(); startPTT(); }, { passive: false });
-            btn.addEventListener('touchend', (e) => { e.preventDefault(); stopPTT(); }, { passive: false });
+            if (!isAudioPTTActive) {
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: { echoCancellation: true, noiseSuppression: true } 
+                    });
+
+                    initPeerConnection();
+                    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+                    const offer = await peerConnection.createOffer();
+                    await peerConnection.setLocalDescription(offer);
+                    signalRef.set({ type: 'offer', offer: JSON.stringify(offer) });
+
+                    isAudioPTTActive = true;
+                    btn.classList.add('active');
+                    btn.innerText = '🔴 ВЕЩАНИЕ (АУДИО)';
+                } catch(e) { alert("Ошибка микрофона!"); }
+            } else {
+                stopPTTAll();
+            }
         }
 
-        async function startPTT() {
-            try {
-                // Подавление эха и посторонних шумов в реальном времени
-                localStream = await navigator.mediaDevices.getUserMedia({ 
-                    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } 
-                });
+        /* 2. ВИДЕО-РАЦИЯ (ВКЛЮЧАЕТ И КАМЕРУ, И МИКРОФОН ОДНОВРЕМЕННО) */
+        async function toggleVideoPTT() {
+            if (isAudioPTTActive) stopPTTAll();
 
-                initPeerConnection();
-                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+            const btn = document.getElementById('vptt-button');
+            if (!isVideoPTTActive) {
+                try {
+                    // Включаем Видео + Микрофон одновременно
+                    localStream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { width: 160, height: 120, facingMode: 'user' },
+                        audio: { echoCancellation: true, noiseSuppression: true } 
+                    });
 
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-                signalRef.set({ type: 'offer', offer: JSON.stringify(offer) });
+                    initPeerConnection();
+                    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
-                const btn = document.getElementById('ptt-button');
-                btn.classList.add('active');
-                btn.innerText = '🔴 ГОВОРИ...';
-            } catch(e) {}
+                    const offer = await peerConnection.createOffer();
+                    await peerConnection.setLocalDescription(offer);
+                    signalRef.set({ type: 'offer', offer: JSON.stringify(offer) });
+
+                    isVideoPTTActive = true;
+                    btn.classList.add('active');
+                    btn.innerText = '🔴 ВЕЩАНИЕ (ВИДЕО)';
+                } catch(e) { alert("Ошибка камеры или микрофона!"); }
+            } else {
+                stopPTTAll();
+            }
         }
 
-        function stopPTT() {
+        function stopPTTAll() {
             if (localStream) {
                 localStream.getTracks().forEach(track => track.stop());
                 localStream = null;
@@ -841,47 +879,23 @@
             }
             signalRef.set({ type: 'stop' });
 
-            const btn = document.getElementById('ptt-button');
-            btn.classList.remove('active');
-            btn.innerText = '🎙️ РАЦИЯ (ГОЛОС)';
+            isAudioPTTActive = false;
+            isVideoPTTActive = false;
+
+            const audioBtn = document.getElementById('ptt-button');
+            const videoBtn = document.getElementById('vptt-button');
+
+            audioBtn.classList.remove('active');
+            audioBtn.innerText = '🎙️ РАЦИЯ (ГОЛОС)';
+
+            videoBtn.classList.remove('active');
+            videoBtn.innerText = '📹 ВИДЕО-РАЦИЯ';
         }
 
-        /* 2. ВИДЕО-РАЦИЯ (WebRTC) */
-        function setupVPTTEvents() {
-            const btn = document.getElementById('vptt-button');
-            if (!btn) return;
-            btn.addEventListener('mousedown', startVPTT);
-            btn.addEventListener('mouseup', stopVPTT);
-            btn.addEventListener('touchstart', (e) => { e.preventDefault(); startVPTT(); }, { passive: false });
-            btn.addEventListener('touchend', (e) => { e.preventDefault(); stopVPTT(); }, { passive: false });
-        }
-
-        async function startVPTT() {
-            try {
-                // Мгновенная передача звука + видео без задержек
-                localStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { width: 160, height: 120 },
-                    audio: { echoCancellation: true, noiseSuppression: true } 
-                });
-
-                initPeerConnection();
-                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-                signalRef.set({ type: 'offer', offer: JSON.stringify(offer) });
-
-                const btn = document.getElementById('vptt-button');
-                btn.classList.add('active');
-                btn.innerText = '🔴 ПЕРЕДАЧА...';
-            } catch(e) {}
-        }
-
-        function stopVPTT() {
-            stopPTT();
-            const btn = document.getElementById('vptt-button');
-            btn.classList.remove('active');
-            btn.innerText = '📹 ВИДЕО-РАЦИЯ';
+        /* ТАП НА ВИДЕО ДЛЯ ПОЛНОЭКРАННОГО РЕЖИМА */
+        function toggleFullscreenVideo() {
+            const container = document.getElementById('peer-video-container');
+            container.classList.toggle('fullscreen');
         }
 
         function insertEmoji(emoji) {
@@ -903,14 +917,23 @@
         }
         function closeNotes() { document.getElementById('notes-modal').style.display = 'none'; }
 
-        /* Камера */
+        /* Камера с возможностью смены режима (Портрет/Основная) */
         async function openCamera() {
             try {
-                cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
+                cameraStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: cameraFacingMode } 
+                });
                 document.getElementById('camera-video').srcObject = cameraStream;
                 document.getElementById('camera-modal').style.display = 'flex';
             } catch(e) { alert("Ошибка доступа к камере!"); }
         }
+
+        function switchCameraMode() {
+            cameraFacingMode = (cameraFacingMode === 'user') ? 'environment' : 'user';
+            openCamera();
+        }
+
         function takePhotoAndSend() {
             const videoEl = document.getElementById('camera-video');
             const canvas = document.createElement('canvas');
@@ -920,6 +943,7 @@
             sendMessagePayload({ type: 'image', content: canvas.toDataURL('image/jpeg', 0.7) });
             closeCamera();
         }
+
         function closeCamera() {
             if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
             document.getElementById('camera-modal').style.display = 'none';
