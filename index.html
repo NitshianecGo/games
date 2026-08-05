@@ -3,542 +3,628 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ICQ — Эфир Связи</title>
+    <title>ICQ 6 - Conversations</title>
     <!-- MQTT.js -->
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-    <!-- Шрифт Tahoma (классика Windows XP / ICQ) -->
-    <link href="https://fonts.googleapis.com/css2?family=Tahoma&display=swap" rel="stylesheet">
-    
     <style>
         :root {
-            --icq-bg: #ece9d8; /* Классический цвет Windows XP */
-            --icq-header: linear-gradient(180deg, #0058e6 0%, #003bb3 100%);
-            --icq-panel: #d4d0c8;
-            --icq-border-light: #ffffff;
-            --icq-border-dark: #808080;
-            --icq-border-darker: #404040;
-            --icq-blue: #0A246A;
-            --icq-green: #33cc33;
-            --text-main: #000000;
+            --icq-green-bg: #e2f5e1;
+            --icq-border: #9ed799;
+            --icq-header-grad: linear-gradient(180deg, #b0e8ab 0%, #6ecf67 100%);
+            --icq-tab-active: linear-gradient(180deg, #8ae082 0%, #4cb843 100%);
+            --icq-panel-bg: #f2faf1;
+            --text-dark: #1e3a1a;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Tahoma', sans-serif;
+            font-family: 'Segoe UI', Arial, sans-serif;
             font-size: 11px;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
         }
 
-        html, body {
+        body, html {
             width: 100%;
             height: 100%;
             height: 100dvh;
-            background-color: #3a6ea5; /* Синий рабочий стол Windows */
+            background: #2a5227;
             display: flex;
             justify-content: center;
             align-items: center;
             overflow: hidden;
         }
 
-        /* Главное окно ICQ (Стиль Windows XP) */
-        .icq-window {
+        /* Оболочка окна ICQ 6 */
+        .icq-app {
             width: 100%;
-            max-width: 420px;
+            max-width: 460px;
             height: 100%;
             height: 100dvh;
-            background: var(--icq-bg);
-            border: 3px solid #0053e1;
+            background: var(--icq-green-bg);
+            border: 2px solid #57ad4e;
             border-radius: 8px 8px 0 0;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
             position: relative;
+            overflow: hidden;
             padding-top: env(safe-area-inset-top);
             padding-bottom: env(safe-area-inset-bottom);
         }
 
-        /* Шапка окна ICQ */
-        .icq-header {
-            background: var(--icq-header);
-            color: #fff;
+        /* 1. ЭКРАН ЗАГРУЗКИ С ВРАЩАЮЩИМСЯ И РАСТВОРЯЮЩИМСЯ ЦВЕТКОМ */
+        #loading-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #e2f5e1;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.8s ease, visibility 0.8s;
+        }
+
+        .flower-spinner {
+            width: 80px;
+            height: 80px;
+            background-image: url('https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f33c.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            filter: hue-rotate(60deg) saturate(300%);
+            animation: spinFlower 1.5s linear infinite;
+            margin-bottom: 15px;
+        }
+
+        @keyframes spinFlower {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-weight: bold;
+            color: #276321;
+            font-size: 13px;
+            letter-spacing: 1px;
+        }
+
+        /* 2. ШАПКА ОКНА (Title Bar) */
+        .window-titlebar {
+            background: var(--icq-header-grad);
             padding: 4px 8px;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            border-bottom: 1px solid #7bc674;
+            color: #ffffff;
+            text-shadow: 0 1px 1px rgba(0,0,0,0.3);
             font-weight: bold;
             font-size: 12px;
             flex-shrink: 0;
-            border-bottom: 1px solid #002d80;
         }
 
-        .icq-title-group {
+        .title-left {
             display: flex;
             align-items: center;
             gap: 6px;
         }
 
-        .icq-flower {
+        .flower-icon {
             width: 16px;
             height: 16px;
-            background-size: contain;
-            background-repeat: no-repeat;
-            display: inline-block;
-        }
-
-        /* Зеленый цветочек ICQ */
-        .flower-online {
             background-image: url('https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f33c.png');
+            background-size: contain;
             filter: hue-rotate(60deg) saturate(300%);
         }
 
-        /* Красный цветочек ICQ (офлайн) */
-        .flower-offline {
-            background-image: url('https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f33c.png');
-            filter: hue-rotate(300deg) saturate(300%);
-        }
-
-        /* Системные кнопки Windows (Свернуть/Развернуть/Закрыть) */
-        .win-btn-group {
+        .win-controls {
             display: flex;
-            gap: 2px;
+            gap: 3px;
         }
 
         .win-btn {
-            width: 16px;
+            width: 15px;
             height: 14px;
-            background: #d4d0c8;
-            border-top: 1px solid #fff;
-            border-left: 1px solid #fff;
-            border-right: 1px solid #404040;
-            border-bottom: 1px solid #404040;
+            background: #ffffff;
+            border: 1px solid #7bc674;
+            border-radius: 2px;
+            color: #2e6628;
             font-size: 9px;
             font-weight: bold;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            color: #000;
         }
 
-        .win-btn:active {
-            border-top: 1px solid #404040;
-            border-left: 1px solid #404040;
-            border-right: 1px solid #fff;
-            border-bottom: 1px solid #fff;
-        }
-
-        .win-btn.close {
-            background: #d9534f;
-            color: white;
-        }
-
-        /* ЭКРАН ВХОДА (ICQ Login) */
-        #screen-login {
+        /* 3. ВКТЛАДКИ (Tabs) */
+        .tabs-bar {
+            background: #c3f0c0;
+            padding: 4px 8px 0 8px;
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            flex: 1;
-            padding: 20px;
-            background: var(--icq-bg);
-        }
-
-        .login-box {
-            background: var(--icq-panel);
-            border-top: 2px solid var(--icq-border-light);
-            border-left: 2px solid var(--icq-border-light);
-            border-right: 2px solid var(--icq-border-darker);
-            border-bottom: 2px solid var(--icq-border-darker);
-            padding: 20px;
-            width: 100%;
-            max-width: 300px;
-            text-align: center;
-        }
-
-        .icq-logo-big {
-            width: 64px;
-            height: 64px;
-            margin-bottom: 10px;
-            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
-        }
-
-        .input-inset {
-            width: 100%;
-            padding: 4px 6px;
-            background: #fff;
-            border-top: 2px solid var(--icq-border-darker);
-            border-left: 2px solid var(--icq-border-darker);
-            border-right: 2px solid var(--icq-border-light);
-            border-bottom: 2px solid var(--icq-border-light);
-            outline: none;
-            margin-top: 4px;
-            margin-bottom: 12px;
-            font-size: 12px;
-        }
-
-        .btn-retro {
-            padding: 4px 12px;
-            background: var(--icq-panel);
-            border-top: 2px solid var(--icq-border-light);
-            border-left: 2px solid var(--icq-border-light);
-            border-right: 2px solid var(--icq-border-darker);
-            border-bottom: 2px solid var(--icq-border-darker);
-            font-weight: bold;
-            cursor: pointer;
-            outline: none;
-        }
-
-        .btn-retro:active {
-            border-top: 2px solid var(--icq-border-darker);
-            border-left: 2px solid var(--icq-border-darker);
-            border-right: 2px solid var(--icq-border-light);
-            border-bottom: 2px solid var(--icq-border-light);
-        }
-
-        /* ОСНОВНОЙ ЭКРАН ЧАТА */
-        #screen-chat {
-            display: none;
-            flex-direction: column;
-            flex: 1;
-            min-height: 0;
-            background: var(--icq-bg);
-        }
-
-        #screen-chat.active { display: flex; }
-
-        /* Информационная панель пользователя */
-        .user-bar {
-            background: #fff;
-            border-bottom: 1px solid var(--icq-border-dark);
-            padding: 6px 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            gap: 4px;
+            border-bottom: 1px solid #95da8e;
             flex-shrink: 0;
         }
 
-        .uin-tag {
+        .tab-item {
+            background: var(--icq-tab-active);
+            border: 1px solid #4ca644;
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+            padding: 4px 10px;
+            color: white;
             font-weight: bold;
-            color: var(--icq-blue);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
+        }
+
+        .tab-close {
+            background: rgba(0,0,0,0.15);
+            border-radius: 50%;
+            width: 11px;
+            height: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            cursor: pointer;
+        }
+
+        /* 4. ИКОНКИ ДЕЙСТВИЙ ПОД ВКТЛАДКАМИ */
+        .action-toolbar {
+            background: var(--icq-panel-bg);
+            padding: 4px 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid #bce6ba;
+            flex-shrink: 0;
+        }
+
+        .tool-btn {
+            padding: 3px 6px;
+            background: #ffffff;
+            border: 1px solid #a3dc9d;
+            border-radius: 3px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .tool-btn:active { background: #dff5dc; }
+
+        /* 5. ЭКРАН ВХОДА / СОЗДАНИЯ КОМНАТЫ */
+        #login-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            flex: 1;
+            padding: 20px;
+            background: var(--icq-panel-bg);
+        }
+
+        .login-card {
+            background: #ffffff;
+            border: 1px solid #82d17b;
+            border-radius: 6px;
+            padding: 20px;
+            width: 100%;
+            max-width: 320px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #70c468;
+            border-radius: 3px;
+            margin-top: 4px;
+            margin-bottom: 12px;
+            outline: none;
             font-size: 12px;
         }
 
-        /* Окно сообщений */
-        .chat-messages {
+        .btn-green {
+            width: 100%;
+            padding: 8px;
+            background: linear-gradient(180deg, #74d86b 0%, #3ca033 100%);
+            border: 1px solid #2e8826;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+            cursor: pointer;
+            text-shadow: 0 1px 1px rgba(0,0,0,0.3);
+        }
+
+        /* 6. ГЛАВНЫЙ ЧАТ И АВАТАРЫ */
+        #chat-screen {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            min-height: 0;
+            background: var(--icq-panel-bg);
+        }
+
+        #chat-screen.active { display: flex; }
+
+        .chat-main-layout {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .chat-left-side {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 6px;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .chat-right-side {
+            width: 90px;
+            padding: 6px 6px 6px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+            border-left: 1px solid #d0ebd0;
+            flex-shrink: 0;
+        }
+
+        /* БЛОК АВАТАРА */
+        .avatar-box {
+            width: 72px;
+            height: 72px;
+            border: 1px solid #82d17b;
+            background: #e8f7e6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .avatar-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .avatar-info {
+            font-size: 10px;
+            font-weight: bold;
+            color: #22591d;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        /* ОБЛАСТЬ СООБЩЕНИЙ */
+        .messages-box {
             flex: 1;
             background: #ffffff;
-            border-top: 2px solid var(--icq-border-darker);
-            border-left: 2px solid var(--icq-border-darker);
-            border-right: 2px solid var(--icq-border-light);
-            border-bottom: 2px solid var(--icq-border-light);
-            margin: 6px;
+            border: 1px solid #93da8e;
+            border-radius: 3px;
             padding: 8px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            min-height: 0;
-            -webkit-overflow-scrolling: touch;
+            gap: 8px;
         }
 
-        .msg {
+        .msg-item {
             display: flex;
             flex-direction: column;
             gap: 2px;
         }
 
-        .msg-header {
+        .msg-header-text {
             font-weight: bold;
-            font-size: 10px;
+            color: #cc0000; /* Красный цвет имени Tomáš как на скриншоте */
+            font-size: 11px;
         }
 
-        .msg.self .msg-header { color: #0000ff; } /* Синий для себя */
-        .msg.other .msg-header { color: #ff0000; } /* Красный для собеседника */
-        .msg.system .msg-header { color: #808080; }
+        .msg-header-text.self {
+            color: #0000cc;
+        }
 
-        .msg-body {
-            background: #f9f9f9;
-            border: 1px dotted #ccc;
-            padding: 4px 6px;
+        .msg-content {
             font-size: 11px;
-            line-height: 1.3;
+            color: #000000;
             word-break: break-word;
             user-select: text;
         }
 
-        /* Панель PTT-Рации */
-        .ptt-container {
-            padding: 4px 6px;
-            background: var(--icq-panel);
-            border-top: 1px solid var(--icq-border-light);
-            flex-shrink: 0;
-        }
-
-        .ptt-btn {
-            width: 100%;
-            padding: 6px;
-            background: linear-gradient(180deg, #33cc33 0%, #228822 100%);
-            border-top: 2px solid #66ff66;
-            border-left: 2px solid #66ff66;
-            border-right: 2px solid #114411;
-            border-bottom: 2px solid #114411;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-            text-align: center;
-            text-shadow: 1px 1px 1px #000;
-        }
-
-        .ptt-btn:active, .ptt-btn.transmitting {
-            background: linear-gradient(180deg, #cc3333 0%, #882222 100%);
-            border-top: 2px solid #114411;
-            border-left: 2px solid #114411;
-            border-right: 2px solid #ff6666;
-            border-bottom: 2px solid #ff6666;
-        }
-
-        /* Панель ввода сообщений */
-        .input-panel {
-            padding: 6px;
-            background: var(--icq-panel);
-            display: flex;
-            gap: 4px;
-            align-items: center;
-            flex-shrink: 0;
-        }
-
-        .chat-input {
-            flex: 1;
-            padding: 4px 6px;
-            background: #fff;
-            border-top: 2px solid var(--icq-border-darker);
-            border-left: 2px solid var(--icq-border-darker);
-            border-right: 2px solid var(--icq-border-light);
-            border-bottom: 2px solid var(--icq-border-light);
+        /* ОБЛАСТЬ ВВОДА ТЕКСТА */
+        .input-box {
+            height: 70px;
+            background: #ffffff;
+            border: 1px solid #93da8e;
+            border-radius: 3px;
+            padding: 4px;
             outline: none;
+            resize: none;
             font-size: 11px;
         }
 
-        .ptt-banner {
-            display: none;
-            background: #ffffcc;
-            border: 1px solid #ffcc00;
-            padding: 4px 8px;
-            font-size: 10px;
-            color: #000;
+        /* ПАНЕЛЬ ИНСТРУМЕНТОВ ВВОДА И СМАЙЛОВ */
+        .input-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 2px 0;
+        }
+
+        .format-btns {
+            display: flex;
+            gap: 4px;
+        }
+
+        .btn-send-icq {
+            padding: 3px 18px;
+            background: linear-gradient(180deg, #ffffff 0%, #e1f5df 100%);
+            border: 1px solid #7bc674;
+            border-radius: 3px;
+            font-weight: bold;
+            color: #276321;
+            cursor: pointer;
+        }
+
+        /* 7. ПАНЕЛЬ СМАЙЛИКОВ КАК НА СКРИНШОТЕ */
+        .emoticons-bar {
+            background: #ffffff;
+            border: 1px solid #93da8e;
+            border-radius: 4px;
+            padding: 4px 6px;
+            display: flex;
             align-items: center;
             gap: 6px;
+            overflow-x: auto;
+            margin-top: 2px;
+        }
+
+        .emoticons-bar::-webkit-scrollbar { height: 3px; }
+        .emoticons-bar::-webkit-scrollbar-thumb { background: #82d17b; }
+
+        .emoji-icon {
+            font-size: 18px;
+            cursor: pointer;
+            transition: transform 0.1s;
             flex-shrink: 0;
         }
-        .ptt-banner.active { display: flex; }
 
-        /* Уведомление Toast */
-        .toast {
-            position: absolute;
-            top: 30px; left: 50%;
-            transform: translateX(-50%);
-            background: #ffffcc;
-            border: 1px solid #000;
-            padding: 4px 10px;
-            font-size: 10px;
-            display: none;
-            z-index: 200;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+        .emoji-icon:hover { transform: scale(1.3); }
+
+        /* PTT РАЦИЯ */
+        .ptt-bar {
+            padding: 4px 6px;
+            background: #d8f3d6;
+            border-top: 1px solid #a3dc9d;
+        }
+
+        .ptt-button {
+            width: 100%;
+            padding: 6px;
+            background: linear-gradient(180deg, #6fd467 0%, #349b2b 100%);
+            border: 1px solid #237a1b;
+            color: white;
+            font-weight: bold;
+            border-radius: 3px;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .ptt-button.active {
+            background: linear-gradient(180deg, #e64545 0%, #991a1a 100%);
+            border-color: #660000;
         }
     </style>
 </head>
 <body>
 
-    <div id="toast" class="toast">Ссылка скопирована!</div>
+    <!-- ОБОЛОЧКА ПРИЛОЖЕНИЯ ICQ -->
+    <div class="icq-app">
+        
+        <!-- 1. АНИМАЦИЯ ЗАГРУЗКИ С РАСТВОРЕНИЕМ -->
+        <div id="loading-screen">
+            <div class="flower-spinner"></div>
+            <div class="loading-text">Загрузка ICQ...</div>
+        </div>
 
-    <!-- ОКНО ICQ -->
-    <div class="icq-window">
-        <!-- Шапка окна Windows -->
-        <div class="icq-header">
-            <div class="icq-title-group">
-                <div id="status-flower" class="icq-flower flower-offline"></div>
-                <span id="icq-window-title">ICQ 2003a — Вход</span>
+        <!-- 2. ЗАГОЛОВОК ОКНА -->
+        <div class="window-titlebar">
+            <div class="title-left">
+                <div class="flower-icon"></div>
+                <span>2 Conversations - Tomáš</span>
             </div>
-            <div class="win-btn-group">
+            <div class="win-controls">
                 <div class="win-btn">_</div>
                 <div class="win-btn">□</div>
-                <div class="win-btn close">✕</div>
+                <div class="win-btn">✕</div>
             </div>
         </div>
 
-        <!-- 1. ЭКРАН ВХОДА (ICQ Login) -->
-        <div id="screen-login">
-            <div class="login-box">
-                <!-- Оцениваем зеленый цветок ICQ из открытого репозитория Twemoji -->
-                <img class="icq-logo-big" src="https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f33c.png" alt="ICQ Logo" style="filter: hue-rotate(60deg) saturate(300%);">
+        <!-- 3. ВКЛАДКИ СОБЕСЕДНИКОВ -->
+        <div class="tabs-bar">
+            <div class="tab-item">
+                <div class="flower-icon"></div>
+                <span id="tab-name">Tomáš</span>
+                <div class="tab-close">✕</div>
+            </div>
+        </div>
+
+        <!-- 4. ИКОНКИ ДЕЙСТВИЙ -->
+        <div class="action-toolbar">
+            <div class="tool-btn">📝 Заметки</div>
+            <div class="tool-btn">📞 Звонок</div>
+            <div class="tool-btn">📷 Камера</div>
+            <div class="tool-btn" onclick="document.getElementById('file-input').click()">📁 Файл</div>
+            <input type="file" id="file-input" accept="image/*,video/*" style="display:none;" onchange="handleFileSelect(event)">
+        </div>
+
+        <!-- 5. ЭКРАН СОЗДАНИЯ КОМНАТЫ / ВХОДА -->
+        <div id="login-screen">
+            <div class="login-card">
+                <div class="flower-spinner" style="animation:none; margin:0 auto 10px auto;"></div>
+                <div style="font-weight:bold; color:#1e3a1a; margin-bottom:10px; font-size:13px;">Создать комнату / Войти</div>
                 
-                <div style="text-align:left; font-weight:bold; margin-bottom:2px;">Никнейм / Ник:</div>
-                <input type="text" id="username-input" class="input-inset" placeholder="Stalker_777" maxlength="16">
+                <div style="text-align:left; font-weight:bold; margin-bottom:2px;">Ваш позывной (Имя):</div>
+                <input type="text" id="username-input" class="input-field" placeholder="Tomáš" value="Tomáš">
 
-                <div style="text-align:left; font-weight:bold; margin-bottom:2px;">Номер канала (Комната):</div>
-                <input type="text" id="room-input" class="input-inset" placeholder="icq-100" maxlength="20">
+                <div style="text-align:left; font-weight:bold; margin-bottom:2px;">Комната (Частота):</div>
+                <input type="text" id="room-input" class="input-field" placeholder="icq-777" value="icq-777">
 
-                <button class="btn-retro" style="width:100%; margin-top:5px;" onclick="startSession()">Подключиться (Login)</button>
+                <button class="btn-green" onclick="startSession()">Подключиться к ICQ</button>
             </div>
         </div>
 
-        <!-- 2. ЭКРАН ЧАТА -->
-        <div id="screen-chat">
-            <!-- Панель пользователя -->
-            <div class="user-bar">
-                <div>
-                    <span class="uin-tag" id="display-user">Пользователь</span>
-                    <span style="color:#808080;" id="display-room">#комната</span>
+        <!-- 6. ГЛАВНЫЙ ИНТЕРФЕЙС ЧАТА -->
+        <div id="chat-screen">
+            <div class="chat-main-layout">
+                <!-- ЛЕВАЯ ЧАСТЬ: Сообщения и ввод -->
+                <div class="chat-left-side">
+                    <!-- Уведомление сохранения -->
+                    <div style="color:#2a6323; font-size:10px;">Your conversations are currently being saved.</div>
+
+                    <!-- Список сообщений -->
+                    <div id="chat-messages" class="messages-box"></div>
+
+                    <!-- Поле ввода текста -->
+                    <textarea id="chat-message-input" class="input-box" placeholder="Напишите сообщение..." onkeypress="handleKeyPress(event)"></textarea>
+
+                    <!-- Панель кнопок форматирования и отправки -->
+                    <div class="input-toolbar">
+                        <div class="format-btns">
+                            <button class="tool-btn" id="rec-btn" onclick="toggleVoiceRecord()">🎤 Голос</button>
+                        </div>
+                        <button class="btn-send-icq" onclick="sendTextMessage()">Send</button>
+                    </div>
+
+                    <!-- ПАНЕЛЬ СМАЙЛИКОВ ИЗ КАРТИНКИ -->
+                    <div class="emoticons-bar">
+                        <span class="emoji-icon" onclick="insertEmoji('😊')">😊</span>
+                        <span class="emoji-icon" onclick="insertEmoji('🤨')">🤨</span>
+                        <span class="emoji-icon" onclick="insertEmoji('😒')">😒</span>
+                        <span class="emoji-icon" onclick="insertEmoji('😮')">😮</span>
+                        <span class="emoji-icon" onclick="insertEmoji('😁')">😁</span>
+                        <span class="emoji-icon" onclick="insertEmoji('😎')">😎</span>
+                        <span class="emoji-icon" onclick="insertEmoji('😜')">😜</span>
+                        <span class="emoji-icon" onclick="insertEmoji('🎧')">🎧</span>
+                        <span class="emoji-icon" onclick="insertEmoji('😇')">😇</span>
+                        <span class="emoji-icon" onclick="insertEmoji('🤓')">🤓</span>
+                        <span class="emoji-icon" onclick="insertEmoji('😢')">😢</span>
+                        <span class="emoji-icon" onclick="insertEmoji('🤢')">🤢</span>
+                        <span class="emoji-icon" onclick="insertEmoji('😘')">😘</span>
+                        <span class="emoji-icon" onclick="insertEmoji('😈')">😈</span>
+                        <span class="emoji-icon" onclick="insertEmoji('🌹')">🌹</span>
+                        <span class="emoji-icon" onclick="insertEmoji('💣')">💣</span>
+                        <span class="emoji-icon" onclick="insertEmoji('👍')">👍</span>
+                        <span class="emoji-icon" onclick="insertEmoji('🍺')">🍺</span>
+                        <span class="emoji-icon" onclick="insertEmoji('😍')">😍</span>
+                    </div>
                 </div>
-                <button class="btn-retro" onclick="copyInviteLink()" title="Скопировать ссылку на чат">Ссылка 🔗</button>
-            </div>
 
-            <!-- Баннер приема радиосигнала PTT -->
-            <div id="ptt-banner" class="ptt-banner">
-                <span>📢 Входящая передача от:</span>
-                <b id="ptt-speaker-name">...</b>
-            </div>
+                <!-- ПРАВАЯ ЧАСТЬ: Аватарки -->
+                <div class="chat-right-side">
+                    <!-- Аватар собеседника -->
+                    <div class="avatar-box">
+                        <img src="https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f468.png" alt="Tomáš">
+                    </div>
+                    <div class="avatar-info">
+                        <div class="flower-icon" style="width:12px; height:12px;"></div>
+                        <span id="display-speaker">Tomáš</span>
+                    </div>
 
-            <!-- Поле сообщений -->
-            <div id="chat-messages" class="chat-messages"></div>
+                    <div style="flex:1;"></div>
+
+                    <!-- Аватар пользователя (Футбольный мяч из скриншота) -->
+                    <div class="avatar-box" style="background:#00cc00;">
+                        <img src="https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/26bd.png" alt="User Ball">
+                    </div>
+                </div>
+            </div>
 
             <!-- PTT Рация -->
-            <div class="ptt-container">
-                <button id="ptt-button" class="ptt-btn">🎙️ ЗАЖМИ И ГОВОРИ (PTT РАЦИЯ)</button>
-            </div>
-
-            <!-- Нижняя панель ввода -->
-            <div class="input-panel">
-                <input type="file" id="file-input" accept="image/*,video/*" style="display:none;" onchange="handleFileSelect(event)">
-                <button class="btn-retro" onclick="document.getElementById('file-input').click()" title="Отправить картинку">📷</button>
-                <button id="rec-btn" class="btn-retro" onclick="toggleVoiceRecord()" title="Записать аудио">🎤</button>
-                <input type="text" id="chat-message-input" class="chat-input" placeholder="Введите сообщение..." onkeypress="handleKeyPress(event)">
-                <button class="btn-retro" onclick="sendTextMessage()">Отправить</button>
+            <div class="ptt-bar">
+                <button id="ptt-button" class="ptt-button">🎙️ ЗАЖМИ И ГОВОРИ (PTT РАЦИЯ)</button>
             </div>
         </div>
+
     </div>
 
+    <!-- JS ДВИЖОК С ВАШИМ ФУНКЦИОНАЛОМ -->
     <script>
-        /* ================= 1. ЗВУКОВОЙ ДВИЖОК С ЛЕГЕНДАРНЫМ "О-ОУ!" ICQ ================= */
+        /* ================= 1. АНИМАЦИЯ ЗАГРУЗКИ ================= */
+        window.onload = () => {
+            setupPTTEvents();
+            
+            // Через 2.5 секунды экран загрузки плавно растворяется
+            setTimeout(() => {
+                const loader = document.getElementById('loading-screen');
+                loader.style.opacity = '0';
+                setTimeout(() => {
+                    loader.style.display = 'none';
+                }, 800);
+            }, 2000);
+        };
+
+        /* ================= 2. ЗВУКИ ICQ ================= */
         class ICQSoundEngine {
             constructor() { this.ctx = null; }
             init() {
                 if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
                 if (this.ctx.state === 'suspended') this.ctx.resume();
             }
-
-            // Воспроизведение оригинального звука "Uh-Oh!" ICQ из открытого CDN источника
             playUhOh() {
                 const audio = new Audio('https://www.myinstants.com/media/sounds/icq-uh-oh.mp3');
-                audio.play().catch(e => console.log('Audio play blocked'));
-            }
-
-            playClick() {
-                this.init();
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.03);
-                gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.03);
-                osc.connect(gain); gain.connect(this.ctx.destination);
-                osc.start(); osc.stop(this.ctx.currentTime + 0.03);
-            }
-
-            playPTTStart() {
-                this.init();
-                const now = this.ctx.currentTime;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(700, now);
-                osc.frequency.setValueAtTime(1000, now + 0.04);
-                gain.gain.setValueAtTime(0.05, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-                osc.connect(gain); gain.connect(this.ctx.destination);
-                osc.start(now); osc.stop(now + 0.08);
-            }
-
-            playPTTEnd() {
-                this.init();
-                const now = this.ctx.currentTime;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(1000, now);
-                osc.frequency.setValueAtTime(500, now + 0.04);
-                gain.gain.setValueAtTime(0.05, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-                osc.connect(gain); gain.connect(this.ctx.destination);
-                osc.start(now); osc.stop(now + 0.08);
+                audio.play().catch(e => {});
             }
         }
-
         const audioEngine = new ICQSoundEngine();
 
-        /* ================= 2. MQTT И ЛОГИКА (С ПОДДЕРЖКОЙ СТАРЫХ УСТРОЙСТВ) ================= */
+        /* ================= 3. MQTT СВЯЗЬ ================= */
         const BROKERS = [
             'wss://broker.emqx.io:8084/mqtt',
             'wss://broker.hivemq.com:8884/mqtt',
-            'wss://mqtt.eclipseprojects.io:443/mqtt',
-            'ws://broker.emqx.io:8083/mqtt' // Фоллбек для старых iOS
+            'wss://mqtt.eclipseprojects.io:443/mqtt'
         ];
-
         let currentBrokerIdx = 0;
         let mqttClient = null;
 
-        let myUserId = localStorage.getItem('icq_uid') || 'uin_' + Math.floor(100000 + Math.random() * 900000);
+        let myUserId = localStorage.getItem('icq_uid') || 'u_' + Math.random().toString(36).substr(2, 5);
         localStorage.setItem('icq_uid', myUserId);
 
-        let myUsername = localStorage.getItem('icq_uname') || '';
-        let rawRoom = new URLSearchParams(window.location.search).get('room') || localStorage.getItem('icq_room') || '';
-
-        function cleanRoomName(str) {
-            if (!str) return '';
-            try { str = decodeURIComponent(str); } catch(e){}
-            return str.toLowerCase().replace(/[^a-z0-9_-]/g, '');
-        }
-
-        let currentRoom = cleanRoomName(rawRoom);
+        let myUsername = 'Tomáš';
+        let currentRoom = 'icq-777';
         let isVoiceRecording = false, voiceRecorder = null, voiceChunks = [];
         let isPTTTransmitting = false, pttStreamId = null, pttAudioCtx = null, pttMicStream = null, pttProcessor = null, rxAudioCtx = null, nextStartTime = 0;
 
-        window.onload = () => {
-            setupPTTEvents();
-            if (myUsername) document.getElementById('username-input').value = myUsername;
-            if (!currentRoom) currentRoom = 'icq-100';
-            document.getElementById('room-input').value = currentRoom;
-
-            if (myUsername && new URLSearchParams(window.location.search).get('room')) {
-                startSession();
-            }
-        };
-
         function startSession() {
-            audioEngine.playClick();
-            const unameInput = document.getElementById('username-input').value.trim();
-            const roomInput = cleanRoomName(document.getElementById('room-input').value.trim());
+            const uname = document.getElementById('username-input').value.trim();
+            const room = document.getElementById('room-input').value.trim();
 
-            if (!unameInput || !roomInput) return alert("Введите никнейм и номер канала!");
+            if (!uname || !room) return alert("Введите имя и комнату!");
 
-            myUsername = unameInput;
-            currentRoom = roomInput;
+            myUsername = uname;
+            currentRoom = room;
 
-            localStorage.setItem('icq_uname', myUsername);
-            localStorage.setItem('icq_room', currentRoom);
-
-            window.history.replaceState({}, '', `?room=${encodeURIComponent(currentRoom)}`);
-
-            document.getElementById('screen-login').style.display = 'none';
-            document.getElementById('screen-chat').classList.add('active');
-            document.getElementById('display-user').innerText = `${myUsername} (${myUserId})`;
-            document.getElementById('display-room').innerText = `#${currentRoom}`;
-            document.getElementById('icq-window-title').innerText = `ICQ — #${currentRoom}`;
+            document.getElementById('tab-name').innerText = myUsername;
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('chat-screen').classList.add('active');
 
             connectMQTT();
         }
@@ -552,13 +638,8 @@
                 mqttClient = mqtt.connect(targetBroker, { clientId: clientId, keepalive: 30, reconnectPeriod: 0, connectTimeout: 4000 });
 
                 mqttClient.on('connect', () => {
-                    document.getElementById('status-flower').className = 'icq-flower flower-online';
-                    const topic = `icq/channel/v7/${currentRoom}`;
-                    mqttClient.subscribe(topic, { qos: 1 }, (err) => {
-                        if (!err) {
-                            publishPayload({ type: 'system', content: `Пользователь [${myUsername}] вошел в сеть.` });
-                        }
-                    });
+                    const topic = `icq/channel/v8/${currentRoom}`;
+                    mqttClient.subscribe(topic, { qos: 1 });
                 });
 
                 mqttClient.on('message', (topic, message) => {
@@ -574,33 +655,29 @@
         }
 
         function switchBroker() {
-            document.getElementById('status-flower').className = 'icq-flower flower-offline';
             currentBrokerIdx = (currentBrokerIdx + 1) % BROKERS.length;
             setTimeout(connectMQTT, 1000);
         }
 
-        /* ================= 3. РАЦИЯ PTT ================= */
+        /* ================= 4. PTT РАЦИЯ ================= */
         function setupPTTEvents() {
             const btn = document.getElementById('ptt-button');
             btn.addEventListener('mousedown', startPTT);
             btn.addEventListener('mouseup', stopPTT);
-            btn.addEventListener('mouseleave', stopPTT);
             btn.addEventListener('touchstart', (e) => { e.preventDefault(); startPTT(); }, { passive: false });
             btn.addEventListener('touchend', (e) => { e.preventDefault(); stopPTT(); }, { passive: false });
         }
 
         async function startPTT() {
             if (isPTTTransmitting) return;
-            audioEngine.playPTTStart();
-
             try {
                 pttMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 isPTTTransmitting = true;
                 pttStreamId = 'stream_' + Date.now();
 
                 const btn = document.getElementById('ptt-button');
-                btn.classList.add('transmitting');
-                btn.innerText = '🔴 ИДЕТ ПЕРЕДАЧА СИГНАЛА...';
+                btn.classList.add('active');
+                btn.innerText = '🔴 ПЕРЕДАЧА СИГНАЛА...';
 
                 pttAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
                 const source = pttAudioCtx.createMediaStreamSource(pttMicStream);
@@ -624,7 +701,7 @@
 
                 source.connect(pttProcessor);
                 pttProcessor.connect(pttAudioCtx.destination);
-            } catch (err) { alert("Микрофон недоступен!"); isPTTTransmitting = false; }
+            } catch (err) { isPTTTransmitting = false; }
         }
 
         function stopPTT() {
@@ -632,9 +709,8 @@
             isPTTTransmitting = false;
 
             const btn = document.getElementById('ptt-button');
-            btn.classList.remove('transmitting');
+            btn.classList.remove('active');
             btn.innerText = '🎙️ ЗАЖМИ И ГОВОРИ (PTT РАЦИЯ)';
-            audioEngine.playPTTEnd();
 
             if (pttProcessor) { pttProcessor.disconnect(); pttProcessor = null; }
             if (pttAudioCtx) { pttAudioCtx.close(); pttAudioCtx = null; }
@@ -645,13 +721,8 @@
 
         function handlePTTIncoming(data) {
             if (data.uid === myUserId) return;
-            const banner = document.getElementById('ptt-banner');
-            const speakerTag = document.getElementById('ptt-speaker-name');
-
             if (data.type === 'ptt_start') {
-                speakerTag.innerText = data.sender;
-                banner.classList.add('active');
-                audioEngine.playPTTStart();
+                document.getElementById('display-speaker').innerText = data.sender;
                 if (!rxAudioCtx) rxAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
                 if (rxAudioCtx.state === 'suspended') rxAudioCtx.resume();
                 nextStartTime = rxAudioCtx.currentTime;
@@ -672,28 +743,31 @@
                 if (nextStartTime < rxAudioCtx.currentTime) nextStartTime = rxAudioCtx.currentTime;
                 source.start(nextStartTime);
                 nextStartTime += audioBuffer.duration;
-            } else if (data.type === 'ptt_end') {
-                setTimeout(() => { banner.classList.remove('active'); audioEngine.playPTTEnd(); }, 200);
             }
         }
 
-        /* ================= 4. СООБЩЕНИЯ И МЕДИА ================= */
+        /* ================= 5. СООБЩЕНИЯ И СМАЙЛЫ ================= */
         function publishPayload(data) {
             if (!mqttClient || !mqttClient.connected) return;
             const fullPayload = {
-                id: 'm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                id: 'm_' + Date.now(),
                 uid: myUserId,
                 sender: myUsername,
                 timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 ...data
             };
-            mqttClient.publish(`icq/channel/v7/${currentRoom}`, JSON.stringify(fullPayload), { qos: 1 });
+            mqttClient.publish(`icq/channel/v8/${currentRoom}`, JSON.stringify(fullPayload), { qos: 1 });
         }
 
-        function handleKeyPress(e) { if (e.key === 'Enter') sendTextMessage(); }
+        function insertEmoji(emoji) {
+            const input = document.getElementById('chat-message-input');
+            input.value += emoji;
+            input.focus();
+        }
+
+        function handleKeyPress(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTextMessage(); } }
 
         function sendTextMessage() {
-            audioEngine.playClick();
             const input = document.getElementById('chat-message-input');
             const text = input.value.trim();
             if (!text) return;
@@ -702,7 +776,6 @@
         }
 
         async function toggleVoiceRecord() {
-            audioEngine.playClick();
             const btn = document.getElementById('rec-btn');
             if (!isVoiceRecording) {
                 try {
@@ -720,10 +793,10 @@
                     voiceRecorder.start();
                     isVoiceRecording = true;
                     btn.innerText = '🔴 Стоп';
-                } catch(e) { alert("Ошибка записи"); }
+                } catch(e){}
             } else {
                 isVoiceRecording = false;
-                btn.innerText = '🎤';
+                btn.innerText = '🎤 Голос';
                 if (voiceRecorder) voiceRecorder.stop();
             }
         }
@@ -743,47 +816,26 @@
             if (data.id) renderedMsgs.add(data.id);
 
             const box = document.getElementById('chat-messages');
-            const isAtBottom = box.scrollHeight - box.clientHeight <= box.scrollTop + 60;
+            const isSelf = data.uid === myUserId;
 
-            if (data.type === 'system') {
-                const sysDiv = document.createElement('div');
-                sysDiv.className = 'msg system';
-                sysDiv.innerHTML = `<div class="msg-header">[Система] ${data.timestamp}</div><div class="msg-body">${escapeHTML(data.content)}</div>`;
-                box.appendChild(sysDiv);
-            } else {
-                const isSelf = data.uid === myUserId;
-                
-                // Воспроизводим легендарное "О-оу!" при входящем сообщении
-                if (!isSelf) audioEngine.playUhOh();
+            if (!isSelf) audioEngine.playUhOh();
 
-                const msgDiv = document.createElement('div');
-                msgDiv.className = `msg ${isSelf ? 'self' : 'other'}`;
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'msg-item';
 
-                let contentHTML = '';
-                if (data.type === 'text') contentHTML = escapeHTML(data.content);
-                else if (data.type === 'image') contentHTML = `<img src="${data.content}" style="max-width:100%; border:1px solid #000;">`;
-                else if (data.type === 'video') contentHTML = `<video src="${data.content}" controls style="max-width:100%;"></video>`;
-                else if (data.type === 'audio') contentHTML = `<audio src="${data.content}" controls style="max-width:180px;"></audio>`;
+            let contentHTML = '';
+            if (data.type === 'text') contentHTML = escapeHTML(data.content);
+            else if (data.type === 'image') contentHTML = `<img src="${data.content}" style="max-width:100%; border-radius:3px;">`;
+            else if (data.type === 'video') contentHTML = `<video src="${data.content}" controls style="max-width:100%;"></video>`;
+            else if (data.type === 'audio') contentHTML = `<audio src="${data.content}" controls style="max-width:180px;"></audio>`;
 
-                msgDiv.innerHTML = `
-                    <div class="msg-header">${escapeHTML(data.sender)} (${data.timestamp}):</div>
-                    <div class="msg-body">${contentHTML}</div>
-                `;
+            msgDiv.innerHTML = `
+                <div class="msg-header-text ${isSelf ? 'self' : ''}">${escapeHTML(data.sender)} (${data.timestamp}):</div>
+                <div class="msg-content">${contentHTML}</div>
+            `;
 
-                box.appendChild(msgDiv);
-            }
-
-            if (data.uid === myUserId || isAtBottom) {
-                box.scrollTop = box.scrollHeight;
-            }
-        }
-
-        function copyInviteLink() {
-            audioEngine.playClick();
-            navigator.clipboard.writeText(window.location.href);
-            const toast = document.getElementById('toast');
-            toast.style.display = 'block';
-            setTimeout(() => toast.style.display = 'none', 2000);
+            box.appendChild(msgDiv);
+            box.scrollTop = box.scrollHeight;
         }
 
         function escapeHTML(str) {
