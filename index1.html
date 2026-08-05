@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>ICQ — Эфир Связи</title>
+    <!-- MQTT.js -->
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <!-- Шрифт Tahoma (классика Windows XP / ICQ) -->
+    <link href="https://fonts.googleapis.com/css2?family=Tahoma&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --icq-bg: #ece9d8; /* Классический цвет Windows XP */
+            --icq-header: linear-gradient(180deg, #0058e6 0%, #003bb3 100%);
+            --icq-panel: #d4d0c8;
+            --icq-border-light: #ffffff;
+            --icq-border-dark: #808080;
+            --icq-border-darker: #404040;
+            --icq-blue: #0A246A;
+            --icq-green: #33cc33;
+            --text-main: #000000;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Tahoma', sans-serif;
+            font-size: 11px;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            height: 100dvh;
+            background-color: #3a6ea5; /* Синий рабочий стол Windows */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Главное окно ICQ (Стиль Windows XP) */
+        .icq-window {
+            width: 100%;
+            max-width: 420px;
+            height: 100%;
+            height: 100dvh;
+            background: var(--icq-bg);
+            border: 3px solid #0053e1;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            overflow: hidden;
+            position: relative;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        /* Шапка окна ICQ */
+        .icq-header {
+            background: var(--icq-header);
+            color: #fff;
+            padding: 4px 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: bold;
+            font-size: 12px;
+            flex-shrink: 0;
+            border-bottom: 1px solid #002d80;
+        }
+
+        .icq-title-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .icq-flower {
+            width: 16px;
+            height: 16px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            display: inline-block;
+        }
+
+        /* Зеленый цветочек ICQ */
+        .flower-online {
+            background-image: url('https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f33c.png');
+            filter: hue-rotate(60deg) saturate(300%);
+        }
+
+        /* Красный цветочек ICQ (офлайн) */
+        .flower-offline {
+            background-image: url('https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f33c.png');
+            filter: hue-rotate(300deg) saturate(300%);
+        }
+
+        /* Системные кнопки Windows (Свернуть/Развернуть/Закрыть) */
+        .win-btn-group {
+            display: flex;
+            gap: 2px;
+        }
+
+        .win-btn {
+            width: 16px;
+            height: 14px;
+            background: #d4d0c8;
+            border-top: 1px solid #fff;
+            border-left: 1px solid #fff;
+            border-right: 1px solid #404040;
+            border-bottom: 1px solid #404040;
+            font-size: 9px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #000;
+        }
+
+        .win-btn:active {
+            border-top: 1px solid #404040;
+            border-left: 1px solid #404040;
+            border-right: 1px solid #fff;
+            border-bottom: 1px solid #fff;
+        }
+
+        .win-btn.close {
+            background: #d9534f;
+            color: white;
+        }
+
+        /* ЭКРАН ВХОДА (ICQ Login) */
+        #screen-login {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            padding: 20px;
+            background: var(--icq-bg);
+        }
+
+        .login-box {
+            background: var(--icq-panel);
+            border-top: 2px solid var(--icq-border-light);
+            border-left: 2px solid var(--icq-border-light);
+            border-right: 2px solid var(--icq-border-darker);
+            border-bottom: 2px solid var(--icq-border-darker);
+            padding: 20px;
+            width: 100%;
+            max-width: 300px;
+            text-align: center;
+        }
+
+        .icq-logo-big {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 10px;
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
+        }
+
+        .input-inset {
+            width: 100%;
+            padding: 4px 6px;
+            background: #fff;
+            border-top: 2px solid var(--icq-border-darker);
+            border-left: 2px solid var(--icq-border-darker);
+            border-right: 2px solid var(--icq-border-light);
+            border-bottom: 2px solid var(--icq-border-light);
+            outline: none;
+            margin-top: 4px;
+            margin-bottom: 12px;
+            font-size: 12px;
+        }
+
+        .btn-retro {
+            padding: 4px 12px;
+            background: var(--icq-panel);
+            border-top: 2px solid var(--icq-border-light);
+            border-left: 2px solid var(--icq-border-light);
+            border-right: 2px solid var(--icq-border-darker);
+            border-bottom: 2px solid var(--icq-border-darker);
+            font-weight: bold;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .btn-retro:active {
+            border-top: 2px solid var(--icq-border-darker);
+            border-left: 2px solid var(--icq-border-darker);
+            border-right: 2px solid var(--icq-border-light);
+            border-bottom: 2px solid var(--icq-border-light);
+        }
+
+        /* ОСНОВНОЙ ЭКРАН ЧАТА */
+        #screen-chat {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            background: var(--icq-bg);
+        }
+
+        #screen-chat.active { display: flex; }
+
+        /* Информационная панель пользователя */
+        .user-bar {
+            background: #fff;
+            border-bottom: 1px solid var(--icq-border-dark);
+            padding: 6px 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .uin-tag {
+            font-weight: bold;
+            color: var(--icq-blue);
+            font-size: 12px;
+        }
+
+        /* Окно сообщений */
+        .chat-messages {
+            flex: 1;
+            background: #ffffff;
+            border-top: 2px solid var(--icq-border-darker);
+            border-left: 2px solid var(--icq-border-darker);
+            border-right: 2px solid var(--icq-border-light);
+            border-bottom: 2px solid var(--icq-border-light);
+            margin: 6px;
+            padding: 8px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-height: 0;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .msg {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .msg-header {
+            font-weight: bold;
+            font-size: 10px;
+        }
+
+        .msg.self .msg-header { color: #0000ff; } /* Синий для себя */
+        .msg.other .msg-header { color: #ff0000; } /* Красный для собеседника */
+        .msg.system .msg-header { color: #808080; }
+
+        .msg-body {
+            background: #f9f9f9;
+            border: 1px dotted #ccc;
+            padding: 4px 6px;
+            font-size: 11px;
+            line-height: 1.3;
+            word-break: break-word;
+            user-select: text;
+        }
+
+        /* Панель PTT-Рации */
+        .ptt-container {
+            padding: 4px 6px;
+            background: var(--icq-panel);
+            border-top: 1px solid var(--icq-border-light);
+            flex-shrink: 0;
+        }
+
+        .ptt-btn {
+            width: 100%;
+            padding: 6px;
+            background: linear-gradient(180deg, #33cc33 0%, #228822 100%);
+            border-top: 2px solid #66ff66;
+            border-left: 2px solid #66ff66;
+            border-right: 2px solid #114411;
+            border-bottom: 2px solid #114411;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            text-shadow: 1px 1px 1px #000;
+        }
+
+        .ptt-btn:active, .ptt-btn.transmitting {
+            background: linear-gradient(180deg, #cc3333 0%, #882222 100%);
+            border-top: 2px solid #114411;
+            border-left: 2px solid #114411;
+            border-right: 2px solid #ff6666;
+            border-bottom: 2px solid #ff6666;
+        }
+
+        /* Панель ввода сообщений */
+        .input-panel {
+            padding: 6px;
+            background: var(--icq-panel);
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 4px 6px;
+            background: #fff;
+            border-top: 2px solid var(--icq-border-darker);
+            border-left: 2px solid var(--icq-border-darker);
+            border-right: 2px solid var(--icq-border-light);
+            border-bottom: 2px solid var(--icq-border-light);
+            outline: none;
+            font-size: 11px;
+        }
+
+        .ptt-banner {
+            display: none;
+            background: #ffffcc;
+            border: 1px solid #ffcc00;
+            padding: 4px 8px;
+            font-size: 10px;
+            color: #000;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .ptt-banner.active { display: flex; }
+
+        /* Уведомление Toast */
+        .toast {
+            position: absolute;
+            top: 30px; left: 50%;
+            transform: translateX(-50%);
+            background: #ffffcc;
+            border: 1px solid #000;
+            padding: 4px 10px;
+            font-size: 10px;
+            display: none;
+            z-index: 200;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="toast" class="toast">Ссылка скопирована!</div>
+
+    <!-- ОКНО ICQ -->
+    <div class="icq-window">
+        <!-- Шапка окна Windows -->
+        <div class="icq-header">
+            <div class="icq-title-group">
+                <div id="status-flower" class="icq-flower flower-offline"></div>
+                <span id="icq-window-title">ICQ 2003a — Вход</span>
+            </div>
+            <div class="win-btn-group">
+                <div class="win-btn">_</div>
+                <div class="win-btn">□</div>
+                <div class="win-btn close">✕</div>
+            </div>
+        </div>
+
+        <!-- 1. ЭКРАН ВХОДА (ICQ Login) -->
+        <div id="screen-login">
+            <div class="login-box">
+                <!-- Оцениваем зеленый цветок ICQ из открытого репозитория Twemoji -->
+                <img class="icq-logo-big" src="https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f33c.png" alt="ICQ Logo" style="filter: hue-rotate(60deg) saturate(300%);">
+                
+                <div style="text-align:left; font-weight:bold; margin-bottom:2px;">Никнейм / Ник:</div>
+                <input type="text" id="username-input" class="input-inset" placeholder="Stalker_777" maxlength="16">
+
+                <div style="text-align:left; font-weight:bold; margin-bottom:2px;">Номер канала (Комната):</div>
+                <input type="text" id="room-input" class="input-inset" placeholder="icq-100" maxlength="20">
+
+                <button class="btn-retro" style="width:100%; margin-top:5px;" onclick="startSession()">Подключиться (Login)</button>
+            </div>
+        </div>
+
+        <!-- 2. ЭКРАН ЧАТА -->
+        <div id="screen-chat">
+            <!-- Панель пользователя -->
+            <div class="user-bar">
+                <div>
+                    <span class="uin-tag" id="display-user">Пользователь</span>
+                    <span style="color:#808080;" id="display-room">#комната</span>
+                </div>
+                <button class="btn-retro" onclick="copyInviteLink()" title="Скопировать ссылку на чат">Ссылка 🔗</button>
+            </div>
+
+            <!-- Баннер приема радиосигнала PTT -->
+            <div id="ptt-banner" class="ptt-banner">
+                <span>📢 Входящая передача от:</span>
+                <b id="ptt-speaker-name">...</b>
+            </div>
+
+            <!-- Поле сообщений -->
+            <div id="chat-messages" class="chat-messages"></div>
+
+            <!-- PTT Рация -->
+            <div class="ptt-container">
+                <button id="ptt-button" class="ptt-btn">🎙️ ЗАЖМИ И ГОВОРИ (PTT РАЦИЯ)</button>
+            </div>
+
+            <!-- Нижняя панель ввода -->
+            <div class="input-panel">
+                <input type="file" id="file-input" accept="image/*,video/*" style="display:none;" onchange="handleFileSelect(event)">
+                <button class="btn-retro" onclick="document.getElementById('file-input').click()" title="Отправить картинку">📷</button>
+                <button id="rec-btn" class="btn-retro" onclick="toggleVoiceRecord()" title="Записать аудио">🎤</button>
+                <input type="text" id="chat-message-input" class="chat-input" placeholder="Введите сообщение..." onkeypress="handleKeyPress(event)">
+                <button class="btn-retro" onclick="sendTextMessage()">Отправить</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ================= 1. ЗВУКОВОЙ ДВИЖОК С ЛЕГЕНДАРНЫМ "О-ОУ!" ICQ ================= */
+        class ICQSoundEngine {
+            constructor() { this.ctx = null; }
+            init() {
+                if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+            }
+
+            // Воспроизведение оригинального звука "Uh-Oh!" ICQ из открытого CDN источника
+            playUhOh() {
+                const audio = new Audio('https://www.myinstants.com/media/sounds/icq-uh-oh.mp3');
+                audio.play().catch(e => console.log('Audio play blocked'));
+            }
+
+            playClick() {
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.03);
+                gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.03);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.03);
+            }
+
+            playPTTStart() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(700, now);
+                osc.frequency.setValueAtTime(1000, now + 0.04);
+                gain.gain.setValueAtTime(0.05, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(now); osc.stop(now + 0.08);
+            }
+
+            playPTTEnd() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1000, now);
+                osc.frequency.setValueAtTime(500, now + 0.04);
+                gain.gain.setValueAtTime(0.05, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(now); osc.stop(now + 0.08);
+            }
+        }
+
+        const audioEngine = new ICQSoundEngine();
+
+        /* ================= 2. MQTT И ЛОГИКА (С ПОДДЕРЖКОЙ СТАРЫХ УСТРОЙСТВ) ================= */
+        const BROKERS = [
+            'wss://broker.emqx.io:8084/mqtt',
+            'wss://broker.hivemq.com:8884/mqtt',
+            'wss://mqtt.eclipseprojects.io:443/mqtt',
+            'ws://broker.emqx.io:8083/mqtt' // Фоллбек для старых iOS
+        ];
+
+        let currentBrokerIdx = 0;
+        let mqttClient = null;
+
+        let myUserId = localStorage.getItem('icq_uid') || 'uin_' + Math.floor(100000 + Math.random() * 900000);
+        localStorage.setItem('icq_uid', myUserId);
+
+        let myUsername = localStorage.getItem('icq_uname') || '';
+        let rawRoom = new URLSearchParams(window.location.search).get('room') || localStorage.getItem('icq_room') || '';
+
+        function cleanRoomName(str) {
+            if (!str) return '';
+            try { str = decodeURIComponent(str); } catch(e){}
+            return str.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+        }
+
+        let currentRoom = cleanRoomName(rawRoom);
+        let isVoiceRecording = false, voiceRecorder = null, voiceChunks = [];
+        let isPTTTransmitting = false, pttStreamId = null, pttAudioCtx = null, pttMicStream = null, pttProcessor = null, rxAudioCtx = null, nextStartTime = 0;
+
+        window.onload = () => {
+            setupPTTEvents();
+            if (myUsername) document.getElementById('username-input').value = myUsername;
+            if (!currentRoom) currentRoom = 'icq-100';
+            document.getElementById('room-input').value = currentRoom;
+
+            if (myUsername && new URLSearchParams(window.location.search).get('room')) {
+                startSession();
+            }
+        };
+
+        function startSession() {
+            audioEngine.playClick();
+            const unameInput = document.getElementById('username-input').value.trim();
+            const roomInput = cleanRoomName(document.getElementById('room-input').value.trim());
+
+            if (!unameInput || !roomInput) return alert("Введите никнейм и номер канала!");
+
+            myUsername = unameInput;
+            currentRoom = roomInput;
+
+            localStorage.setItem('icq_uname', myUsername);
+            localStorage.setItem('icq_room', currentRoom);
+
+            window.history.replaceState({}, '', `?room=${encodeURIComponent(currentRoom)}`);
+
+            document.getElementById('screen-login').style.display = 'none';
+            document.getElementById('screen-chat').classList.add('active');
+            document.getElementById('display-user').innerText = `${myUsername} (${myUserId})`;
+            document.getElementById('display-room').innerText = `#${currentRoom}`;
+            document.getElementById('icq-window-title').innerText = `ICQ — #${currentRoom}`;
+
+            connectMQTT();
+        }
+
+        function connectMQTT() {
+            const clientId = 'icq_' + myUserId + '_' + Math.random().toString(36).substr(2, 4);
+            const targetBroker = BROKERS[currentBrokerIdx];
+
+            try {
+                if (mqttClient) mqttClient.end(true);
+                mqttClient = mqtt.connect(targetBroker, { clientId: clientId, keepalive: 30, reconnectPeriod: 0, connectTimeout: 4000 });
+
+                mqttClient.on('connect', () => {
+                    document.getElementById('status-flower').className = 'icq-flower flower-online';
+                    const topic = `icq/channel/v7/${currentRoom}`;
+                    mqttClient.subscribe(topic, { qos: 1 }, (err) => {
+                        if (!err) {
+                            publishPayload({ type: 'system', content: `Пользователь [${myUsername}] вошел в сеть.` });
+                        }
+                    });
+                });
+
+                mqttClient.on('message', (topic, message) => {
+                    try {
+                        const payload = JSON.parse(message.toString());
+                        if (payload.type.startsWith('ptt_')) handlePTTIncoming(payload);
+                        else renderIncomingMessage(payload);
+                    } catch(e){}
+                });
+
+                mqttClient.on('error', () => switchBroker());
+            } catch(e) { switchBroker(); }
+        }
+
+        function switchBroker() {
+            document.getElementById('status-flower').className = 'icq-flower flower-offline';
+            currentBrokerIdx = (currentBrokerIdx + 1) % BROKERS.length;
+            setTimeout(connectMQTT, 1000);
+        }
+
+        /* ================= 3. РАЦИЯ PTT ================= */
+        function setupPTTEvents() {
+            const btn = document.getElementById('ptt-button');
+            btn.addEventListener('mousedown', startPTT);
+            btn.addEventListener('mouseup', stopPTT);
+            btn.addEventListener('mouseleave', stopPTT);
+            btn.addEventListener('touchstart', (e) => { e.preventDefault(); startPTT(); }, { passive: false });
+            btn.addEventListener('touchend', (e) => { e.preventDefault(); stopPTT(); }, { passive: false });
+        }
+
+        async function startPTT() {
+            if (isPTTTransmitting) return;
+            audioEngine.playPTTStart();
+
+            try {
+                pttMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                isPTTTransmitting = true;
+                pttStreamId = 'stream_' + Date.now();
+
+                const btn = document.getElementById('ptt-button');
+                btn.classList.add('transmitting');
+                btn.innerText = '🔴 ИДЕТ ПЕРЕДАЧА СИГНАЛА...';
+
+                pttAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                const source = pttAudioCtx.createMediaStreamSource(pttMicStream);
+                pttProcessor = pttAudioCtx.createScriptProcessor(2048, 1, 1);
+
+                publishPayload({ type: 'ptt_start', streamId: pttStreamId });
+
+                pttProcessor.onaudioprocess = (e) => {
+                    if (!isPTTTransmitting) return;
+                    const inputData = e.inputBuffer.getChannelData(0);
+                    const pttInt16 = new Int16Array(inputData.length);
+                    for (let i = 0; i < inputData.length; i++) {
+                        let s = Math.max(-1, Math.min(1, inputData[i]));
+                        pttInt16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                    }
+                    let binary = '';
+                    const bytes = new Uint8Array(pttInt16.buffer);
+                    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+                    publishPayload({ type: 'ptt_chunk', streamId: pttStreamId, chunk: btoa(binary) });
+                };
+
+                source.connect(pttProcessor);
+                pttProcessor.connect(pttAudioCtx.destination);
+            } catch (err) { alert("Микрофон недоступен!"); isPTTTransmitting = false; }
+        }
+
+        function stopPTT() {
+            if (!isPTTTransmitting) return;
+            isPTTTransmitting = false;
+
+            const btn = document.getElementById('ptt-button');
+            btn.classList.remove('transmitting');
+            btn.innerText = '🎙️ ЗАЖМИ И ГОВОРИ (PTT РАЦИЯ)';
+            audioEngine.playPTTEnd();
+
+            if (pttProcessor) { pttProcessor.disconnect(); pttProcessor = null; }
+            if (pttAudioCtx) { pttAudioCtx.close(); pttAudioCtx = null; }
+            if (pttMicStream) { pttMicStream.getTracks().forEach(t => t.stop()); pttMicStream = null; }
+
+            publishPayload({ type: 'ptt_end', streamId: pttStreamId });
+        }
+
+        function handlePTTIncoming(data) {
+            if (data.uid === myUserId) return;
+            const banner = document.getElementById('ptt-banner');
+            const speakerTag = document.getElementById('ptt-speaker-name');
+
+            if (data.type === 'ptt_start') {
+                speakerTag.innerText = data.sender;
+                banner.classList.add('active');
+                audioEngine.playPTTStart();
+                if (!rxAudioCtx) rxAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                if (rxAudioCtx.state === 'suspended') rxAudioCtx.resume();
+                nextStartTime = rxAudioCtx.currentTime;
+            } else if (data.type === 'ptt_chunk') {
+                if (!rxAudioCtx) return;
+                const binary = atob(data.chunk);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                const int16 = new Int16Array(bytes.buffer);
+                const float32 = new Float32Array(int16.length);
+                for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / (int16[i] < 0 ? 0x8000 : 0x7FFF);
+
+                const audioBuffer = rxAudioCtx.createBuffer(1, float32.length, 16000);
+                audioBuffer.getChannelData(0).set(float32);
+                const source = rxAudioCtx.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(rxAudioCtx.destination);
+                if (nextStartTime < rxAudioCtx.currentTime) nextStartTime = rxAudioCtx.currentTime;
+                source.start(nextStartTime);
+                nextStartTime += audioBuffer.duration;
+            } else if (data.type === 'ptt_end') {
+                setTimeout(() => { banner.classList.remove('active'); audioEngine.playPTTEnd(); }, 200);
+            }
+        }
+
+        /* ================= 4. СООБЩЕНИЯ И МЕДИА ================= */
+        function publishPayload(data) {
+            if (!mqttClient || !mqttClient.connected) return;
+            const fullPayload = {
+                id: 'm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                uid: myUserId,
+                sender: myUsername,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                ...data
+            };
+            mqttClient.publish(`icq/channel/v7/${currentRoom}`, JSON.stringify(fullPayload), { qos: 1 });
+        }
+
+        function handleKeyPress(e) { if (e.key === 'Enter') sendTextMessage(); }
+
+        function sendTextMessage() {
+            audioEngine.playClick();
+            const input = document.getElementById('chat-message-input');
+            const text = input.value.trim();
+            if (!text) return;
+            publishPayload({ type: 'text', content: text });
+            input.value = '';
+        }
+
+        async function toggleVoiceRecord() {
+            audioEngine.playClick();
+            const btn = document.getElementById('rec-btn');
+            if (!isVoiceRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    voiceRecorder = new MediaRecorder(stream);
+                    voiceChunks = [];
+                    voiceRecorder.ondataavailable = e => { if (e.data.size > 0) voiceChunks.push(e.data); };
+                    voiceRecorder.onstop = () => {
+                        const audioBlob = new Blob(voiceChunks, { type: 'audio/webm' });
+                        const reader = new FileReader();
+                        reader.onloadend = () => publishPayload({ type: 'audio', content: reader.result });
+                        reader.readAsDataURL(audioBlob);
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+                    voiceRecorder.start();
+                    isVoiceRecording = true;
+                    btn.innerText = '🔴 Стоп';
+                } catch(e) { alert("Ошибка записи"); }
+            } else {
+                isVoiceRecording = false;
+                btn.innerText = '🎤';
+                if (voiceRecorder) voiceRecorder.stop();
+            }
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (evt) => publishPayload({ type: file.type.startsWith('image/') ? 'image' : 'video', content: evt.target.result });
+            reader.readAsDataURL(file);
+            e.target.value = '';
+        }
+
+        const renderedMsgs = new Set();
+        function renderIncomingMessage(data) {
+            if (data.id && renderedMsgs.has(data.id)) return;
+            if (data.id) renderedMsgs.add(data.id);
+
+            const box = document.getElementById('chat-messages');
+            const isAtBottom = box.scrollHeight - box.clientHeight <= box.scrollTop + 60;
+
+            if (data.type === 'system') {
+                const sysDiv = document.createElement('div');
+                sysDiv.className = 'msg system';
+                sysDiv.innerHTML = `<div class="msg-header">[Система] ${data.timestamp}</div><div class="msg-body">${escapeHTML(data.content)}</div>`;
+                box.appendChild(sysDiv);
+            } else {
+                const isSelf = data.uid === myUserId;
+                
+                // Воспроизводим легендарное "О-оу!" при входящем сообщении
+                if (!isSelf) audioEngine.playUhOh();
+
+                const msgDiv = document.createElement('div');
+                msgDiv.className = `msg ${isSelf ? 'self' : 'other'}`;
+
+                let contentHTML = '';
+                if (data.type === 'text') contentHTML = escapeHTML(data.content);
+                else if (data.type === 'image') contentHTML = `<img src="${data.content}" style="max-width:100%; border:1px solid #000;">`;
+                else if (data.type === 'video') contentHTML = `<video src="${data.content}" controls style="max-width:100%;"></video>`;
+                else if (data.type === 'audio') contentHTML = `<audio src="${data.content}" controls style="max-width:180px;"></audio>`;
+
+                msgDiv.innerHTML = `
+                    <div class="msg-header">${escapeHTML(data.sender)} (${data.timestamp}):</div>
+                    <div class="msg-body">${contentHTML}</div>
+                `;
+
+                box.appendChild(msgDiv);
+            }
+
+            if (data.uid === myUserId || isAtBottom) {
+                box.scrollTop = box.scrollHeight;
+            }
+        }
+
+        function copyInviteLink() {
+            audioEngine.playClick();
+            navigator.clipboard.writeText(window.location.href);
+            const toast = document.getElementById('toast');
+            toast.style.display = 'block';
+            setTimeout(() => toast.style.display = 'none', 2000);
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+        }
+    </script>
+</body>
+</html>
