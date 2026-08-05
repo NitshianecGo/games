@@ -563,7 +563,7 @@
                     <div class="avatar-box" title="Создатель">🌵</div>
                     <div class="avatar-info" id="creator-name-tag">Создатель</div>
 
-                    <!-- Окно видео с поддержкой клика для полноэкранного режима -->
+                    <!-- Окно видео рации с поддержкой тапа -->
                     <div class="video-stream-box" id="peer-video-container" onclick="toggleFullscreenVideo()">
                         <div class="video-placeholder" id="video-placeholder">Рация выкл</div>
                         <video id="peer-video-element" autoplay playsinline style="display:none;"></video>
@@ -574,7 +574,7 @@
                 </div>
             </div>
 
-            <!-- ДВОЙНАЯ ПАНЕЛЬ: ВЛЮЧЕНИЕ ПО 1 КЛИКУ -->
+            <!-- ДВОЙНАЯ ПАНЕЛЬ РАЦИИ (ВКЛ/ВЫКЛ ПО 1 КЛИКУ) -->
             <div class="ptt-bar">
                 <button id="ptt-button" class="ptt-button" onclick="toggleAudioPTT()">🎙️ РАЦИЯ (ГОЛОС)</button>
                 <button id="vptt-button" class="ptt-button" style="background: linear-gradient(180deg, #4ca6ff 0%, #1a66cc 100%); border-color: #004499;" onclick="toggleVideoPTT()">📹 ВИДЕО-РАЦИЯ</button>
@@ -608,13 +608,13 @@
         </div>
     </div>
 
-    <!-- Элемент аудио для трансляции звука рации -->
+    <!-- Аудио элемент для динамика -->
     <audio id="peer-audio-element" autoplay style="display:none;"></audio>
 
     <script>
         /* 1. КОНФИГУРАЦИЯ FIREBASE */
         const firebaseConfig = {
-           apiKey: "AIzaSyDo3LytnfDm-hAPL2RxTpz3VteGmTcSmAc",
+            apiKey: "AIzaSyDo3LytnfDm-hAPL2RxTpz3VteGmTcSmAc",
   authDomain: "icqnovpn.firebaseapp.com",
   projectId: "icqnovpn",
   storageBucket: "icqnovpn.firebasestorage.app",
@@ -642,11 +642,9 @@
         let signalRef = null;
         let isVoiceRecording = false, voiceRecorder = null, voiceChunks = [];
         
-        /* Состояние камеры */
         let cameraStream = null;
-        let cameraFacingMode = 'user'; // 'user' - селфи, 'environment' - основная
+        let cameraFacingMode = 'user';
 
-        /* Состояние раций */
         let isAudioPTTActive = false;
         let isVideoPTTActive = false;
         let peerConnection = null;
@@ -696,14 +694,25 @@
             document.getElementById('chat-screen').classList.add('active');
             document.getElementById('exit-btn').style.display = 'block';
 
+            // Разделяем ветку сообщений и служебных сигналов PTT
             roomRef = database.ref('rooms/' + currentRoom + '/messages');
             signalRef = database.ref('rooms/' + currentRoom + '/signal/' + myUserId);
 
+            // Чат загружает ТОЛЬКО обычные текстовые и медиа сообщения
             roomRef.limitToLast(50).on('child_added', (snapshot) => {
-                renderIncomingMessage(snapshot.val());
+                const val = snapshot.val();
+                if (val && val.type) {
+                    renderIncomingMessage(val);
+                }
             });
 
+            // Сигналы соединения обрабатываются изолированно
             const allSignalsRef = database.ref('rooms/' + currentRoom + '/signal');
+            allSignalsRef.on('child_changed', (snapshot) => {
+                if (snapshot.key !== myUserId) {
+                    handleSignalIncoming(snapshot.val());
+                }
+            });
             allSignalsRef.on('child_added', (snapshot) => {
                 if (snapshot.key !== myUserId) {
                     handleSignalIncoming(snapshot.val());
@@ -765,7 +774,7 @@
             box.scrollTop = box.scrollHeight;
         }
 
-        /* ================= WebRTC РАЦИЯ БЕЗ ЗАДЕРЖЕК ================= */
+        /* ================= WebRTC РАЦИЯ БЕЗ ЭХО И СПАМА ================= */
         function initPeerConnection() {
             if (peerConnection) return;
 
@@ -793,6 +802,7 @@
         }
 
         async function handleSignalIncoming(data) {
+            if (!data) return;
             initPeerConnection();
             if (data.type === 'offer') {
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(JSON.parse(data.offer)));
@@ -812,7 +822,7 @@
             }
         }
 
-        /* 1. ГОЛОСОВАЯ РАЦИЯ (1 КЛИК ВКЛ/ВЫКЛ) */
+        /* 1. ГОЛОСОВАЯ РАЦИЯ */
         async function toggleAudioPTT() {
             if (isVideoPTTActive) stopPTTAll();
 
@@ -839,14 +849,13 @@
             }
         }
 
-        /* 2. ВИДЕО-РАЦИЯ (ВКЛЮЧАЕТ И КАМЕРУ, И МИКРОФОН ОДНОВРЕМЕННО) */
+        /* 2. ВИДЕО-РАЦИЯ */
         async function toggleVideoPTT() {
             if (isAudioPTTActive) stopPTTAll();
 
             const btn = document.getElementById('vptt-button');
             if (!isVideoPTTActive) {
                 try {
-                    // Включаем Видео + Микрофон одновременно
                     localStream = await navigator.mediaDevices.getUserMedia({ 
                         video: { width: 160, height: 120, facingMode: 'user' },
                         audio: { echoCancellation: true, noiseSuppression: true } 
@@ -877,7 +886,7 @@
                 peerConnection.close();
                 peerConnection = null;
             }
-            signalRef.set({ type: 'stop' });
+            if (signalRef) signalRef.set({ type: 'stop' });
 
             isAudioPTTActive = false;
             isVideoPTTActive = false;
@@ -892,7 +901,6 @@
             videoBtn.innerText = '📹 ВИДЕО-РАЦИЯ';
         }
 
-        /* ТАП НА ВИДЕО ДЛЯ ПОЛНОЭКРАННОГО РЕЖИМА */
         function toggleFullscreenVideo() {
             const container = document.getElementById('peer-video-container');
             container.classList.toggle('fullscreen');
@@ -917,7 +925,7 @@
         }
         function closeNotes() { document.getElementById('notes-modal').style.display = 'none'; }
 
-        /* Камера с возможностью смены режима (Портрет/Основная) */
+        /* Камера */
         async function openCamera() {
             try {
                 if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
