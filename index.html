@@ -1,39 +1,55 @@
-<div class="icq-tilda-wrapper">
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>ICQ Messenger</title>
+    
+    <!-- Подключаем Firebase SDK (Работает мгновенно без VPN) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
     <style>
-        .icq-tilda-wrapper {
+        :root {
             --icq-green-bg: #e2f5e1;
             --icq-border: #9ed799;
             --icq-header-grad: linear-gradient(180deg, #b0e8ab 0%, #6ecf67 100%);
             --icq-btn-grad: linear-gradient(180deg, #8ae082 0%, #4cb843 100%);
             --icq-panel-bg: #f2faf1;
-            width: 100%;
-            max-width: 460px;
-            height: 600px;
-            margin: 0 auto;
-            position: relative;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Arial, sans-serif;
-            font-size: 11px;
         }
 
-        .icq-tilda-wrapper * {
+        * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+            font-family: 'Segoe UI', Arial, sans-serif;
             font-size: 11px;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
         }
 
-        .icq-app {
+        body, html {
             width: 100%;
             height: 100%;
+            height: 100dvh;
+            background: #2a5227;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .icq-app {
+            width: 100%;
+            max-width: 460px;
+            height: 100%;
+            height: 100dvh;
             background: var(--icq-green-bg);
             border: 2px solid #57ad4e;
             border-radius: 8px;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
             position: relative;
             overflow: hidden;
         }
@@ -158,7 +174,7 @@
             text-shadow: 0 1px 1px rgba(0,0,0,0.3);
         }
 
-        /* 4. ЧАТ И ЭЛЕМЕНТЫ */
+        /* 4. ЧАТ */
         .chat-top-panel {
             display: flex;
             flex-direction: column;
@@ -342,29 +358,6 @@
             flex-shrink: 0;
         }
 
-        .ptt-bar {
-            padding: 4px 6px;
-            background: #d8f3d6;
-            border-top: 1px solid #a3dc9d;
-        }
-
-        .ptt-button {
-            width: 100%;
-            padding: 6px;
-            background: var(--icq-btn-grad);
-            border: 1px solid #237a1b;
-            color: white;
-            font-weight: bold;
-            border-radius: 4px;
-            cursor: pointer;
-            text-align: center;
-        }
-
-        .ptt-button.active {
-            background: linear-gradient(180deg, #e64545 0%, #991a1a 100%);
-            border-color: #660000;
-        }
-
         .modal-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -415,16 +408,17 @@
             object-fit: cover;
         }
     </style>
-
-    <!-- Подключение библиотеки MQTT.js -->
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+</head>
+<body>
 
     <div class="icq-app">
+        <!-- Экран загрузки -->
         <div id="loading-screen">
             <div class="icq-logo-spin"></div>
             <div class="loading-text">Загрузка ICQ...</div>
         </div>
 
+        <!-- Шапка -->
         <div class="window-titlebar">
             <div class="title-left">
                 <div class="icq-icon-img"></div>
@@ -433,6 +427,7 @@
             <button id="exit-btn" class="btn-exit" style="display:none;" onclick="logout()">Выйти</button>
         </div>
 
+        <!-- Экран входа -->
         <div id="login-screen">
             <div class="login-card">
                 <div class="icq-logo-spin" style="animation:none; margin:0 auto 10px auto;"></div>
@@ -448,6 +443,7 @@
             </div>
         </div>
 
+        <!-- Чат -->
         <div id="chat-screen">
             <div class="chat-top-panel">
                 <div class="tabs-bar">
@@ -503,12 +499,9 @@
                     <div class="avatar-info" id="joined-name-tag">Собеседник</div>
                 </div>
             </div>
-
-            <div class="ptt-bar">
-                <button id="ptt-button" class="ptt-button">🎙️ ЗАЖМИ И ГОВОРИ (PTT РАЦИЯ)</button>
-            </div>
         </div>
 
+        <!-- Модалки -->
         <div id="notes-modal" class="modal-overlay">
             <div class="modal-card">
                 <div class="modal-header">
@@ -533,13 +526,48 @@
     </div>
 
     <script>
-        /* ================= 1. ЗВУКИ ICQ ================= */
+        /* 1. КОНФИГУРАЦИЯ FIREBASE (ВСТАВЬТЕ СВОИ ДАННЫЕ) */
+        const firebaseConfig = {
+          apiKey: "AIzaSyDo3LytnfDm-hAPL2RxTpz3VteGmTcSmAc",
+  authDomain: "icqnovpn.firebaseapp.com",
+  projectId: "icqnovpn",
+  storageBucket: "icqnovpn.firebasestorage.app",
+  messagingSenderId: "624335054201",
+  appId: "1:624335054201:web:69556400be41283b157ba8"
+        };
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+
+
+
+        
+
+        // Инициализация Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        /* Звуковой движок ICQ */
         class ICQSoundEngine {
-            constructor() { this.ctx = null; }
-            init() {
-                if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-                if (this.ctx.state === 'suspended') this.ctx.resume();
-            }
             playUhOh() {
                 const audio = new Audio('https://www.myinstants.com/media/sounds/icq-uh-oh.mp3');
                 audio.play().catch(e => {});
@@ -547,35 +575,23 @@
         }
         const audioEngine = new ICQSoundEngine();
 
-        /* ================= 2. MQTT И СВЯЗЬ БЕЗ VPN (РФ БРОКЕРЫ) ================= */
-        const BROKERS = [
-            'wss://broker.emqx.io:8084/mqtt',
-            'wss://test.mosquitto.org:8081/mqtt',
-            'wss://broker.hivemq.com:8884/mqtt'
-        ];
-        let currentBrokerIdx = 0;
-        let mqttClient = null;
-
         let myUserId = localStorage.getItem('icq_uid') || 'u_' + Math.random().toString(36).substr(2, 5);
         localStorage.setItem('icq_uid', myUserId);
 
         let myUsername = '';
         let currentRoom = '';
-
+        let roomRef = null;
         let isVoiceRecording = false, voiceRecorder = null, voiceChunks = [];
-        let isPTTTransmitting = false, pttStreamId = null, pttAudioCtx = null, pttMicStream = null, pttProcessor = null, rxAudioCtx = null, nextStartTime = 0;
         let cameraStream = null;
 
         window.addEventListener('load', () => {
-            setupPTTEvents();
-            
             setTimeout(() => {
                 const loader = document.getElementById('loading-screen');
                 if (loader) {
                     loader.style.opacity = '0';
                     setTimeout(() => { loader.style.display = 'none'; }, 800);
                 }
-            }, 1500);
+            }, 1200);
 
             const savedUname = localStorage.getItem('icq_uname');
             const savedRoom = localStorage.getItem('icq_room');
@@ -594,7 +610,7 @@
             if (!uname || !room) return alert("Заполните все поля!");
 
             myUsername = uname;
-            currentRoom = room;
+            currentRoom = room.toLowerCase().replace(/[^a-z0-9_-]/g, '');
 
             localStorage.setItem('icq_uname', myUsername);
             localStorage.setItem('icq_room', currentRoom);
@@ -605,16 +621,14 @@
             document.getElementById('chat-screen').classList.add('active');
             document.getElementById('exit-btn').style.display = 'block';
 
-            let savedCreator = localStorage.getItem(`room_creator_${currentRoom}`);
-            if (!savedCreator) {
-                savedCreator = myUsername;
-                localStorage.setItem(`room_creator_${currentRoom}`, savedCreator);
-            }
-
-            document.getElementById('creator-name-tag').innerText = savedCreator;
-            document.getElementById('joined-name-tag').innerText = myUsername;
-
-            connectMQTT();
+            // Подключение к комнате в Firebase Realtime Database
+            roomRef = database.ref('rooms/' + currentRoom + '/messages');
+            
+            // Слушаем новые сообщения (Мгновенное обновление без VPN!)
+            roomRef.limitToLast(50).on('child_added', (snapshot) => {
+                const data = snapshot.val();
+                renderIncomingMessage(data);
+            });
         }
 
         function logout() {
@@ -623,191 +637,8 @@
             location.reload();
         }
 
-        function connectMQTT() {
-            const clientId = 'icq_ru_' + myUserId + '_' + Math.random().toString(36).substr(2, 4);
-            const targetBroker = BROKERS[currentBrokerIdx];
-
-            try {
-                if (mqttClient) mqttClient.end(true);
-                
-                mqttClient = mqtt.connect(targetBroker, { 
-                    clientId: clientId, 
-                    keepalive: 60, 
-                    reconnectPeriod: 3000, 
-                    connectTimeout: 5000 
-                });
-
-                mqttClient.on('connect', () => {
-                    const topic = `icq/ru_channel/v10/${currentRoom}`;
-                    mqttClient.subscribe(topic, { qos: 1 });
-                    publishPayload({ type: 'presence', username: myUsername });
-                });
-
-                mqttClient.on('message', (topic, message) => {
-                    try {
-                        const payload = JSON.parse(message.toString());
-                        if (payload.type === 'presence') {
-                            if (payload.uid !== myUserId) {
-                                document.getElementById('joined-name-tag').innerText = payload.username;
-                            }
-                        } else if (payload.type.startsWith('ptt_')) {
-                            handlePTTIncoming(payload);
-                        } else {
-                            renderIncomingMessage(payload);
-                        }
-                    } catch(e){}
-                });
-
-                mqttClient.on('error', () => switchBroker());
-            } catch(e) { switchBroker(); }
-        }
-
-        function switchBroker() {
-            currentBrokerIdx = (currentBrokerIdx + 1) % BROKERS.length;
-            setTimeout(connectMQTT, 1000);
-        }
-
-        /* ================= 3. ЗАМЕТКИ ================= */
-        function openNotes() {
-            const savedNotes = localStorage.getItem(`notes_${currentRoom}`) || '';
-            document.getElementById('notes-text').value = savedNotes;
-            document.getElementById('notes-modal').style.display = 'flex';
-        }
-
-        function saveNotes() {
-            const text = document.getElementById('notes-text').value;
-            localStorage.setItem(`notes_${currentRoom}`, text);
-            closeNotes();
-        }
-
-        function closeNotes() {
-            document.getElementById('notes-modal').style.display = 'none';
-        }
-
-        /* ================= 4. КАМЕРА ================= */
-        async function openCamera() {
-            try {
-                cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
-                const videoEl = document.getElementById('camera-video');
-                videoEl.srcObject = cameraStream;
-                document.getElementById('camera-modal').style.display = 'flex';
-            } catch(e) {
-                alert("Ошибка доступа к камере!");
-            }
-        }
-
-        function takePhotoAndSend() {
-            const videoEl = document.getElementById('camera-video');
-            const canvas = document.createElement('canvas');
-            canvas.width = videoEl.videoWidth || 640;
-            canvas.height = videoEl.videoHeight || 480;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
-
-            const imageData = canvas.toDataURL('image/jpeg', 0.8);
-            publishPayload({ type: 'image', content: imageData });
-
-            closeCamera();
-        }
-
-        function closeCamera() {
-            if (cameraStream) {
-                cameraStream.getTracks().forEach(t => t.stop());
-                cameraStream = null;
-            }
-            document.getElementById('camera-modal').style.display = 'none';
-        }
-
-        /* ================= 5. PTT РАЦИЯ ================= */
-        function setupPTTEvents() {
-            const btn = document.getElementById('ptt-button');
-            if (!btn) return;
-            btn.addEventListener('mousedown', startPTT);
-            btn.addEventListener('mouseup', stopPTT);
-            btn.addEventListener('touchstart', (e) => { e.preventDefault(); startPTT(); }, { passive: false });
-            btn.addEventListener('touchend', (e) => { e.preventDefault(); stopPTT(); }, { passive: false });
-        }
-
-        async function startPTT() {
-            if (isPTTTransmitting) return;
-            try {
-                pttMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                isPTTTransmitting = true;
-                pttStreamId = 'stream_' + Date.now();
-
-                const btn = document.getElementById('ptt-button');
-                btn.classList.add('active');
-                btn.innerText = '🔴 ПЕРЕДАЧА...';
-
-                pttAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-                const source = pttAudioCtx.createMediaStreamSource(pttMicStream);
-                pttProcessor = pttAudioCtx.createScriptProcessor(2048, 1, 1);
-
-                publishPayload({ type: 'ptt_start', streamId: pttStreamId });
-
-                pttProcessor.onaudioprocess = (e) => {
-                    if (!isPTTTransmitting) return;
-                    const inputData = e.inputBuffer.getChannelData(0);
-                    const pttInt16 = new Int16Array(inputData.length);
-                    for (let i = 0; i < inputData.length; i++) {
-                        let s = Math.max(-1, Math.min(1, inputData[i]));
-                        pttInt16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-                    }
-                    let binary = '';
-                    const bytes = new Uint8Array(pttInt16.buffer);
-                    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-                    publishPayload({ type: 'ptt_chunk', streamId: pttStreamId, chunk: btoa(binary) });
-                };
-
-                source.connect(pttProcessor);
-                pttProcessor.connect(pttAudioCtx.destination);
-            } catch (err) { isPTTTransmitting = false; }
-        }
-
-        function stopPTT() {
-            if (!isPTTTransmitting) return;
-            isPTTTransmitting = false;
-
-            const btn = document.getElementById('ptt-button');
-            btn.classList.remove('active');
-            btn.innerText = '🎙️ ЗАЖМИ И ГОВОРИ (PTT РАЦИЯ)';
-
-            if (pttProcessor) { pttProcessor.disconnect(); pttProcessor = null; }
-            if (pttAudioCtx) { pttAudioCtx.close(); pttAudioCtx = null; }
-            if (pttMicStream) { pttMicStream.getTracks().forEach(t => t.stop()); pttMicStream = null; }
-
-            publishPayload({ type: 'ptt_end', streamId: pttStreamId });
-        }
-
-        function handlePTTIncoming(data) {
-            if (data.uid === myUserId) return;
-            if (data.type === 'ptt_start') {
-                if (!rxAudioCtx) rxAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-                if (rxAudioCtx.state === 'suspended') rxAudioCtx.resume();
-                nextStartTime = rxAudioCtx.currentTime;
-            } else if (data.type === 'ptt_chunk') {
-                if (!rxAudioCtx) return;
-                const binary = atob(data.chunk);
-                const bytes = new Uint8Array(binary.length);
-                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-                const int16 = new Int16Array(bytes.buffer);
-                const float32 = new Float32Array(int16.length);
-                for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / (int16[i] < 0 ? 0x8000 : 0x7FFF);
-
-                const audioBuffer = rxAudioCtx.createBuffer(1, float32.length, 16000);
-                audioBuffer.getChannelData(0).set(float32);
-                const source = rxAudioCtx.createBufferSource();
-                source.buffer = audioBuffer;
-                source.connect(rxAudioCtx.destination);
-                if (nextStartTime < rxAudioCtx.currentTime) nextStartTime = rxAudioCtx.currentTime;
-                source.start(nextStartTime);
-                nextStartTime += audioBuffer.duration;
-            }
-        }
-
-        /* ================= 6. СООБЩЕНИЯ И МЕДИА ================= */
-        function publishPayload(data) {
-            if (!mqttClient || !mqttClient.connected) return;
+        function sendMessagePayload(data) {
+            if (!roomRef) return;
             const fullPayload = {
                 id: 'm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
                 uid: myUserId,
@@ -815,58 +646,16 @@
                 timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 ...data
             };
-            mqttClient.publish(`icq/ru_channel/v10/${currentRoom}`, JSON.stringify(fullPayload), { qos: 1 });
+            // Запись в Firebase моментально доставляет данные всем
+            roomRef.push(fullPayload);
         }
-
-        function insertEmoji(emoji) {
-            const input = document.getElementById('chat-message-input');
-            input.value += emoji;
-            input.focus();
-        }
-
-        function handleKeyPress(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTextMessage(); } }
 
         function sendTextMessage() {
             const input = document.getElementById('chat-message-input');
             const text = input.value.trim();
             if (!text) return;
-            publishPayload({ type: 'text', content: text });
+            sendMessagePayload({ type: 'text', content: text });
             input.value = '';
-        }
-
-        async function toggleVoiceRecord() {
-            const btn = document.getElementById('rec-btn');
-            if (!isVoiceRecording) {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    voiceRecorder = new MediaRecorder(stream);
-                    voiceChunks = [];
-                    voiceRecorder.ondataavailable = e => { if (e.data.size > 0) voiceChunks.push(e.data); };
-                    voiceRecorder.onstop = () => {
-                        const audioBlob = new Blob(voiceChunks, { type: 'audio/webm' });
-                        const reader = new FileReader();
-                        reader.onloadend = () => publishPayload({ type: 'audio', content: reader.result });
-                        reader.readAsDataURL(audioBlob);
-                        stream.getTracks().forEach(track => track.stop());
-                    };
-                    voiceRecorder.start();
-                    isVoiceRecording = true;
-                    btn.innerText = '🔴 Стоп';
-                } catch(e) { alert("Ошибка микрофона"); }
-            } else {
-                isVoiceRecording = false;
-                btn.innerText = '🎤 Голосовое';
-                if (voiceRecorder) voiceRecorder.stop();
-            }
-        }
-
-        function handleFileSelect(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (evt) => publishPayload({ type: file.type.startsWith('image/') ? 'image' : 'video', content: evt.target.result });
-            reader.readAsDataURL(file);
-            e.target.value = '';
         }
 
         const renderedMsgs = new Set();
@@ -897,8 +686,85 @@
             box.scrollTop = box.scrollHeight;
         }
 
+        function insertEmoji(emoji) {
+            const input = document.getElementById('chat-message-input');
+            input.value += emoji;
+            input.focus();
+        }
+
+        function handleKeyPress(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTextMessage(); } }
+
+        /* Заметки */
+        function openNotes() {
+            document.getElementById('notes-text').value = localStorage.getItem(`notes_${currentRoom}`) || '';
+            document.getElementById('notes-modal').style.display = 'flex';
+        }
+        function saveNotes() {
+            localStorage.setItem(`notes_${currentRoom}`, document.getElementById('notes-text').value);
+            closeNotes();
+        }
+        function closeNotes() { document.getElementById('notes-modal').style.display = 'none'; }
+
+        /* Камера */
+        async function openCamera() {
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                document.getElementById('camera-video').srcObject = cameraStream;
+                document.getElementById('camera-modal').style.display = 'flex';
+            } catch(e) { alert("Ошибка доступа к камере!"); }
+        }
+        function takePhotoAndSend() {
+            const videoEl = document.getElementById('camera-video');
+            const canvas = document.createElement('canvas');
+            canvas.width = videoEl.videoWidth || 640;
+            canvas.height = videoEl.videoHeight || 480;
+            canvas.getContext('2d').drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+            sendMessagePayload({ type: 'image', content: canvas.toDataURL('image/jpeg', 0.7) });
+            closeCamera();
+        }
+        function closeCamera() {
+            if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+            document.getElementById('camera-modal').style.display = 'none';
+        }
+
+        /* Голосовые сообщения */
+        async function toggleVoiceRecord() {
+            const btn = document.getElementById('rec-btn');
+            if (!isVoiceRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    voiceRecorder = new MediaRecorder(stream);
+                    voiceChunks = [];
+                    voiceRecorder.ondataavailable = e => { if (e.data.size > 0) voiceChunks.push(e.data); };
+                    voiceRecorder.onstop = () => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => sendMessagePayload({ type: 'audio', content: reader.result });
+                        reader.readAsDataURL(new Blob(voiceChunks, { type: 'audio/webm' }));
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+                    voiceRecorder.start();
+                    isVoiceRecording = true;
+                    btn.innerText = '🔴 Стоп';
+                } catch(e) { alert("Ошибка микрофона"); }
+            } else {
+                isVoiceRecording = false;
+                btn.innerText = '🎤 Голосовое';
+                if (voiceRecorder) voiceRecorder.stop();
+            }
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (evt) => sendMessagePayload({ type: file.type.startsWith('image/') ? 'image' : 'video', content: evt.target.result });
+            reader.readAsDataURL(file);
+            e.target.value = '';
+        }
+
         function escapeHTML(str) {
             return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
         }
     </script>
-</div>
+</body>
+</html>
