@@ -612,14 +612,15 @@
     <audio id="peer-audio-element" autoplay style="display:none;"></audio>
 
     <script>
-        /* 1. КОНФИГУРАЦИЯ FIREBASE */
+        /* 1. КОНФИГУРАЦИЯ FIREBASE (ВАШИ ДАННЫЕ) */
         const firebaseConfig = {
             apiKey: "AIzaSyDo3LytnfDm-hAPL2RxTpz3VteGmTcSmAc",
-  authDomain: "icqnovpn.firebaseapp.com",
-  projectId: "icqnovpn",
-  storageBucket: "icqnovpn.firebasestorage.app",
-  messagingSenderId: "624335054201",
-  appId: "1:624335054201:web:69556400be41283b157ba8"
+            authDomain: "icqnovpn.firebaseapp.com",
+            databaseURL: "https://icqnovpn-default-rtdb.firebaseio.com",
+            projectId: "icqnovpn",
+            storageBucket: "icqnovpn.firebasestorage.app",
+            messagingSenderId: "624335054201",
+            appId: "1:624335054201:web:69556400be41283b157ba8"
         };
 
         firebase.initializeApp(firebaseConfig);
@@ -694,7 +695,7 @@
             document.getElementById('chat-screen').classList.add('active');
             document.getElementById('exit-btn').style.display = 'block';
 
-            // Разделяем ветку сообщений и служебных сигналов PTT
+            // Разделяем сообщения чата и служебные сигналы связи
             roomRef = database.ref('rooms/' + currentRoom + '/messages');
             signalRef = database.ref('rooms/' + currentRoom + '/signal/' + myUserId);
 
@@ -706,7 +707,7 @@
                 }
             });
 
-            // Сигналы соединения обрабатываются изолированно
+            // Сигналы соединения обрабатываются изолированно без спама
             const allSignalsRef = database.ref('rooms/' + currentRoom + '/signal');
             allSignalsRef.on('child_changed', (snapshot) => {
                 if (snapshot.key !== myUserId) {
@@ -774,9 +775,36 @@
             box.scrollTop = box.scrollHeight;
         }
 
-        /* ================= WebRTC РАЦИЯ БЕЗ ЭХО И СПАМА ================= */
+        /* ================= ИСПРАВЛЕННЫЙ WEBRTC ДВИЖОК РАЦИИ ================= */
+        function cleanupPeerConnection() {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            if (peerConnection) {
+                peerConnection.ontrack = null;
+                peerConnection.onicecandidate = null;
+                peerConnection.close();
+                peerConnection = null;
+            }
+            
+            const videoEl = document.getElementById('peer-video-element');
+            const placeholder = document.getElementById('video-placeholder');
+            if (videoEl) {
+                videoEl.style.display = 'none';
+                videoEl.srcObject = null;
+            }
+            if (placeholder) {
+                placeholder.style.display = 'block';
+                placeholder.innerText = 'Рация выкл';
+            }
+        }
+
         function initPeerConnection() {
-            if (peerConnection) return;
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
 
             peerConnection = new RTCPeerConnection(rtcServers);
 
@@ -803,31 +831,30 @@
 
         async function handleSignalIncoming(data) {
             if (!data) return;
-            initPeerConnection();
+            
             if (data.type === 'offer') {
+                initPeerConnection();
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(JSON.parse(data.offer)));
                 const answer = await peerConnection.createAnswer();
                 await peerConnection.setLocalDescription(answer);
                 signalRef.set({ type: 'answer', answer: JSON.stringify(answer) });
-            } else if (data.type === 'answer') {
+            } else if (data.type === 'answer' && peerConnection) {
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(JSON.parse(data.answer)));
-            } else if (data.type === 'candidate') {
-                await peerConnection.addIceCandidate(new RTCIceCandidate(JSON.parse(data.candidate)));
+            } else if (data.type === 'candidate' && peerConnection) {
+                try {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(JSON.parse(data.candidate)));
+                } catch(e) {}
             } else if (data.type === 'stop') {
-                const videoEl = document.getElementById('peer-video-element');
-                const placeholder = document.getElementById('video-placeholder');
-                videoEl.style.display = 'none';
-                placeholder.style.display = 'block';
-                placeholder.innerText = 'Рация выкл';
+                cleanupPeerConnection();
             }
         }
 
         /* 1. ГОЛОСОВАЯ РАЦИЯ */
         async function toggleAudioPTT() {
-            if (isVideoPTTActive) stopPTTAll();
-
             const btn = document.getElementById('ptt-button');
             if (!isAudioPTTActive) {
+                stopPTTAll();
+
                 try {
                     localStream = await navigator.mediaDevices.getUserMedia({ 
                         audio: { echoCancellation: true, noiseSuppression: true } 
@@ -851,10 +878,10 @@
 
         /* 2. ВИДЕО-РАЦИЯ */
         async function toggleVideoPTT() {
-            if (isAudioPTTActive) stopPTTAll();
-
             const btn = document.getElementById('vptt-button');
             if (!isVideoPTTActive) {
+                stopPTTAll();
+
                 try {
                     localStream = await navigator.mediaDevices.getUserMedia({ 
                         video: { width: 160, height: 120, facingMode: 'user' },
@@ -878,14 +905,8 @@
         }
 
         function stopPTTAll() {
-            if (localStream) {
-                localStream.getTracks().forEach(track => track.stop());
-                localStream = null;
-            }
-            if (peerConnection) {
-                peerConnection.close();
-                peerConnection = null;
-            }
+            cleanupPeerConnection();
+
             if (signalRef) signalRef.set({ type: 'stop' });
 
             isAudioPTTActive = false;
@@ -894,11 +915,14 @@
             const audioBtn = document.getElementById('ptt-button');
             const videoBtn = document.getElementById('vptt-button');
 
-            audioBtn.classList.remove('active');
-            audioBtn.innerText = '🎙️ РАЦИЯ (ГОЛОС)';
-
-            videoBtn.classList.remove('active');
-            videoBtn.innerText = '📹 ВИДЕО-РАЦИЯ';
+            if (audioBtn) {
+                audioBtn.classList.remove('active');
+                audioBtn.innerText = '🎙️ РАЦИЯ (ГОЛОС)';
+            }
+            if (videoBtn) {
+                videoBtn.classList.remove('active');
+                videoBtn.innerText = '📹 ВИДЕО-РАЦИЯ';
+            }
         }
 
         function toggleFullscreenVideo() {
