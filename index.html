@@ -358,6 +358,32 @@
             flex-shrink: 0;
         }
 
+        /* РАЦИЯ PTT */
+        .ptt-bar {
+            padding: 4px 6px;
+            background: #d8f3d6;
+            border-top: 1px solid #a3dc9d;
+            flex-shrink: 0;
+        }
+
+        .ptt-button {
+            width: 100%;
+            padding: 6px;
+            background: var(--icq-btn-grad);
+            border: 1px solid #237a1b;
+            color: white;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .ptt-button.active {
+            background: linear-gradient(180deg, #e64545 0%, #991a1a 100%);
+            border-color: #660000;
+        }
+
+        /* МОДАЛЬНЫЕ ОКНА */
         .modal-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -499,9 +525,14 @@
                     <div class="avatar-info" id="joined-name-tag">Собеседник</div>
                 </div>
             </div>
+
+            <!-- PTT РАЦИЯ -->
+            <div class="ptt-bar">
+                <button id="ptt-button" class="ptt-button">🎙️ ЗАЖМИ И ГОВОРИ (PTT РАЦИЯ)</button>
+            </div>
         </div>
 
-        <!-- Модалки -->
+        <!-- Модальные окна -->
         <div id="notes-modal" class="modal-overlay">
             <div class="modal-card">
                 <div class="modal-header">
@@ -526,41 +557,16 @@
     </div>
 
     <script>
-        /* 1. КОНФИГУРАЦИЯ FIREBASE (ВСТАВЬТЕ СВОИ ДАННЫЕ) */
+        /* 1. КОНФИГУРАЦИЯ FIREBASE (ЗАМЕНИТЕ НА СВОИ ДАННЫЕ ИЗ CONSOLE.FIREBASE.GOOGLE.COM) */
         const firebaseConfig = {
-          apiKey: "AIzaSyDo3LytnfDm-hAPL2RxTpz3VteGmTcSmAc",
+             apiKey: "AIzaSyDo3LytnfDm-hAPL2RxTpz3VteGmTcSmAc",
   authDomain: "icqnovpn.firebaseapp.com",
   projectId: "icqnovpn",
   storageBucket: "icqnovpn.firebasestorage.app",
   messagingSenderId: "624335054201",
   appId: "1:624335054201:web:69556400be41283b157ba8"
+
         };
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-
-
-
-
-
-
-
-        
-
-
-
-        
 
         // Инициализация Firebase
         firebase.initializeApp(firebaseConfig);
@@ -584,7 +590,17 @@
         let isVoiceRecording = false, voiceRecorder = null, voiceChunks = [];
         let cameraStream = null;
 
+        /* PTT Состояние */
+        let isPTTTransmitting = false;
+        let pttMicStream = null;
+        let pttAudioCtx = null;
+        let pttProcessor = null;
+        let rxAudioCtx = null;
+        let nextStartTime = 0;
+
         window.addEventListener('load', () => {
+            setupPTTEvents();
+
             setTimeout(() => {
                 const loader = document.getElementById('loading-screen');
                 if (loader) {
@@ -621,13 +637,17 @@
             document.getElementById('chat-screen').classList.add('active');
             document.getElementById('exit-btn').style.display = 'block';
 
-            // Подключение к комнате в Firebase Realtime Database
+            // Подключение к комнате в Firebase
             roomRef = database.ref('rooms/' + currentRoom + '/messages');
             
-            // Слушаем новые сообщения (Мгновенное обновление без VPN!)
+            // Слушаем входящие сообщения и сигнал рации в реальном времени
             roomRef.limitToLast(50).on('child_added', (snapshot) => {
                 const data = snapshot.val();
-                renderIncomingMessage(data);
+                if (data.type && data.type.startsWith('ptt_')) {
+                    handlePTTIncoming(data);
+                } else {
+                    renderIncomingMessage(data);
+                }
             });
         }
 
@@ -646,7 +666,6 @@
                 timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 ...data
             };
-            // Запись в Firebase моментально доставляет данные всем
             roomRef.push(fullPayload);
         }
 
@@ -684,6 +703,94 @@
 
             box.appendChild(msgDiv);
             box.scrollTop = box.scrollHeight;
+        }
+
+        /* ================= PTT РАЦИЯ ================= */
+        function setupPTTEvents() {
+            const btn = document.getElementById('ptt-button');
+            if (!btn) return;
+            btn.addEventListener('mousedown', startPTT);
+            btn.addEventListener('mouseup', stopPTT);
+            btn.addEventListener('touchstart', (e) => { e.preventDefault(); startPTT(); }, { passive: false });
+            btn.addEventListener('touchend', (e) => { e.preventDefault(); stopPTT(); }, { passive: false });
+        }
+
+        async function startPTT() {
+            if (isPTTTransmitting) return;
+            try {
+                pttMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                isPTTTransmitting = true;
+
+                const btn = document.getElementById('ptt-button');
+                btn.classList.add('active');
+                btn.innerText = '🔴 ПЕРЕДАЧА...';
+
+                pttAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                const source = pttAudioCtx.createMediaStreamSource(pttMicStream);
+                pttProcessor = pttAudioCtx.createScriptProcessor(2048, 1, 1);
+
+                sendMessagePayload({ type: 'ptt_start' });
+
+                pttProcessor.onaudioprocess = (e) => {
+                    if (!isPTTTransmitting) return;
+                    const inputData = e.inputBuffer.getChannelData(0);
+                    const pttInt16 = new Int16Array(inputData.length);
+                    for (let i = 0; i < inputData.length; i++) {
+                        let s = Math.max(-1, Math.min(1, inputData[i]));
+                        pttInt16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                    }
+                    let binary = '';
+                    const bytes = new Uint8Array(pttInt16.buffer);
+                    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+                    
+                    sendMessagePayload({ type: 'ptt_chunk', chunk: btoa(binary) });
+                };
+
+                source.connect(pttProcessor);
+                pttProcessor.connect(pttAudioCtx.destination);
+            } catch (err) { isPTTTransmitting = false; }
+        }
+
+        function stopPTT() {
+            if (!isPTTTransmitting) return;
+            isPTTTransmitting = false;
+
+            const btn = document.getElementById('ptt-button');
+            btn.classList.remove('active');
+            btn.innerText = '🎙️ ЗАЖМИ И ГОВОРИ (PTT РАЦИЯ)';
+
+            if (pttProcessor) { pttProcessor.disconnect(); pttProcessor = null; }
+            if (pttAudioCtx) { pttAudioCtx.close(); pttAudioCtx = null; }
+            if (pttMicStream) { pttMicStream.getTracks().forEach(t => t.stop()); pttMicStream = null; }
+
+            sendMessagePayload({ type: 'ptt_end' });
+        }
+
+        function handlePTTIncoming(data) {
+            if (data.uid === myUserId) return;
+            
+            if (data.type === 'ptt_start') {
+                if (!rxAudioCtx) rxAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                if (rxAudioCtx.state === 'suspended') rxAudioCtx.resume();
+                nextStartTime = rxAudioCtx.currentTime;
+            } else if (data.type === 'ptt_chunk') {
+                if (!rxAudioCtx) return;
+                const binary = atob(data.chunk);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                const int16 = new Int16Array(bytes.buffer);
+                const float32 = new Float32Array(int16.length);
+                for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / (int16[i] < 0 ? 0x8000 : 0x7FFF);
+
+                const audioBuffer = rxAudioCtx.createBuffer(1, float32.length, 16000);
+                audioBuffer.getChannelData(0).set(float32);
+                const source = rxAudioCtx.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(rxAudioCtx.destination);
+                if (nextStartTime < rxAudioCtx.currentTime) nextStartTime = rxAudioCtx.currentTime;
+                source.start(nextStartTime);
+                nextStartTime += audioBuffer.duration;
+            }
         }
 
         function insertEmoji(emoji) {
