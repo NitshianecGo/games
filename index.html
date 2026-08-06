@@ -10,8 +10,6 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <!-- Скрипт Tenor Embed для интерактивных гифок -->
-    <script async src="https://tenor.com/embed.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@500;700&display=swap');
@@ -615,10 +613,10 @@
 <body>
 
     <div class="icq-app">
-        <!-- 1. Экран загрузки с гифкой Stelle -->
+        <!-- 1. Экран загрузки с валидной гифкой Stelle -->
         <div id="loading-screen">
             <div class="gif-loader-wrapper">
-                <img src="https://media.tenor.com/7L4S1z09OAwAAAAC/stelle-hsr-stelle-planacadia.gif" alt="Stelle Loading">
+                <img src="https://i.gifer.com/fetch/w300-preview/e5/e5f03d22e03aa32f231e35574c82c237.gif" alt="Stelle Loading">
             </div>
             <div class="loading-text">Загрузка ICQ Anime... ✨</div>
         </div>
@@ -626,7 +624,7 @@
         <!-- Экран выхода c Bocchi -->
         <div id="logout-screen">
             <div class="logout-gif-card">
-                <img src="https://media.tenor.com/b_8fR3-yN08AAAAC/anime-bocchi.gif" alt="Bocchi Logout">
+                <img src="https://i.gifer.com/fetch/w300-preview/8a/8a8342ca3a9cb1a5e1c8651a547285a8.gif" alt="Bocchi Logout">
             </div>
             <div style="font-weight:bold; color:var(--text-dark); margin-top:15px; font-size:13px;">Выход из аккаунта...</div>
         </div>
@@ -643,7 +641,7 @@
         <div id="login-screen">
             <div class="login-card">
                 <div style="width:70px; height:70px; border-radius:50%; overflow:hidden; margin:0 auto 12px auto; border:2px solid #ffb3c6;">
-                    <img src="https://media.tenor.com/2Xy-6I4M810AAAAC/konata-lucky-star.gif" style="width:100%; height:100%; object-fit:cover;">
+                    <img src="https://i.gifer.com/fetch/w300-preview/a3/a3487cbfec576c9ef56b9c9f75f91e4a.gif" style="width:100%; height:100%; object-fit:cover;">
                 </div>
                 <div style="font-weight:bold; color:var(--text-dark); margin-bottom:14px; font-size:14px;">Добро пожаловать!</div>
                 
@@ -707,15 +705,15 @@
                             <span class="emoji-icon" onclick="insertEmoji('🧸')">🧸</span>
                         </div>
 
-                        <!-- GIF-карусель -->
+                        <!-- Рабочие GIF-картинки без ошибок 404 -->
                         <div class="gifs-grid-bar" id="gifs-grid-bar">
-                            <img src="https://media.tenor.com/z1I1W2I1vnoAAAAC/anime-girl.gif" class="gif-thumb" onclick="sendGif('https://media.tenor.com/z1I1W2I1vnoAAAAC/anime-girl.gif')">
-                            <img src="https://media.tenor.com/5uPvhEToOkgAAAAC/42.gif" class="gif-thumb" onclick="sendGif('https://media.tenor.com/5uPvhEToOkgAAAAC/42.gif')">
-                            <img src="https://media.tenor.com/YI5S2sYF9pUAAAAC/yuyukins.gif" class="gif-thumb" onclick="sendGif('https://media.tenor.com/YI5S2sYF9pUAAAAC/yuyukins.gif')">
-                            <img src="https://media.tenor.com/OqD0y-r62h0AAAAC/slow-blink-cute-anime-boy.gif" class="gif-thumb" onclick="sendGif('https://media.tenor.com/OqD0y-r62h0AAAAC/slow-blink-cute-anime-boy.gif')">
-                            <img src="https://media.tenor.com/y1vK62O10g4AAAAC/glare-scowl.gif" class="gif-thumb" onclick="sendGif('https://media.tenor.com/y1vK62O10g4AAAAC/glare-scowl.gif')">
-                            <img src="https://media.tenor.com/dKxM1-uW8W4AAAAC/chicken-say-what.gif" class="gif-thumb" onclick="sendGif('https://media.tenor.com/dKxM1-uW8W4AAAAC/chicken-say-what.gif')">
-                            <img src="https://media.tenor.com/9v_C150Gg0IAAAAC/anime-spy-x-family.gif" class="gif-thumb" onclick="sendGif('https://media.tenor.com/9v_C150Gg0IAAAAC/anime-spy-x-family.gif')">
+                            <img src="https://i.gifer.com/fetch/w300-preview/a9/a933fef7dfa1789c56581be39d6776df.gif" class="gif-thumb" onclick="sendGif('https://i.gifer.com/fetch/w300-preview/a9/a933fef7dfa1789c56581be39d6776df.gif')">
+                            <img src="https://i.gifer.com/fetch/w300-preview/42/4243a416a9dd7a4a9ea44078170c0c53.gif" class="gif-thumb" onclick="sendGif('https://i.gifer.com/fetch/w300-preview/42/4243a416a9dd7a4a9ea44078170c0c53.gif')">
+                            <img src="https://i.gifer.com/fetch/w300-preview/d9/d9cf9b177267dc54407b13a7c6f09a5b.gif" class="gif-thumb" onclick="sendGif('https://i.gifer.com/fetch/w300-preview/d9/d9cf9b177267dc54407b13a7c6f09a5b.gif')">
+                            <img src="https://i.gifer.com/fetch/w300-preview/cd/cdb2584e03023eb29871fa288cb4c6ff.gif" class="gif-thumb" onclick="sendGif('https://i.gifer.com/fetch/w300-preview/cd/cdb2584e03023eb29871fa288cb4c6ff.gif')">
+                            <img src="https://i.gifer.com/fetch/w300-preview/8f/8f3ec2cf9dfed57dbec48a04dfcbe464.gif" class="gif-thumb" onclick="sendGif('https://i.gifer.com/fetch/w300-preview/8f/8f3ec2cf9dfed57dbec48a04dfcbe464.gif')">
+                            <img src="https://i.gifer.com/fetch/w300-preview/a2/a2a97576a7e029f635fbb59762dfa7c8.gif" class="gif-thumb" onclick="sendGif('https://i.gifer.com/fetch/w300-preview/a2/a2a97576a7e029f635fbb59762dfa7c8.gif')">
+                            <img src="https://i.gifer.com/fetch/w300-preview/51/5176cbe3b4a20f9bd3e00b555d8126b8.gif" class="gif-thumb" onclick="sendGif('https://i.gifer.com/fetch/w300-preview/51/5176cbe3b4a20f9bd3e00b555d8126b8.gif')">
                         </div>
                     </div>
                 </div>
@@ -723,7 +721,7 @@
                 <div class="chat-right-side">
                     <!-- Аватарка Создателя (Konata) -->
                     <div class="avatar-box" title="Создатель">
-                        <img src="https://media.tenor.com/2Xy-6I4M810AAAAC/konata-lucky-star.gif" alt="Konata">
+                        <img src="https://i.gifer.com/fetch/w300-preview/a3/a3487cbfec576c9ef56b9c9f75f91e4a.gif" alt="Konata">
                     </div>
                     <div class="avatar-info" id="creator-name-tag">Создатель</div>
 
@@ -735,7 +733,7 @@
 
                     <!-- Аватарка Собеседника (Gojo) -->
                     <div class="avatar-box" title="Подключившийся">
-                        <img src="https://media.tenor.com/R387a3R0cBgAAAAC/gojo-gojo-annoyed.gif" alt="Gojo">
+                        <img src="https://i.gifer.com/fetch/w300-preview/f4/f47e30d7045b736737f59d57fb33cb25.gif" alt="Gojo">
                     </div>
                     <div class="avatar-info" id="joined-name-tag">Собеседник</div>
                 </div>
@@ -1229,7 +1227,7 @@
                     voiceRecorder.onstop = () => {
                         const reader = new FileReader();
                         reader.onloadend = () => sendMessagePayload({ type: 'audio', content: reader.result });
-                        reader.readAsDataURL(new Blob(voiceChunks, { type: 'audio/webm' }));
+                        reader.readAsDataURL(file);
                         stream.getTracks().forEach(track => track.stop());
                     };
                     voiceRecorder.start();
