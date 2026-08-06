@@ -5,12 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Anime ICQ Messenger 💕</title>
     
-    <!-- Заглушка для favicon -->
     <link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <!-- Скрипт Tenor Embed для интерактивных гифок -->
+    <script async src="https://tenor.com/embed.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@500;700&display=swap');
@@ -72,25 +73,22 @@
             justify-content: center;
             align-items: center;
             transition: opacity 0.8s ease, visibility 0.8s;
+            padding: 20px;
         }
 
-        .anime-logo-spin {
-            width: 80px;
-            height: 80px;
-            background: #ff85a2;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 40px;
-            box-shadow: 0 0 20px rgba(255, 133, 162, 0.6);
-            animation: floatLogo 2s ease-in-out infinite alternate;
-            margin-bottom: 20px;
+        .gif-loader-wrapper {
+            width: 220px;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(255, 133, 162, 0.4);
+            border: 3px solid #ffb3c6;
+            margin-bottom: 15px;
         }
 
-        @keyframes floatLogo {
-            0% { transform: translateY(0px) scale(1); }
-            100% { transform: translateY(-12px) scale(1.08); }
+        .gif-loader-wrapper img {
+            width: 100%;
+            height: auto;
+            display: block;
         }
 
         .loading-text {
@@ -104,6 +102,32 @@
         @keyframes pulseText {
             0%, 100% { opacity: 0.5; }
             50% { opacity: 1; }
+        }
+
+        /* ЭКРАН ВЫХОДА (Bocchi) */
+        #logout-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #ffffff;
+            z-index: 500;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .logout-gif-card {
+            width: 280px;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 3px solid #ffccd5;
+        }
+
+        .logout-gif-card img {
+            width: 100%;
+            display: block;
         }
 
         /* 2. ШАПКА ОКНА */
@@ -178,9 +202,7 @@
             transition: border-color 0.3s;
         }
 
-        .input-field:focus {
-            border-color: #ff85a2;
-        }
+        .input-field:focus { border-color: #ff85a2; }
 
         .btn-green-rounded {
             width: 100%;
@@ -193,14 +215,12 @@
             font-size: 12px;
             cursor: pointer;
             box-shadow: 0 4px 10px rgba(255, 133, 162, 0.4);
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.2s;
         }
 
-        .btn-green-rounded:active {
-            transform: scale(0.96);
-        }
+        .btn-green-rounded:active { transform: scale(0.96); }
 
-        /* 4. ЧАТ И ЭЛЕМЕНТЫ */
+        /* 4. ЧАТ */
         .chat-top-panel {
             display: flex;
             flex-direction: column;
@@ -250,10 +270,7 @@
             transition: all 0.2s;
         }
 
-        .tool-btn:hover {
-            background: #ff85a2;
-            color: white;
-        }
+        .tool-btn:hover { background: #ff85a2; color: white; }
 
         #chat-screen {
             display: none;
@@ -293,17 +310,22 @@
         }
 
         .avatar-box {
-            width: 60px;
-            height: 60px;
+            width: 65px;
+            height: 65px;
             border: 2px solid #ffb3c6;
             background: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
             border-radius: 50%;
-            font-size: 30px;
             overflow: hidden;
-            box-shadow: 0 4px 8px rgba(255, 179, 198, 0.3);
+            box-shadow: 0 4px 8px rgba(255, 179, 198, 0.4);
+        }
+
+        .avatar-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         .avatar-info {
@@ -398,6 +420,12 @@
             max-width: 90%;
         }
 
+        .msg-content img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 4px;
+        }
+
         .input-box {
             height: 50px;
             background: #ffffff;
@@ -427,16 +455,65 @@
             box-shadow: 0 2px 6px rgba(255, 133, 162, 0.4);
         }
 
-        .emoticons-bar {
+        /* ВКЛАДКИ СМАЙЛОВ И ГИФОК */
+        .emoticons-container {
             background: #ffffff;
             border: 2px solid #ffccd5;
             border-radius: 10px;
-            padding: 4px 6px;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .emoji-tabs-bar {
+            display: flex;
+            gap: 6px;
+            border-bottom: 1px solid #ffe5ec;
+            padding-bottom: 4px;
+        }
+
+        .emoji-tab-btn {
+            font-weight: bold;
+            font-size: 10px;
+            color: var(--text-dark);
+            cursor: pointer;
+            padding: 2px 8px;
+            border-radius: 8px;
+            background: #fff0f5;
+        }
+
+        .emoji-tab-btn.active {
+            background: #ff85a2;
+            color: white;
+        }
+
+        .emoticons-bar {
             display: flex;
             align-items: center;
             gap: 6px;
             overflow-x: auto;
         }
+
+        .gifs-grid-bar {
+            display: none;
+            gap: 6px;
+            overflow-x: auto;
+            padding-bottom: 2px;
+        }
+
+        .gif-thumb {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            object-fit: cover;
+            cursor: pointer;
+            border: 1.5px solid #ffb3c6;
+            flex-shrink: 0;
+            transition: transform 0.2s;
+        }
+
+        .gif-thumb:hover { transform: scale(1.1); }
 
         .emoji-icon {
             font-size: 16px;
@@ -538,10 +615,20 @@
 <body>
 
     <div class="icq-app">
-        <!-- Экран загрузки -->
+        <!-- 1. Экран загрузки с гифкой Stelle -->
         <div id="loading-screen">
-            <div class="anime-logo-spin">🌸</div>
-            <div class="loading-text">Загрузка ICQ Anime...</div>
+            <div class="gif-loader-wrapper">
+                <img src="https://media.tenor.com/7L4S1z09OAwAAAAC/stelle-hsr-stelle-planacadia.gif" alt="Stelle Loading">
+            </div>
+            <div class="loading-text">Загрузка ICQ Anime... ✨</div>
+        </div>
+
+        <!-- Экран выхода c Bocchi -->
+        <div id="logout-screen">
+            <div class="logout-gif-card">
+                <img src="https://media.tenor.com/b_8fR3-yN08AAAAC/anime-bocchi.gif" alt="Bocchi Logout">
+            </div>
+            <div style="font-weight:bold; color:var(--text-dark); margin-top:15px; font-size:13px;">Выход из аккаунта...</div>
         </div>
 
         <!-- Шапка -->
@@ -555,7 +642,9 @@
         <!-- Экран входа -->
         <div id="login-screen">
             <div class="login-card">
-                <div class="anime-logo-spin" style="margin:0 auto 15px auto;">🎀</div>
+                <div style="width:70px; height:70px; border-radius:50%; overflow:hidden; margin:0 auto 12px auto; border:2px solid #ffb3c6;">
+                    <img src="https://media.tenor.com/2Xy-6I4M810AAAAC/konata-lucky-star.gif" style="width:100%; height:100%; object-fit:cover;">
+                </div>
                 <div style="font-weight:bold; color:var(--text-dark); margin-bottom:14px; font-size:14px;">Добро пожаловать!</div>
                 
                 <div style="text-align:left; font-weight:bold; margin-bottom:2px; color:var(--text-dark);">Твое имя:</div>
@@ -597,22 +686,45 @@
                         <button class="btn-send-icq" onclick="sendTextMessage()">Send 💌</button>
                     </div>
 
-                    <div class="emoticons-bar">
-                        <span class="emoji-icon" onclick="insertEmoji('😊')">😊</span>
-                        <span class="emoji-icon" onclick="insertEmoji('💖')">💖</span>
-                        <span class="emoji-icon" onclick="insertEmoji('🌸')">🌸</span>
-                        <span class="emoji-icon" onclick="insertEmoji('✨')">✨</span>
-                        <span class="emoji-icon" onclick="insertEmoji('🥺')">🥺</span>
-                        <span class="emoji-icon" onclick="insertEmoji('🐱')">🐱</span>
-                        <span class="emoji-icon" onclick="insertEmoji('🎀')">🎀</span>
-                        <span class="emoji-icon" onclick="insertEmoji('🍡')">🍡</span>
-                        <span class="emoji-icon" onclick="insertEmoji('⭐')">⭐</span>
-                        <span class="emoji-icon" onclick="insertEmoji('🧸')">🧸</span>
+                    <!-- Панель со смайликами и гифками -->
+                    <div class="emoticons-container">
+                        <div class="emoji-tabs-bar">
+                            <div class="emoji-tab-btn active" id="tab-btn-emoji" onclick="switchEmojiTab('emoji')">Смайлы</div>
+                            <div class="emoji-tab-btn" id="tab-btn-gif" onclick="switchEmojiTab('gif')">GIF</div>
+                        </div>
+
+                        <!-- Смайлики -->
+                        <div class="emoticons-bar" id="emoticons-bar">
+                            <span class="emoji-icon" onclick="insertEmoji('😊')">😊</span>
+                            <span class="emoji-icon" onclick="insertEmoji('💖')">💖</span>
+                            <span class="emoji-icon" onclick="insertEmoji('🌸')">🌸</span>
+                            <span class="emoji-icon" onclick="insertEmoji('✨')">✨</span>
+                            <span class="emoji-icon" onclick="insertEmoji('🥺')">🥺</span>
+                            <span class="emoji-icon" onclick="insertEmoji('🐱')">🐱</span>
+                            <span class="emoji-icon" onclick="insertEmoji('🎀')">🎀</span>
+                            <span class="emoji-icon" onclick="insertEmoji('🍡')">🍡</span>
+                            <span class="emoji-icon" onclick="insertEmoji('⭐')">⭐</span>
+                            <span class="emoji-icon" onclick="insertEmoji('🧸')">🧸</span>
+                        </div>
+
+                        <!-- GIF-карусель -->
+                        <div class="gifs-grid-bar" id="gifs-grid-bar">
+                            <img src="https://media.tenor.com/z1I1W2I1vnoAAAAC/anime-girl.gif" class="gif-thumb" onclick="sendGif('https://media.tenor.com/z1I1W2I1vnoAAAAC/anime-girl.gif')">
+                            <img src="https://media.tenor.com/5uPvhEToOkgAAAAC/42.gif" class="gif-thumb" onclick="sendGif('https://media.tenor.com/5uPvhEToOkgAAAAC/42.gif')">
+                            <img src="https://media.tenor.com/YI5S2sYF9pUAAAAC/yuyukins.gif" class="gif-thumb" onclick="sendGif('https://media.tenor.com/YI5S2sYF9pUAAAAC/yuyukins.gif')">
+                            <img src="https://media.tenor.com/OqD0y-r62h0AAAAC/slow-blink-cute-anime-boy.gif" class="gif-thumb" onclick="sendGif('https://media.tenor.com/OqD0y-r62h0AAAAC/slow-blink-cute-anime-boy.gif')">
+                            <img src="https://media.tenor.com/y1vK62O10g4AAAAC/glare-scowl.gif" class="gif-thumb" onclick="sendGif('https://media.tenor.com/y1vK62O10g4AAAAC/glare-scowl.gif')">
+                            <img src="https://media.tenor.com/dKxM1-uW8W4AAAAC/chicken-say-what.gif" class="gif-thumb" onclick="sendGif('https://media.tenor.com/dKxM1-uW8W4AAAAC/chicken-say-what.gif')">
+                            <img src="https://media.tenor.com/9v_C150Gg0IAAAAC/anime-spy-x-family.gif" class="gif-thumb" onclick="sendGif('https://media.tenor.com/9v_C150Gg0IAAAAC/anime-spy-x-family.gif')">
+                        </div>
                     </div>
                 </div>
 
                 <div class="chat-right-side">
-                    <div class="avatar-box" title="Создатель">🐱</div>
+                    <!-- Аватарка Создателя (Konata) -->
+                    <div class="avatar-box" title="Создатель">
+                        <img src="https://media.tenor.com/2Xy-6I4M810AAAAC/konata-lucky-star.gif" alt="Konata">
+                    </div>
                     <div class="avatar-info" id="creator-name-tag">Создатель</div>
 
                     <!-- Окно видео рации -->
@@ -621,7 +733,10 @@
                         <video id="peer-video-element" autoplay playsinline style="display:none;"></video>
                     </div>
 
-                    <div class="avatar-box" title="Подключившийся">🐰</div>
+                    <!-- Аватарка Собеседника (Gojo) -->
+                    <div class="avatar-box" title="Подключившийся">
+                        <img src="https://media.tenor.com/R387a3R0cBgAAAAC/gojo-gojo-annoyed.gif" alt="Gojo">
+                    </div>
                     <div class="avatar-info" id="joined-name-tag">Собеседник</div>
                 </div>
             </div>
@@ -744,7 +859,7 @@
                     loader.style.opacity = '0';
                     setTimeout(() => { loader.style.display = 'none'; }, 800);
                 }
-            }, 1200);
+            }, 1800);
 
             const savedUname = localStorage.getItem('icq_uname');
             const savedRoom = localStorage.getItem('icq_room');
@@ -802,10 +917,17 @@
             });
         }
 
+        /* АНИМИРОВАННЫЙ ВЫХОД С BOCCHI */
         function logout() {
-            localStorage.removeItem('icq_uname');
-            localStorage.removeItem('icq_room');
-            location.reload();
+            audioEngine.playClickSound();
+            const logoutScreen = document.getElementById('logout-screen');
+            logoutScreen.style.display = 'flex';
+
+            setTimeout(() => {
+                localStorage.removeItem('icq_uname');
+                localStorage.removeItem('icq_room');
+                location.reload();
+            }, 2200);
         }
 
         function sendMessagePayload(data) {
@@ -829,6 +951,31 @@
             input.value = '';
         }
 
+        function sendGif(url) {
+            audioEngine.playClickSound();
+            sendMessagePayload({ type: 'image', content: url });
+        }
+
+        function switchEmojiTab(type) {
+            audioEngine.playClickSound();
+            const tabEmoji = document.getElementById('tab-btn-emoji');
+            const tabGif = document.getElementById('tab-btn-gif');
+            const emojiBar = document.getElementById('emoticons-bar');
+            const gifBar = document.getElementById('gifs-grid-bar');
+
+            if (type === 'emoji') {
+                tabEmoji.classList.add('active');
+                tabGif.classList.remove('active');
+                emojiBar.style.display = 'flex';
+                gifBar.style.display = 'none';
+            } else {
+                tabGif.classList.add('active');
+                tabEmoji.classList.remove('active');
+                emojiBar.style.display = 'none';
+                gifBar.style.display = 'flex';
+            }
+        }
+
         const renderedMsgs = new Set();
         function renderIncomingMessage(data) {
             if (data.id && renderedMsgs.has(data.id)) return;
@@ -844,7 +991,7 @@
 
             let contentHTML = '';
             if (data.type === 'text') contentHTML = escapeHTML(data.content);
-            else if (data.type === 'image') contentHTML = `<img src="${data.content}" style="max-width:100%; border-radius:8px; margin-top:4px;">`;
+            else if (data.type === 'image') contentHTML = `<img src="${data.content}">`;
             else if (data.type === 'video') contentHTML = `<video src="${data.content}" controls style="max-width:100%; margin-top:4px;"></video>`;
             else if (data.type === 'audio') contentHTML = `<audio src="${data.content}" controls style="max-width:200px; margin-top:4px;"></audio>`;
 
@@ -857,7 +1004,7 @@
             box.scrollTop = box.scrollHeight;
         }
 
-        /* ================= WEBRTC ДВИЖОК ================= */
+        /* WEBRTC ДВИЖОК */
         function cleanupPeerConnection() {
             if (localStream) {
                 localStream.getTracks().forEach(track => track.stop());
