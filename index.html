@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Anime ICQ Messenger 💕</title>
     
-    <!-- Заглушка для favicon, чтобы консоль была чистой -->
+    <!-- Заглушка для favicon -->
     <link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
 
     <!-- Firebase SDK -->
@@ -61,7 +61,7 @@
             overflow: hidden;
         }
 
-        /* 1. АНИМАЦИОННЫЙ ЭКРАН ЗАГРУЗКИ */
+        /* 1. ЭКРАН ЗАГРУЗКИ */
         #loading-screen {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -547,7 +547,7 @@
         <!-- Шапка -->
         <div class="window-titlebar">
             <div class="title-left">
-                <span>✨ Anime ICQ ✨</span>
+                <span id="app-header-title">✨ Anime ICQ ✨</span>
             </div>
             <button id="exit-btn" class="btn-exit" style="display:none;" onclick="logout()">Выйти</button>
         </div>
@@ -615,7 +615,7 @@
                     <div class="avatar-box" title="Создатель">🐱</div>
                     <div class="avatar-info" id="creator-name-tag">Создатель</div>
 
-                    <!-- Окно видео рации с поддержкой тапа -->
+                    <!-- Окно видео рации -->
                     <div class="video-stream-box" id="peer-video-container" onclick="toggleFullscreenVideo()">
                         <div class="video-placeholder" id="video-placeholder">Рация выкл</div>
                         <video id="peer-video-element" autoplay playsinline style="display:none;"></video>
@@ -660,7 +660,6 @@
         </div>
     </div>
 
-    <!-- Аудио элемент для динамика -->
     <audio id="peer-audio-element" autoplay style="display:none;"></audio>
 
     <script>
@@ -678,7 +677,7 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        /* ГЕНЕРАТОР КАВАЙНЫХ ЗВУКОВ (Web Audio API) */
+        /* ГЕНЕРАТОР ЗВУКОВ */
         class AnimeSoundEngine {
             constructor() { this.ctx = null; }
             init() {
@@ -689,8 +688,8 @@
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(880, this.ctx.currentTime); // A5
-                osc.frequency.exponentialRampToValueAtTime(1318.51, this.ctx.currentTime + 0.15); // E6
+                osc.frequency.setValueAtTime(880, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1318.51, this.ctx.currentTime + 0.15);
                 gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
                 osc.connect(gain);
@@ -770,8 +769,12 @@
             localStorage.setItem('icq_uname', myUsername);
             localStorage.setItem('icq_room', currentRoom);
 
-            document.getElementById('tab-room-name').innerText = currentRoom;
-            document.getElementById('app-header-title').innerText = `ICQ — #${currentRoom}`;
+            const tabRoomEl = document.getElementById('tab-room-name');
+            if (tabRoomEl) tabRoomEl.innerText = currentRoom;
+
+            const headerEl = document.getElementById('app-header-title');
+            if (headerEl) headerEl.innerText = `Anime ICQ — #${currentRoom}`;
+
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('chat-screen').classList.add('active');
             document.getElementById('exit-btn').style.display = 'block';
