@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Anime ICQ Messenger 💕</title>
     
+    <!-- Иконка-заглушка -->
     <link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
 
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
@@ -612,20 +614,23 @@
 <body>
 
     <div class="icq-app">
+        <!-- 1. Экран загрузки с прямым raw-URL GitHub -->
         <div id="loading-screen">
             <div class="gif-loader-wrapper">
-                <img src="./gif/konata-lucky-star.gif" alt="Konata Loading">
+                <img src="https://raw.githubusercontent.com/nitshianecgo/icq_old/main/gif/konata-lucky-star.gif" alt="Konata Loading">
             </div>
             <div class="loading-text">Загрузка ICQ Anime... ✨</div>
         </div>
 
+        <!-- Экран выхода c Bocchi -->
         <div id="logout-screen">
             <div class="logout-gif-card">
-                <img src="./gif/anime-bocchi.gif" alt="Bocchi Logout">
+                <img src="https://raw.githubusercontent.com/nitshianecgo/icq_old/main/gif/anime-bocchi.gif" alt="Bocchi Logout">
             </div>
             <div style="font-weight:bold; color:var(--text-dark); margin-top:15px; font-size:13px;">Выход из аккаунта...</div>
         </div>
 
+        <!-- Шапка -->
         <div class="window-titlebar">
             <div class="title-left">
                 <span id="app-header-title">✨ Anime ICQ ✨</span>
@@ -633,10 +638,11 @@
             <button id="exit-btn" class="btn-exit" style="display:none;" onclick="logout()">Выйти</button>
         </div>
 
+        <!-- Экран входа -->
         <div id="login-screen">
             <div class="login-card">
                 <div style="width:70px; height:70px; border-radius:50%; overflow:hidden; margin:0 auto 12px auto; border:2px solid #ffb3c6;">
-                    <img src="./gif/konata-lucky-star.gif" style="width:100%; height:100%; object-fit:cover;">
+                    <img src="https://raw.githubusercontent.com/nitshianecgo/icq_old/main/gif/konata-lucky-star.gif" style="width:100%; height:100%; object-fit:cover;">
                 </div>
                 <div style="font-weight:bold; color:var(--text-dark); margin-bottom:14px; font-size:14px;">Добро пожаловать!</div>
                 
@@ -650,6 +656,7 @@
             </div>
         </div>
 
+        <!-- Чат -->
         <div id="chat-screen">
             <div class="chat-top-panel">
                 <div class="tabs-bar">
@@ -678,12 +685,14 @@
                         <button class="btn-send-icq" onclick="sendTextMessage()">Send 💌</button>
                     </div>
 
+                    <!-- Панель со смайликами и гифками -->
                     <div class="emoticons-container">
                         <div class="emoji-tabs-bar">
                             <div class="emoji-tab-btn active" id="tab-btn-emoji" onclick="switchEmojiTab('emoji')">Смайлы</div>
                             <div class="emoji-tab-btn" id="tab-btn-gif" onclick="switchEmojiTab('gif')">GIF</div>
                         </div>
 
+                        <!-- Смайлики -->
                         <div class="emoticons-bar" id="emoticons-bar">
                             <span class="emoji-icon" onclick="insertEmoji('😊')">😊</span>
                             <span class="emoji-icon" onclick="insertEmoji('💖')">💖</span>
@@ -697,11 +706,557 @@
                             <span class="emoji-icon" onclick="insertEmoji('🧸')">🧸</span>
                         </div>
 
+                        <!-- Все ваши гифки через прямые ссылки Raw GitHub -->
                         <div class="gifs-grid-bar" id="gifs-grid-bar">
-                            <img src="./gif/42.gif" class="gif-thumb" onclick="sendGif(this.src)">
-                            <img src="./gif/anime-girl.gif" class="gif-thumb" onclick="sendGif(this.src)">
-                            <img src="./gif/anime-pout.gif" class="gif-thumb" onclick="sendGif(this.src)">
-                            <img src="./gif/anime-spy-x-family.gif" class="gif-thumb" onclick="sendGif(this.src)">
-                            <img src="./gif/frenedol.gif" class="gif-thumb" onclick="sendGif(this.src)">
-                            <img src="./gif/frieren-cry-frieren-beyond-journey's-end.gif" class="gif-thumb" onclick="sendGif(this.src)">
-                            <img src="./gif/jujutsu-kaisen-yuji-itadori.gif" class="gif-thumb" onclick="sendGif(this.src
+                            <img src="https://raw.githubusercontent.com/nitshianecgo/icq_old/main/gif/42.gif" class="gif-thumb" onclick="sendGif(this.src)">
+                            <img src="https://raw.githubusercontent.com/nitshianecgo/icq_old/main/gif/anime-girl.gif" class="gif-thumb" onclick="sendGif(this.src)">
+                            <img src="https://raw.githubusercontent.com/nitshianecgo/icq_old/main/gif/anime-pout.gif" class="gif-thumb" onclick="sendGif(this.src)">
+                            <img src="https://raw.githubusercontent.com/nitshianecgo/icq_old/main/gif/anime-spy-x-family.gif" class="gif-thumb" onclick="sendGif(this.src)">
+                            <img src="https://raw.githubusercontent.com/nitshianecgo/icq_old/main/gif/frenedol.gif" class="gif-thumb" onclick="sendGif(this.src)">
+                            <img src="https://raw.githubusercontent.com/nitshianecgo/icq_old/main/gif/frieren-cry-frieren-beyond-journey's-end.gif" class="gif-thumb" onclick="sendGif(this.src)">
+                            <img src="https://raw.githubusercontent.com/nitshianecgo/icq_old/main/gif/jujutsu-kaisen-yuji-itadori.gif" class="gif-thumb" onclick="sendGif(this.src)">
+                            <img src="https://raw.githubusercontent.com/nitshianecgo/icq_old/main/gif/slow-blink-cute-anime-boy.gif" class="gif-thumb" onclick="sendGif(this.src)">
+                            <img src="https://raw.githubusercontent.com/nitshianecgo/icq_old/main/gif/yuji-yuji-itadori.gif" class="gif-thumb" onclick="sendGif(this.src)">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-right-side">
+                    <!-- Аватарка Создателя (Konata) -->
+                    <div class="avatar-box" title="Создатель">
+                        <img src="https://raw.githubusercontent.com/nitshianecgo/icq_old/main/gif/konata-lucky-star.gif" alt="Konata">
+                    </div>
+                    <div class="avatar-info" id="creator-name-tag">Создатель</div>
+
+                    <!-- Окно видео рации -->
+                    <div class="video-stream-box" id="peer-video-container" onclick="toggleFullscreenVideo()">
+                        <div class="video-placeholder" id="video-placeholder">Рация выкл</div>
+                        <video id="peer-video-element" autoplay playsinline style="display:none;"></video>
+                    </div>
+
+                    <!-- Аватарка Собеседника (Yuji Itadori) -->
+                    <div class="avatar-box" title="Подключившийся">
+                        <img src="https://raw.githubusercontent.com/nitshianecgo/icq_old/main/gif/jujutsu-kaisen-yuji-itadori.gif" alt="Yuji">
+                    </div>
+                    <div class="avatar-info" id="joined-name-tag">Собеседник</div>
+                </div>
+            </div>
+
+            <!-- ДВОЙНАЯ ПАНЕЛЬ РАЦИИ -->
+            <div class="ptt-bar">
+                <button id="ptt-button" class="ptt-button" onclick="toggleAudioPTT()">🎙️ РАЦИЯ (ГОЛОС)</button>
+                <button id="vptt-button" class="ptt-button" style="background: linear-gradient(90deg, #a3c4f3 0%, #c8b6ff 100%);" onclick="toggleVideoPTT()">📹 ВИДЕО-РАЦИЯ</button>
+            </div>
+        </div>
+
+        <!-- Модальные окна -->
+        <div id="notes-modal" class="modal-overlay">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <span>📝 Заметки чата</span>
+                    <button class="tool-btn" onclick="closeNotes()">✕</button>
+                </div>
+                <textarea id="notes-text" class="notes-textarea" placeholder="Запишите сюда важную информацию..."></textarea>
+                <button class="btn-green-rounded" style="padding:6px;" onclick="saveNotes()">Сохранить заметку</button>
+            </div>
+        </div>
+
+        <div id="camera-modal" class="modal-overlay">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <span>📷 Сделать фото</span>
+                    <button class="tool-btn" onclick="closeCamera()">✕</button>
+                </div>
+                <video id="camera-video" autoplay playsinline></video>
+                <div style="display:flex; gap:6px;">
+                    <button class="tool-btn" style="flex:1; justify-content:center;" onclick="switchCameraMode()">🔄 Сменить камеру</button>
+                    <button class="btn-green-rounded" style="flex:1; padding:6px;" onclick="takePhotoAndSend()">Сделать снимок</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <audio id="peer-audio-element" autoplay style="display:none;"></audio>
+
+    <script>
+        /* 1. КОНФИГУРАЦИЯ FIREBASE */
+        const firebaseConfig = {
+            apiKey: "AIzaSyDo3LytnfDm-hAPL2RxTpz3VteGmTcSmAc",
+            authDomain: "icqnovpn.firebaseapp.com",
+            databaseURL: "https://icqnovpn-default-rtdb.firebaseio.com",
+            projectId: "icqnovpn",
+            storageBucket: "icqnovpn.firebasestorage.app",
+            messagingSenderId: "624335054201",
+            appId: "1:624335054201:web:69556400be41283b157ba8"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        /* ГЕНЕРАТОР ЗВУКОВ */
+        class AnimeSoundEngine {
+            constructor() { this.ctx = null; }
+            init() {
+                if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            playMsgSound() {
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1318.51, this.ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.3);
+            }
+            playClickSound() {
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, this.ctx.currentTime);
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            }
+        }
+        const audioEngine = new AnimeSoundEngine();
+
+        let myUserId = localStorage.getItem('icq_uid') || 'u_' + Math.random().toString(36).substr(2, 5);
+        localStorage.setItem('icq_uid', myUserId);
+
+        let myUsername = '';
+        let currentRoom = '';
+        let roomRef = null;
+        let signalRef = null;
+        let isVoiceRecording = false, voiceRecorder = null, voiceChunks = [];
+        
+        let cameraStream = null;
+        let cameraFacingMode = 'user';
+
+        let isAudioPTTActive = false;
+        let isVideoPTTActive = false;
+        let peerConnection = null;
+        let localStream = null;
+
+        const rtcServers = {
+            iceServers: [
+                { urls: "stun:stun.l.google.com:19302" },
+                { urls: "stun:stun1.l.google.com:19302" }
+            ]
+        };
+
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const loader = document.getElementById('loading-screen');
+                if (loader) {
+                    loader.style.opacity = '0';
+                    setTimeout(() => { loader.style.display = 'none'; }, 800);
+                }
+            }, 1800);
+
+            const savedUname = localStorage.getItem('icq_uname');
+            const savedRoom = localStorage.getItem('icq_room');
+
+            if (savedUname && savedRoom) {
+                document.getElementById('username-input').value = savedUname;
+                document.getElementById('room-input').value = savedRoom;
+                startSession();
+            }
+        });
+
+        function startSession() {
+            audioEngine.playClickSound();
+            const uname = document.getElementById('username-input').value.trim();
+            const room = document.getElementById('room-input').value.trim();
+
+            if (!uname || !room) return alert("Заполните все поля!");
+
+            myUsername = uname;
+            currentRoom = room.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+
+            localStorage.setItem('icq_uname', myUsername);
+            localStorage.setItem('icq_room', currentRoom);
+
+            const tabRoomEl = document.getElementById('tab-room-name');
+            if (tabRoomEl) tabRoomEl.innerText = currentRoom;
+
+            const headerEl = document.getElementById('app-header-title');
+            if (headerEl) headerEl.innerText = `Anime ICQ — #${currentRoom}`;
+
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('chat-screen').classList.add('active');
+            document.getElementById('exit-btn').style.display = 'block';
+
+            roomRef = database.ref('rooms/' + currentRoom + '/messages');
+            signalRef = database.ref('rooms/' + currentRoom + '/signal/' + myUserId);
+
+            roomRef.limitToLast(50).on('child_added', (snapshot) => {
+                const val = snapshot.val();
+                if (val && val.type) {
+                    renderIncomingMessage(val);
+                }
+            });
+
+            const allSignalsRef = database.ref('rooms/' + currentRoom + '/signal');
+            allSignalsRef.on('child_changed', (snapshot) => {
+                if (snapshot.key !== myUserId) {
+                    handleSignalIncoming(snapshot.val());
+                }
+            });
+            allSignalsRef.on('child_added', (snapshot) => {
+                if (snapshot.key !== myUserId) {
+                    handleSignalIncoming(snapshot.val());
+                }
+            });
+        }
+
+        /* АНИМИРОВАННЫЙ ВЫХОД */
+        function logout() {
+            audioEngine.playClickSound();
+            const logoutScreen = document.getElementById('logout-screen');
+            logoutScreen.style.display = 'flex';
+
+            setTimeout(() => {
+                localStorage.removeItem('icq_uname');
+                localStorage.removeItem('icq_room');
+                location.reload();
+            }, 2200);
+        }
+
+        function sendMessagePayload(data) {
+            if (!roomRef) return;
+            const fullPayload = {
+                id: 'm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                uid: myUserId,
+                sender: myUsername,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                ...data
+            };
+            roomRef.push(fullPayload);
+        }
+
+        function sendTextMessage() {
+            audioEngine.playClickSound();
+            const input = document.getElementById('chat-message-input');
+            const text = input.value.trim();
+            if (!text) return;
+            sendMessagePayload({ type: 'text', content: text });
+            input.value = '';
+        }
+
+        function sendGif(url) {
+            audioEngine.playClickSound();
+            sendMessagePayload({ type: 'image', content: url });
+        }
+
+        function switchEmojiTab(type) {
+            audioEngine.playClickSound();
+            const tabEmoji = document.getElementById('tab-btn-emoji');
+            const tabGif = document.getElementById('tab-btn-gif');
+            const emojiBar = document.getElementById('emoticons-bar');
+            const gifBar = document.getElementById('gifs-grid-bar');
+
+            if (type === 'emoji') {
+                tabEmoji.classList.add('active');
+                tabGif.classList.remove('active');
+                emojiBar.style.display = 'flex';
+                gifBar.style.display = 'none';
+            } else {
+                tabGif.classList.add('active');
+                tabEmoji.classList.remove('active');
+                emojiBar.style.display = 'none';
+                gifBar.style.display = 'flex';
+            }
+        }
+
+        const renderedMsgs = new Set();
+        function renderIncomingMessage(data) {
+            if (data.id && renderedMsgs.has(data.id)) return;
+            if (data.id) renderedMsgs.add(data.id);
+
+            const box = document.getElementById('chat-messages');
+            const isSelf = data.uid === myUserId;
+
+            if (!isSelf) audioEngine.playMsgSound();
+
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'msg-item';
+
+            let contentHTML = '';
+            if (data.type === 'text') contentHTML = escapeHTML(data.content);
+            else if (data.type === 'image') contentHTML = `<img src="${data.content}">`;
+            else if (data.type === 'video') contentHTML = `<video src="${data.content}" controls style="max-width:100%; margin-top:4px;"></video>`;
+            else if (data.type === 'audio') contentHTML = `<audio src="${data.content}" controls style="max-width:200px; margin-top:4px;"></audio>`;
+
+            msgDiv.innerHTML = `
+                <div class="msg-header-text ${isSelf ? 'self' : ''}">${escapeHTML(data.sender)} (${data.timestamp}):</div>
+                <div class="msg-content">${contentHTML}</div>
+            `;
+
+            box.appendChild(msgDiv);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        /* WEBRTC ДВИЖОК */
+        function cleanupPeerConnection() {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            if (peerConnection) {
+                peerConnection.ontrack = null;
+                peerConnection.onicecandidate = null;
+                peerConnection.close();
+                peerConnection = null;
+            }
+            
+            const videoEl = document.getElementById('peer-video-element');
+            const placeholder = document.getElementById('video-placeholder');
+            if (videoEl) {
+                videoEl.style.display = 'none';
+                videoEl.srcObject = null;
+            }
+            if (placeholder) {
+                placeholder.style.display = 'block';
+                placeholder.innerText = 'Рация выкл';
+            }
+        }
+
+        function initPeerConnection() {
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+
+            peerConnection = new RTCPeerConnection(rtcServers);
+
+            peerConnection.ontrack = (event) => {
+                const videoEl = document.getElementById('peer-video-element');
+                const audioEl = document.getElementById('peer-audio-element');
+                const placeholder = document.getElementById('video-placeholder');
+
+                if (event.track.kind === 'video') {
+                    placeholder.style.display = 'none';
+                    videoEl.style.display = 'block';
+                    videoEl.srcObject = event.streams[0];
+                } else if (event.track.kind === 'audio') {
+                    audioEl.srcObject = event.streams[0];
+                }
+            };
+
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    signalRef.set({ type: 'candidate', candidate: JSON.stringify(event.candidate) });
+                }
+            };
+        }
+
+        async function handleSignalIncoming(data) {
+            if (!data) return;
+            
+            if (data.type === 'offer') {
+                initPeerConnection();
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(JSON.parse(data.offer)));
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                signalRef.set({ type: 'answer', answer: JSON.stringify(answer) });
+            } else if (data.type === 'answer' && peerConnection) {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(JSON.parse(data.answer)));
+            } else if (data.type === 'candidate' && peerConnection) {
+                try {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(JSON.parse(data.candidate)));
+                } catch(e) {}
+            } else if (data.type === 'stop') {
+                cleanupPeerConnection();
+            }
+        }
+
+        /* 1. ГОЛОСОВАЯ РАЦИЯ */
+        async function toggleAudioPTT() {
+            audioEngine.playClickSound();
+            const btn = document.getElementById('ptt-button');
+            if (!isAudioPTTActive) {
+                stopPTTAll();
+
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: { echoCancellation: true, noiseSuppression: true } 
+                    });
+
+                    initPeerConnection();
+                    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+                    const offer = await peerConnection.createOffer();
+                    await peerConnection.setLocalDescription(offer);
+                    signalRef.set({ type: 'offer', offer: JSON.stringify(offer) });
+
+                    isAudioPTTActive = true;
+                    btn.classList.add('active');
+                    btn.innerText = '🔴 ВЕЩАНИЕ (АУДИО)';
+                } catch(e) { alert("Ошибка микрофона!"); }
+            } else {
+                stopPTTAll();
+            }
+        }
+
+        /* 2. ВИДЕО-РАЦИЯ */
+        async function toggleVideoPTT() {
+            audioEngine.playClickSound();
+            const btn = document.getElementById('vptt-button');
+            if (!isVideoPTTActive) {
+                stopPTTAll();
+
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { width: 160, height: 120, facingMode: 'user' },
+                        audio: { echoCancellation: true, noiseSuppression: true } 
+                    });
+
+                    initPeerConnection();
+                    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+                    const offer = await peerConnection.createOffer();
+                    await peerConnection.setLocalDescription(offer);
+                    signalRef.set({ type: 'offer', offer: JSON.stringify(offer) });
+
+                    isVideoPTTActive = true;
+                    btn.classList.add('active');
+                    btn.innerText = '🔴 ВЕЩАНИЕ (ВИДЕО)';
+                } catch(e) { alert("Ошибка камеры или микрофона!"); }
+            } else {
+                stopPTTAll();
+            }
+        }
+
+        function stopPTTAll() {
+            cleanupPeerConnection();
+
+            if (signalRef) signalRef.set({ type: 'stop' });
+
+            isAudioPTTActive = false;
+            isVideoPTTActive = false;
+
+            const audioBtn = document.getElementById('ptt-button');
+            const videoBtn = document.getElementById('vptt-button');
+
+            if (audioBtn) {
+                audioBtn.classList.remove('active');
+                audioBtn.innerText = '🎙️ РАЦИЯ (ГОЛОС)';
+            }
+            if (videoBtn) {
+                videoBtn.classList.remove('active');
+                videoBtn.innerText = '📹 ВИДЕО-РАЦИЯ';
+            }
+        }
+
+        function toggleFullscreenVideo() {
+            audioEngine.playClickSound();
+            const container = document.getElementById('peer-video-container');
+            container.classList.toggle('fullscreen');
+        }
+
+        function insertEmoji(emoji) {
+            audioEngine.playClickSound();
+            const input = document.getElementById('chat-message-input');
+            input.value += emoji;
+            input.focus();
+        }
+
+        function handleKeyPress(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTextMessage(); } }
+
+        /* Заметки */
+        function openNotes() {
+            audioEngine.playClickSound();
+            document.getElementById('notes-text').value = localStorage.getItem(`notes_${currentRoom}`) || '';
+            document.getElementById('notes-modal').style.display = 'flex';
+        }
+        function saveNotes() {
+            audioEngine.playClickSound();
+            localStorage.setItem(`notes_${currentRoom}`, document.getElementById('notes-text').value);
+            closeNotes();
+        }
+        function closeNotes() { document.getElementById('notes-modal').style.display = 'none'; }
+
+        /* Камера */
+        async function openCamera() {
+            audioEngine.playClickSound();
+            try {
+                if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
+                cameraStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: cameraFacingMode } 
+                });
+                document.getElementById('camera-video').srcObject = cameraStream;
+                document.getElementById('camera-modal').style.display = 'flex';
+            } catch(e) { alert("Ошибка доступа к камере!"); }
+        }
+
+        function switchCameraMode() {
+            audioEngine.playClickSound();
+            cameraFacingMode = (cameraFacingMode === 'user') ? 'environment' : 'user';
+            openCamera();
+        }
+
+        function takePhotoAndSend() {
+            audioEngine.playClickSound();
+            const videoEl = document.getElementById('camera-video');
+            const canvas = document.createElement('canvas');
+            canvas.width = videoEl.videoWidth || 640;
+            canvas.height = videoEl.videoHeight || 480;
+            canvas.getContext('2d').drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+            sendMessagePayload({ type: 'image', content: canvas.toDataURL('image/jpeg', 0.7) });
+            closeCamera();
+        }
+
+        function closeCamera() { document.getElementById('camera-modal').style.display = 'none'; }
+
+        /* Голосовые сообщения */
+        async function toggleVoiceRecord() {
+            audioEngine.playClickSound();
+            const btn = document.getElementById('rec-btn');
+            if (!isVoiceRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    voiceRecorder = new MediaRecorder(stream);
+                    voiceChunks = [];
+                    voiceRecorder.ondataavailable = e => { if (e.data.size > 0) voiceChunks.push(e.data); };
+                    voiceRecorder.onstop = () => {
+                        const blob = new Blob(voiceChunks, { type: 'audio/webm' });
+                        const reader = new FileReader();
+                        reader.onloadend = () => sendMessagePayload({ type: 'audio', content: reader.result });
+                        reader.readAsDataURL(blob);
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+                    voiceRecorder.start();
+                    isVoiceRecording = true;
+                    btn.innerText = '🔴 Стоп';
+                } catch(e) { alert("Ошибка микрофона"); }
+            } else {
+                isVoiceRecording = false;
+                btn.innerText = '🎤 Голосовое';
+                if (voiceRecorder) voiceRecorder.stop();
+            }
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (evt) => sendMessagePayload({ type: file.type.startsWith('image/') ? 'image' : 'video', content: evt.target.result });
+            reader.readAsDataURL(file);
+            e.target.value = '';
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+        }
+    </script>
+</body>
+</html>
