@@ -3,32 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Anime ICQ Messenger 💕</title>
+    <title>Anime ICQ Messenger 💕 — Master Build</title>
     
     <link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@500;700&display=swap');
-
         :root {
-            --anime-pink-bg: #fff0f5;
-            --anime-main: #ff85a2;
-            --anime-secondary: #ffb3c6;
-            --anime-accent: #a3c4f3;
-            --anime-purple: #c8b6ff;
-            --anime-card: #ffffff;
-            --text-dark: #5c3d46;
+            --color-primary: #5c3d46;
+            --color-pink-bg: #fff0f5;
+            --color-main: #ff85a2;
+            --color-secondary: #ffb3c6;
+            --color-accent: #a3c4f3;
+            --color-purple: #c8b6ff;
+            --color-card-bg: #ffffff;
+            --color-shadow: rgba(255, 133, 162, 0.25);
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Comfortaa', 'Segoe UI', cursive, sans-serif;
+            font-family: 'Comfortaa', 'Roboto', cursive, sans-serif;
             font-size: 11px;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
@@ -47,24 +49,25 @@
 
         .icq-app {
             width: 100%;
-            max-width: 480px;
+            max-width: 500px;
             height: 100%;
             height: 100dvh;
-            background: var(--anime-pink-bg);
-            border: 3px solid #ffb3c6;
+            background: var(--color-pink-bg);
+            border: 3px solid var(--color-secondary);
             border-radius: 16px;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 15px 35px rgba(255, 133, 162, 0.3);
+            box-shadow: 0 15px 35px var(--color-shadow);
             position: relative;
             overflow: hidden;
         }
 
+        /* ⏳ LOADER SCREEN */
         #loading-screen {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: #fff0f5;
-            z-index: 100;
+            background: var(--color-pink-bg);
+            z-index: 1000;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -73,39 +76,32 @@
             padding: 20px;
         }
 
-        .loading-icon {
-            font-size: 40px;
-            margin-bottom: 15px;
-            animation: bounce 1s infinite alternate;
+        .spinner {
+            border: 6px solid #ffe5ec;
+            border-top: 6px solid var(--color-main);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            margin-bottom: 20px;
+            animation: spin 1s linear infinite;
         }
 
-        @keyframes bounce {
-            from { transform: translateY(0); }
-            to { transform: translateY(-10px); }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         .loading-text {
             font-weight: bold;
-            color: var(--text-dark);
+            color: var(--color-primary);
             font-size: 13px;
             letter-spacing: 1px;
         }
 
-        #logout-screen {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: #ffffff;
-            z-index: 500;
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-
+        /* 🧭 ШАПКА */
         .window-titlebar {
-            background: linear-gradient(90deg, #ff85a2 0%, #ffb3c6 100%);
-            padding: 6px 12px;
+            background: linear-gradient(90deg, var(--color-main) 0%, var(--color-secondary) 100%);
+            padding: 8px 12px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -123,7 +119,7 @@
             color: white;
             font-weight: bold;
             font-size: 10px;
-            padding: 3px 10px;
+            padding: 4px 12px;
             border-radius: 12px;
             cursor: pointer;
             box-shadow: 0 2px 5px rgba(255, 77, 109, 0.3);
@@ -132,6 +128,7 @@
 
         .btn-exit:active { transform: scale(0.92); }
 
+        /* 🖥️ ЭКРАН ВХОДА */
         #login-screen {
             display: flex;
             flex-direction: column;
@@ -139,17 +136,18 @@
             align-items: center;
             flex: 1;
             padding: 20px;
-            background: var(--anime-pink-bg);
+            background: var(--color-pink-bg);
+            overflow-y: auto;
         }
 
         .login-card {
-            background: var(--anime-card);
+            background: var(--color-card-bg);
             border: 2px solid #ffccd5;
             border-radius: 16px;
             padding: 25px;
             width: 100%;
-            max-width: 320px;
-            box-shadow: 0 8px 20px rgba(255, 179, 198, 0.25);
+            max-width: 340px;
+            box-shadow: 0 8px 20px var(--color-shadow);
             text-align: center;
         }
 
@@ -162,17 +160,17 @@
             margin-bottom: 14px;
             outline: none;
             font-size: 12px;
-            color: var(--text-dark);
+            color: var(--color-primary);
             background: #fff5f7;
             transition: border-color 0.3s;
         }
 
-        .input-field:focus { border-color: #ff85a2; }
+        .input-field:focus { border-color: var(--color-main); }
 
         .btn-green-rounded {
             width: 100%;
             padding: 10px;
-            background: linear-gradient(90deg, #ff85a2 0%, #c8b6ff 100%);
+            background: linear-gradient(90deg, var(--color-main) 0%, var(--color-purple) 100%);
             border: none;
             border-radius: 20px;
             color: white;
@@ -184,6 +182,17 @@
         }
 
         .btn-green-rounded:active { transform: scale(0.96); }
+
+        /* 💬 ЭКРАН ЧАТА */
+        #chat-screen {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            min-height: 0;
+            background: var(--color-pink-bg);
+        }
+
+        #chat-screen.active { display: flex; }
 
         .chat-top-panel {
             display: flex;
@@ -199,7 +208,7 @@
         }
 
         .tab-item {
-            background: #ff85a2;
+            background: var(--color-main);
             border-radius: 10px 10px 0 0;
             padding: 5px 14px;
             color: white;
@@ -229,22 +238,12 @@
             align-items: center;
             gap: 4px;
             font-weight: bold;
-            color: var(--text-dark);
+            color: var(--color-primary);
             white-space: nowrap;
             transition: all 0.2s;
         }
 
-        .tool-btn:hover { background: #ff85a2; color: white; }
-
-        #chat-screen {
-            display: none;
-            flex: 1;
-            flex-direction: column;
-            min-height: 0;
-            background: var(--anime-pink-bg);
-        }
-
-        #chat-screen.active { display: flex; }
+        .tool-btn:hover { background: var(--color-main); color: white; }
 
         .chat-main-layout {
             display: flex;
@@ -274,23 +273,22 @@
         }
 
         .avatar-box {
-            width: 65px;
-            height: 65px;
-            border: 2px solid #ffb3c6;
+            width: 60px;
+            height: 60px;
+            border: 2px solid var(--color-secondary);
             background: #ffe5ec;
             display: flex;
             align-items: center;
             justify-content: center;
             border-radius: 50%;
-            overflow: hidden;
-            font-size: 28px;
-            box-shadow: 0 4px 8px rgba(255, 179, 198, 0.4);
+            font-size: 24px;
+            box-shadow: 0 4px 8px var(--color-shadow);
         }
 
         .avatar-info {
             font-size: 10px;
             font-weight: bold;
-            color: var(--text-dark);
+            color: var(--color-primary);
             text-align: center;
             word-break: break-all;
             max-width: 95px;
@@ -299,7 +297,7 @@
         .video-stream-box {
             width: 90px;
             height: 90px;
-            border: 2px solid #ff85a2;
+            border: 2px solid var(--color-main);
             background: #2b2d42;
             border-radius: 12px;
             overflow: hidden;
@@ -369,7 +367,7 @@
 
         .msg-content {
             font-size: 11px;
-            color: var(--text-dark);
+            color: var(--color-primary);
             word-break: break-word;
             user-select: text;
             background: #fff0f3;
@@ -394,7 +392,7 @@
             outline: none;
             resize: none;
             font-size: 11px;
-            color: var(--text-dark);
+            color: var(--color-primary);
         }
 
         .input-toolbar {
@@ -405,15 +403,16 @@
 
         .btn-send-icq {
             padding: 6px 20px;
-            background: linear-gradient(90deg, #ff85a2 0%, #ffb3c6 100%);
+            background: linear-gradient(90deg, var(--color-main) 0%, var(--color-secondary) 100%);
             border: none;
             border-radius: 12px;
             font-weight: bold;
             color: #ffffff;
             cursor: pointer;
-            box-shadow: 0 2px 6px rgba(255, 133, 162, 0.4);
+            box-shadow: 0 2px 6px var(--color-shadow);
         }
 
+        /* ЭМОДЗИ И РАЦИЯ */
         .emoticons-container {
             background: #ffffff;
             border: 2px solid #ffccd5;
@@ -452,14 +451,14 @@
         .ptt-button {
             flex: 1;
             padding: 8px;
-            background: linear-gradient(90deg, #ff85a2 0%, #ffb3c6 100%);
+            background: linear-gradient(90deg, var(--color-main) 0%, var(--color-secondary) 100%);
             border: none;
             color: white;
             font-weight: bold;
             border-radius: 12px;
             cursor: pointer;
             text-align: center;
-            box-shadow: 0 3px 8px rgba(255, 133, 162, 0.3);
+            box-shadow: 0 3px 8px var(--color-shadow);
             transition: transform 0.1s, background 0.2s;
         }
 
@@ -473,12 +472,13 @@
             100% { transform: scale(1.02); }
         }
 
+        /* МОДАЛЬНЫЕ ОКНА */
         .modal-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(92, 61, 70, 0.4);
             backdrop-filter: blur(2px);
-            z-index: 200;
+            z-index: 500;
             display: none;
             justify-content: center;
             align-items: center;
@@ -487,7 +487,7 @@
 
         .modal-card {
             background: #ffffff;
-            border: 3px solid #ffb3c6;
+            border: 3px solid var(--color-secondary);
             border-radius: 16px;
             padding: 15px;
             width: 100%;
@@ -495,12 +495,12 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
-            box-shadow: 0 10px 25px rgba(255, 133, 162, 0.3);
+            box-shadow: 0 10px 25px var(--color-shadow);
         }
 
         .modal-header {
             font-weight: bold;
-            color: var(--text-dark);
+            color: var(--color-primary);
             font-size: 13px;
             display: flex;
             justify-content: space-between;
@@ -515,7 +515,7 @@
             padding: 8px;
             outline: none;
             resize: none;
-            color: var(--text-dark);
+            color: var(--color-primary);
         }
 
         #camera-video {
@@ -525,43 +525,62 @@
             border-radius: 10px;
             object-fit: cover;
         }
+
+        /* ИНТЕРАКТИВНЫЙ ТЕСТ XSS */
+        .test-section {
+            background: #fff8fa;
+            border: 2px dashed #ffccd5;
+            border-radius: 10px;
+            padding: 10px;
+            margin-top: 5px;
+        }
+
+        #outputDisplay {
+            margin-top: 8px;
+            padding: 8px;
+            background: #ffffff;
+            border: 1px solid #ffccd5;
+            border-radius: 8px;
+            min-height: 35px;
+            word-break: break-all;
+            color: var(--color-primary);
+        }
     </style>
 </head>
 <body>
 
     <div class="icq-app">
+        <!-- LOADER SCREEN -->
         <div id="loading-screen">
-            <div class="loading-icon">💬</div>
-            <div class="loading-text">Загрузка ICQ Anime... ✨</div>
+            <div class="spinner"></div>
+            <div class="loading-text">Загрузка ICQ Anime Master... ✨</div>
         </div>
 
-        <div id="logout-screen">
-            <div style="font-size: 32px; margin-bottom: 10px;">👋</div>
-            <div style="font-weight:bold; color:var(--text-dark); font-size:13px;">Выход из аккаунта...</div>
-        </div>
-
+        <!-- ШАПКА -->
         <div class="window-titlebar">
             <div class="title-left">
-                <span id="app-header-title">✨ Anime ICQ ✨</span>
+                <span id="app-header-title">✨ Anime ICQ Master ✨</span>
             </div>
             <button id="exit-btn" class="btn-exit" style="display:none;" onclick="logout()">Выйти</button>
         </div>
 
+        <!-- ЭКРАН ВХОДА -->
         <div id="login-screen">
             <div class="login-card">
-                <div style="font-size: 40px; margin-bottom: 12px;">🌸</div>
-                <div style="font-weight:bold; color:var(--text-dark); margin-bottom:14px; font-size:14px;">Добро пожаловать!</div>
+                <div style="font-size: 36px; margin-bottom: 10px;">🌸</div>
+                <div style="font-weight:bold; color:var(--color-primary); margin-bottom:14px; font-size:13px;">Добро пожаловать!</div>
                 
-                <div style="text-align:left; font-weight:bold; margin-bottom:2px; color:var(--text-dark);">Твое имя:</div>
+                <div style="text-align:left; font-weight:bold; margin-bottom:2px; color:var(--color-primary);">Твое имя:</div>
                 <input type="text" id="username-input" class="input-field" placeholder="Например: Sakura" maxlength="16">
 
-                <div style="text-align:left; font-weight:bold; margin-bottom:2px; color:var(--text-dark);">Комната:</div>
+                <div style="text-align:left; font-weight:bold; margin-bottom:2px; color:var(--color-primary);">Комната:</div>
                 <input type="text" id="room-input" class="input-field" placeholder="anime-room" maxlength="20">
 
                 <button class="btn-green-rounded" onclick="startSession()">Войти в чат ✨</button>
             </div>
         </div>
 
+        <!-- ЧАТ -->
         <div id="chat-screen">
             <div class="chat-top-panel">
                 <div class="tabs-bar">
@@ -574,6 +593,7 @@
                 <div class="action-toolbar">
                     <div class="tool-btn" onclick="openNotes()">📝 Заметки</div>
                     <div class="tool-btn" onclick="openCamera()">📷 Камера</div>
+                    <div class="tool-btn" onclick="openTestModal()">🛡️ XSS Тест</div>
                     <div class="tool-btn" onclick="document.getElementById('file-input').click()">📁 Файл</div>
                     <input type="file" id="file-input" accept="image/*,video/*" style="display:none;" onchange="handleFileSelect(event)">
                 </div>
@@ -590,6 +610,7 @@
                         <button class="btn-send-icq" onclick="sendTextMessage()">Send 💌</button>
                     </div>
 
+                    <!-- ПАНЕЛЬ СМАЙЛИКОВ -->
                     <div class="emoticons-container">
                         <div class="emoticons-bar" id="emoticons-bar">
                             <span class="emoji-icon" onclick="insertEmoji('😊')">😊</span>
@@ -610,6 +631,7 @@
                     <div class="avatar-box" title="Создатель">👑</div>
                     <div class="avatar-info" id="creator-name-tag">Создатель</div>
 
+                    <!-- ВИДЕО РАЦИЯ -->
                     <div class="video-stream-box" id="peer-video-container" onclick="toggleFullscreenVideo()">
                         <div class="video-placeholder" id="video-placeholder">Рация выкл</div>
                         <video id="peer-video-element" autoplay playsinline style="display:none;"></video>
@@ -620,12 +642,14 @@
                 </div>
             </div>
 
+            <!-- ПАНЕЛЬ РАЦИИ -->
             <div class="ptt-bar">
                 <button id="ptt-button" class="ptt-button" onclick="toggleAudioPTT()">🎙️ РАЦИЯ (ГОЛОС)</button>
                 <button id="vptt-button" class="ptt-button" style="background: linear-gradient(90deg, #a3c4f3 0%, #c8b6ff 100%);" onclick="toggleVideoPTT()">📹 ВИДЕО-РАЦИЯ</button>
             </div>
         </div>
 
+        <!-- МОДАЛЬНЫЕ ОКНА -->
         <div id="notes-modal" class="modal-overlay">
             <div class="modal-card">
                 <div class="modal-header">
@@ -650,11 +674,26 @@
                 </div>
             </div>
         </div>
+
+        <div id="test-modal" class="modal-overlay">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <span>🛡️ Тест Экранирования HTML</span>
+                    <button class="tool-btn" onclick="closeTestModal()">✕</button>
+                </div>
+                <div class="test-section">
+                    <input type="text" id="userInput" class="input-field" style="margin-bottom:8px;" value="User query <script>alert(1)</script> & '">
+                    <button class="btn-green-rounded" style="padding:6px;" onclick="testEscape()">▶️ Проверить экранирование</button>
+                    <div id="outputDisplay">Результат появится здесь...</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <audio id="peer-audio-element" autoplay style="display:none;"></audio>
 
     <script>
+        /* 1. КОНФИГУРАЦИЯ FIREBASE */
         const firebaseConfig = {
             apiKey: "AIzaSyDo3LytnfDm-hAPL2RxTpz3VteGmTcSmAc",
             authDomain: "icqnovpn.firebaseapp.com",
@@ -668,6 +707,7 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
+        /* ЗВУКОВОЙ ДВИЖОК */
         class AnimeSoundEngine {
             constructor() { this.ctx = null; }
             init() {
@@ -703,6 +743,7 @@
         }
         const audioEngine = new AnimeSoundEngine();
 
+        /* ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ */
         let myUserId = localStorage.getItem('icq_uid') || 'u_' + Math.random().toString(36).substr(2, 5);
         localStorage.setItem('icq_uid', myUserId);
 
@@ -720,19 +761,30 @@
         let peerConnection = null;
         let localStream = null;
 
-        /* УСТОЙЧИВАЯ КОНФИГУРАЦИЯ STUN/TURN ДЛЯ РФ */
+        /* УСТОЙЧИВАЯ КОНФИГУРАЦИЯ STUN/TURN */
         const rtcServers = {
             iceServers: [
                 { urls: "stun:stun.stunprotocol.org:3478" },
                 { urls: "stun:stun.freeswitch.org:3478" },
                 { urls: "stun:stun.voipstunt.com:3478" },
                 { urls: "stun:stun.callwithus.com:3478" },
-                { urls: "stun:stun.12voip.com:3478" },
                 { urls: "stun:stun.services.mozilla.com" }
             ],
             iceTransportPolicy: 'all',
             sdpSemantics: 'unified-plan'
         };
+
+        /* ЭКРАНИРОВАНИЕ ВВОДА (БЕЗОПАСНОСТЬ) */
+        function escapeHTML(str) {
+            if (typeof str !== 'string') return ''; 
+            return str.replace(/[&<>'"]/g, tag => ({ 
+                '&': '&amp;', 
+                '<': '&lt;', 
+                '>': '&gt;', 
+                "'": '&#39;', 
+                '"': '&quot;' 
+            }[tag]));
+        }
 
         window.addEventListener('load', () => {
             setTimeout(() => {
@@ -741,7 +793,7 @@
                     loader.style.opacity = '0';
                     setTimeout(() => { loader.style.display = 'none'; }, 500);
                 }
-            }, 500);
+            }, 600);
 
             const savedUname = localStorage.getItem('icq_uname');
             const savedRoom = localStorage.getItem('icq_room');
@@ -788,27 +840,18 @@
 
             const allSignalsRef = database.ref('rooms/' + currentRoom + '/signal');
             allSignalsRef.on('child_changed', (snapshot) => {
-                if (snapshot.key !== myUserId) {
-                    handleSignalIncoming(snapshot.val());
-                }
+                if (snapshot.key !== myUserId) handleSignalIncoming(snapshot.val());
             });
             allSignalsRef.on('child_added', (snapshot) => {
-                if (snapshot.key !== myUserId) {
-                    handleSignalIncoming(snapshot.val());
-                }
+                if (snapshot.key !== myUserId) handleSignalIncoming(snapshot.val());
             });
         }
 
         function logout() {
             audioEngine.playClickSound();
-            const logoutScreen = document.getElementById('logout-screen');
-            logoutScreen.style.display = 'flex';
-
-            setTimeout(() => {
-                localStorage.removeItem('icq_uname');
-                localStorage.removeItem('icq_room');
-                location.reload();
-            }, 1000);
+            localStorage.removeItem('icq_uname');
+            localStorage.removeItem('icq_room');
+            location.reload();
         }
 
         function sendMessagePayload(data) {
@@ -860,7 +903,7 @@
             box.scrollTop = box.scrollHeight;
         }
 
-        /* WEBRTC ДВИЖОК C АВТОПЕРЕПОДКЛЮЧЕНИЕМ И СТИЖЕНИЕМ ЗАДЕРЖКИ */
+        /* WEBRTC ДВИЖОК РАЦИИ */
         function cleanupPeerConnection() {
             if (localStream) {
                 localStream.getTracks().forEach(track => track.stop());
@@ -924,7 +967,6 @@
 
         async function handleSignalIncoming(data) {
             if (!data) return;
-            
             try {
                 if (data.type === 'offer') {
                     initPeerConnection();
@@ -939,25 +981,18 @@
                 } else if (data.type === 'stop') {
                     cleanupPeerConnection();
                 }
-            } catch(e) { console.error("WebRTC Signaling Error:", e); }
+            } catch(e) { console.error("Signaling Error:", e); }
         }
 
-        /* 1. ГОЛОСОВАЯ РАЦИЯ ВЫСОКОЙ СТАБИЛЬНОСТИ */
         async function toggleAudioPTT() {
             audioEngine.playClickSound();
             const btn = document.getElementById('ptt-button');
             if (!isAudioPTTActive) {
                 stopPTTAll();
-
                 try {
                     localStream = await navigator.mediaDevices.getUserMedia({ 
-                        audio: { 
-                            echoCancellation: true, 
-                            noiseSuppression: true, 
-                            autoGainControl: true 
-                        } 
+                        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } 
                     });
-
                     initPeerConnection();
                     localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
@@ -974,27 +1009,16 @@
             }
         }
 
-        /* 2. ВИДЕО-РАЦИЯ БЕЗ ЗАДЕРЖЕК */
         async function toggleVideoPTT() {
             audioEngine.playClickSound();
             const btn = document.getElementById('vptt-button');
             if (!isVideoPTTActive) {
                 stopPTTAll();
-
                 try {
                     localStream = await navigator.mediaDevices.getUserMedia({ 
-                        video: { 
-                            width: { max: 160 }, 
-                            height: { max: 120 }, 
-                            frameRate: { max: 15 },
-                            facingMode: 'user' 
-                        },
-                        audio: { 
-                            echoCancellation: true, 
-                            noiseSuppression: true 
-                        } 
+                        video: { width: { max: 160 }, height: { max: 120 }, frameRate: { max: 15 }, facingMode: 'user' },
+                        audio: { echoCancellation: true, noiseSuppression: true } 
                     });
-
                     initPeerConnection();
                     localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
@@ -1013,7 +1037,6 @@
 
         function stopPTTAll() {
             cleanupPeerConnection();
-
             if (signalRef) signalRef.set({ type: 'stop' });
 
             isAudioPTTActive = false;
@@ -1034,8 +1057,7 @@
 
         function toggleFullscreenVideo() {
             audioEngine.playClickSound();
-            const container = document.getElementById('peer-video-container');
-            container.classList.toggle('fullscreen');
+            document.getElementById('peer-video-container').classList.toggle('fullscreen');
         }
 
         function insertEmoji(emoji) {
@@ -1045,8 +1067,14 @@
             input.focus();
         }
 
-        function handleKeyPress(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTextMessage(); } }
+        function handleKeyPress(e) { 
+            if (e.key === 'Enter' && !e.shiftKey) { 
+                e.preventDefault(); 
+                sendTextMessage(); 
+            } 
+        }
 
+        /* МОДАЛЬНЫЕ ОКНА И ВСПОМОГАТЕЛЬНЫЕ ИНСТРУМЕНТЫ */
         function openNotes() {
             audioEngine.playClickSound();
             document.getElementById('notes-text').value = localStorage.getItem(`notes_${currentRoom}`) || '';
@@ -1063,9 +1091,7 @@
             audioEngine.playClickSound();
             try {
                 if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
-                cameraStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: cameraFacingMode } 
-                });
+                cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: cameraFacingMode } });
                 document.getElementById('camera-video').srcObject = cameraStream;
                 document.getElementById('camera-modal').style.display = 'flex';
             } catch(e) { alert("Ошибка доступа к камере!"); }
@@ -1088,7 +1114,22 @@
             closeCamera();
         }
 
-        function closeCamera() { document.getElementById('camera-modal').style.display = 'none'; }
+        function closeCamera() { 
+            document.getElementById('camera-modal').style.display = 'none'; 
+            if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
+        }
+
+        function openTestModal() {
+            audioEngine.playClickSound();
+            document.getElementById('test-modal').style.display = 'flex';
+        }
+        function closeTestModal() { document.getElementById('test-modal').style.display = 'none'; }
+
+        function testEscape() {
+            const val = document.getElementById('userInput').value;
+            const outputDisplay = document.getElementById('outputDisplay');
+            outputDisplay.textContent = escapeHTML(val);
+        }
 
         async function toggleVoiceRecord() {
             audioEngine.playClickSound();
@@ -1124,10 +1165,6 @@
             reader.onload = (evt) => sendMessagePayload({ type: file.type.startsWith('image/') ? 'image' : 'video', content: evt.target.result });
             reader.readAsDataURL(file);
             e.target.value = '';
-        }
-
-        function escapeHTML(str) {
-            return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
         }
     </script>
 </body>
