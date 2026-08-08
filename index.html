@@ -790,22 +790,11 @@
   initMicrophone();
 
   /* ============ EXTERNAL STREAMING RADIO (3 TRACKS FROM GITHUB) ============ */
+  /* ============ EXTERNAL STREAMING RADIO ============ */
   const stations = [
-    { 
-      name: 'EXODUS BLUES', 
-      freq: 88.3,  
-      url: 'https://cdn.jsdelivr.net/gh/NitshianecGo/icq_old@main/ExodusBlues.mp3' 
-    },
-    { 
-      name: 'LAST TRAIN TO YAMANTAU', 
-      freq: 96.5,  
-      url: 'https://cdn.jsdelivr.net/gh/NitshianecGo/icq_old@main/LastTraintoYamantau.mp3' 
-    },
-    { 
-      name: 'METRO EXODUS THEME', 
-      freq: 104.1, 
-      url: 'https://cdn.jsdelivr.net/gh/NitshianecGo/icq_old@main/Exodus.mp3' 
-    }
+    { name: 'EXODUS BLUES', freq: 88.3,  url: 'https://raw.githubusercontent.com/NitshianecGo/icq_old/main/ExodusBlues.mp3' },
+    { name: 'LAST TRAIN TO YAMANTAU', freq: 96.5,  url: 'https://raw.githubusercontent.com/NitshianecGo/icq_old/main/LastTraintoYamantau.mp3' },
+    { name: 'METRO EXODUS THEME', freq: 104.1, url: 'https://raw.githubusercontent.com/NitshianecGo/icq_old/main/Exodus.mp3' }
   ];
 
   let currentAudioStream = null;
@@ -827,15 +816,17 @@
     document.getElementById('radio-tuner').value = station.freq;
     document.getElementById('radio-station').textContent = '♪ ' + station.name;
 
-    if (!currentAudioStream) {
-      currentAudioStream = new Audio();
-      currentAudioStream.crossOrigin = "anonymous";
-      currentAudioStream.loop = true;
+    // Полная остановка и сброс предыдущего аудио для стабильной смены трека
+    if (currentAudioStream) {
+      currentAudioStream.pause();
+      currentAudioStream.currentTime = 0;
+      currentAudioStream = null;
     }
-    
-    if (currentAudioStream.src !== station.url) {
-      currentAudioStream.src = station.url;
-    }
+
+    // Создаем новый объект аудио под выбранный трек
+    currentAudioStream = new Audio(station.url);
+    currentAudioStream.crossOrigin = "anonymous";
+    currentAudioStream.loop = true;
 
     currentAudioStream.play().then(() => {
       radio.playing = true;
