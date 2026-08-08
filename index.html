@@ -20,7 +20,7 @@
     --rad-green: 120, 255, 120;
     --rad-green-dim: 90, 180, 90;
     --amber: 255, 176, 66;
-    --glass: rgba(14, 20, 16, 0.55);
+    --glass: rgba(14, 20, 16, 0.65);
     --glass-light: rgba(28, 38, 30, 0.5);
     --text-primary: #dfe8e0;
     --text-dim: #7f8c81;
@@ -146,49 +146,49 @@
   /* ==================== LOBBY / ROOM CREATION ==================== */
   #lobby {
     position: fixed; inset: 0; z-index: 40;
-    display: flex; align-items: center; justify-content: center; padding: 24px;
+    display: flex; align-items: center; justify-content: center; padding: 16px;
     opacity: 0; pointer-events: none; transition: opacity 0.6s var(--ease);
   }
   #lobby.show { opacity: 1; pointer-events: auto; }
-  .lobby-card { width: min(880px, 96vw); max-height: 92vh; overflow-y: auto; display:flex; flex-direction: column; }
-  .lobby-head { padding: 26px 30px 18px; border-bottom: 1px solid rgba(var(--rad-green),0.1); }
-  .lobby-head h1 { font-family:'JetBrains Mono',monospace; font-size: 22px; letter-spacing: 3px; color:#c3d4c5; }
+  .lobby-card { width: min(880px, 100vw); max-height: 94vh; overflow-y: auto; display:flex; flex-direction: column; }
+  .lobby-head { padding: 20px 24px 14px; border-bottom: 1px solid rgba(var(--rad-green),0.1); }
+  .lobby-head h1 { font-family:'JetBrains Mono',monospace; font-size: clamp(18px, 4vw, 22px); letter-spacing: 2px; color:#c3d4c5; }
   .lobby-head h1 .accent { color: rgb(var(--rad-green)); }
-  .lobby-head p { margin-top:8px; font-family:'JetBrains Mono',monospace; font-size: 11px; letter-spacing: 2px; color: var(--text-dim); }
+  .lobby-head p { margin-top:6px; font-family:'JetBrains Mono',monospace; font-size: 10px; letter-spacing: 1.5px; color: var(--text-dim); }
   .lobby-body { display:grid; grid-template-columns: 1.1fr 1fr; gap: 0; min-height: 0; }
   @media (max-width: 720px){ .lobby-body { grid-template-columns: 1fr; } }
-  .lobby-form { padding: 26px 30px; display:flex; flex-direction: column; gap: 20px; }
-  .field-label { font-family:'JetBrains Mono',monospace; font-size: 11px; letter-spacing: 2px; color: rgb(var(--rad-green-dim)); margin-bottom: 9px; display:flex; align-items:center; gap:8px; }
+  .lobby-form { padding: 20px 24px; display:flex; flex-direction: column; gap: 16px; }
+  .field-label { font-family:'JetBrains Mono',monospace; font-size: 11px; letter-spacing: 2px; color: rgb(var(--rad-green-dim)); margin-bottom: 8px; display:flex; align-items:center; gap:8px; }
   .lobby-input {
-    width:100%; padding: 14px 16px; border-radius: 12px; background: rgba(0,0,0,0.35);
+    width:100%; padding: 12px 14px; border-radius: 12px; background: rgba(0,0,0,0.35);
     border: 1px solid rgba(var(--rad-green),0.14); color: var(--text-primary);
     font-family:'JetBrains Mono',monospace; font-size: 16px; letter-spacing: 1px; outline: none; transition: all 0.3s var(--ease);
   }
   .lobby-input:focus { border-color: rgba(var(--rad-green),0.45); box-shadow: 0 0 26px -8px rgba(var(--rad-green),0.6); }
   .lobby-input::placeholder { color: var(--text-ghost); }
-  .freq-dial { display:flex; align-items:center; gap:14px; }
-  .freq-read { font-family:'JetBrains Mono',monospace; font-size: 22px; font-weight:700; color: rgb(var(--rad-green)); text-shadow: 0 0 16px rgba(var(--rad-green),0.5); min-width: 118px; }
+  .freq-dial { display:flex; align-items:center; gap:12px; }
+  .freq-read { font-family:'JetBrains Mono',monospace; font-size: 20px; font-weight:700; color: rgb(var(--rad-green)); text-shadow: 0 0 16px rgba(var(--rad-green),0.5); min-width: 105px; }
   .freq-read small { font-size: 11px; color: var(--text-dim); font-weight:400; }
   input[type=range].tuner { -webkit-appearance:none; appearance:none; flex:1; height: 6px; border-radius: 20px; background: linear-gradient(90deg, rgba(var(--rad-green),0.4), rgba(var(--rust-light),0.4)); outline:none; }
   input[type=range].tuner::-webkit-slider-thumb { -webkit-appearance:none; width:24px; height:24px; border-radius:50%; background: radial-gradient(circle at 35% 30%, #d8e6d8, #7f9a80); border:2px solid rgb(var(--rad-green)); box-shadow: 0 0 14px rgba(var(--rad-green),0.7); cursor:pointer; }
   .enter-btn {
-    margin-top: 4px; width:100%; padding: 16px; border:none; cursor:pointer; border-radius: 14px;
-    font-family:'JetBrains Mono',monospace; font-weight:700; font-size: 14px; letter-spacing: 3px; color:#06120a;
+    margin-top: 2px; width:100%; padding: 14px; border:none; cursor:pointer; border-radius: 14px;
+    font-family:'JetBrains Mono',monospace; font-weight:700; font-size: 13px; letter-spacing: 2.5px; color:#06120a;
     background: linear-gradient(135deg, rgb(var(--rad-green)), rgb(var(--rad-green-dim)));
     box-shadow: 0 0 30px -6px rgba(var(--rad-green),0.7); transition: all 0.3s var(--ease);
     display:flex; align-items:center; justify-content:center; gap:10px;
   }
   .enter-btn:hover { transform: translateY(-2px); box-shadow: 0 0 40px 0 rgba(var(--rad-green),0.9); }
   .enter-btn:active { transform: scale(0.98); }
-  .enter-btn svg { width:20px; height:20px; }
-  .lobby-rooms { padding: 26px 30px; border-left: 1px solid rgba(var(--rad-green),0.1); background: rgba(0,0,0,0.18); overflow-y:auto; }
+  .enter-btn svg { width:18px; height:18px; }
+  .lobby-rooms { padding: 20px 24px; border-left: 1px solid rgba(var(--rad-green),0.1); background: rgba(0,0,0,0.18); overflow-y:auto; }
   @media (max-width: 720px){ .lobby-rooms { border-left:none; border-top:1px solid rgba(var(--rad-green),0.1); } }
-  .lobby-rooms h3 { font-family:'JetBrains Mono',monospace; font-size: 11px; letter-spacing: 2px; color: var(--text-dim); margin-bottom: 14px; }
-  .room-item { display:flex; align-items:center; gap: 12px; padding: 12px 14px; border-radius: 12px; cursor:pointer; border:1px solid transparent; transition: all 0.3s var(--ease); margin-bottom: 6px; }
+  .lobby-rooms h3 { font-family:'JetBrains Mono',monospace; font-size: 10px; letter-spacing: 2px; color: var(--text-dim); margin-bottom: 12px; }
+  .room-item { display:flex; align-items:center; gap: 12px; padding: 10px 12px; border-radius: 12px; cursor:pointer; border:1px solid transparent; transition: all 0.3s var(--ease); margin-bottom: 6px; }
   .room-item:hover { background: rgba(var(--rad-green),0.06); border-color: rgba(var(--rad-green),0.2); transform: translateX(3px); }
-  .room-freq { font-family:'JetBrains Mono',monospace; font-weight:700; font-size: 14px; color: rgb(var(--rad-green)); min-width: 66px; }
-  .room-info .rn { font-size: 13px; font-weight:600; color: var(--text-primary); }
-  .room-info .rm { font-size: 11px; color: var(--text-dim); font-family:'JetBrains Mono',monospace; margin-top:2px; }
+  .room-freq { font-family:'JetBrains Mono',monospace; font-weight:700; font-size: 13px; color: rgb(var(--rad-green)); min-width: 58px; }
+  .room-info .rn { font-size: 12px; font-weight:600; color: var(--text-primary); }
+  .room-info .rm { font-size: 10px; color: var(--text-dim); font-family:'JetBrains Mono',monospace; margin-top:2px; }
 
   /* ==================== HERMETIC BLAST DOOR ==================== */
   #airlock { position: fixed; inset: 0; z-index: 90; pointer-events: none; display: none; }
@@ -229,138 +229,195 @@
   /* ==================== APP SHELL ==================== */
   #app {
     position: relative; z-index: 10; height: 100vh; height: 100dvh;
-    display: grid; grid-template-columns: 1fr; gap: 14px; padding: 12px;
+    display: grid; grid-template-columns: 1fr; gap: 10px; padding: 8px;
     opacity: 0; pointer-events: none; transition: opacity 0.5s var(--ease);
   }
   @media(min-width: 820px) {
-    #app { grid-template-columns: 320px 1fr; padding: 18px; gap: 18px; }
+    #app { grid-template-columns: 320px 1fr; padding: 16px; gap: 16px; }
   }
   #app.show { opacity: 1; pointer-events: auto; }
 
   #sidebar { display: none; flex-direction: column; overflow: hidden; }
   @media(min-width: 820px) { #sidebar { display: flex; } }
-  .brand { padding: 20px 22px 14px; border-bottom: 1px solid rgba(var(--rad-green), 0.1); }
-  .brand h1 { font-family:'JetBrains Mono',monospace; font-size: 19px; font-weight: 700; letter-spacing: 2px; color: #b8c9ba; }
+  .brand { padding: 18px 20px 12px; border-bottom: 1px solid rgba(var(--rad-green), 0.1); }
+  .brand h1 { font-family:'JetBrains Mono',monospace; font-size: 18px; font-weight: 700; letter-spacing: 2px; color: #b8c9ba; }
   .brand h1 .accent { color: rgb(var(--rad-green)); }
-  .brand p { margin-top: 6px; font-size: 11px; letter-spacing: 1.2px; color: var(--text-dim); font-family:'JetBrains Mono',monospace; display: flex; align-items: center; gap: 7px; }
-  .brand .chan { margin-top: 8px; font-family:'JetBrains Mono',monospace; font-size: 11px; color: rgb(var(--rad-green-dim)); letter-spacing:1px; }
+  .brand p { margin-top: 6px; font-size: 10px; letter-spacing: 1px; color: var(--text-dim); font-family:'JetBrains Mono',monospace; display: flex; align-items: center; gap: 6px; }
+  .brand .chan { margin-top: 6px; font-family:'JetBrains Mono',monospace; font-size: 10px; color: rgb(var(--rad-green-dim)); letter-spacing:1px; }
 
-  .search { margin: 14px 16px 6px; display: flex; align-items: center; gap: 8px; padding: 9px 12px; background: rgba(0,0,0,0.28); border: 1px solid rgba(var(--rad-green), 0.1); border-radius: 12px; }
+  .search { margin: 12px 14px 6px; display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: rgba(0,0,0,0.28); border: 1px solid rgba(var(--rad-green), 0.1); border-radius: 12px; }
   .search input { background: none; border: none; outline: none; color: var(--text-primary); font-size: 13px; width: 100%; font-family: 'Inter', sans-serif; }
   .search input::placeholder { color: var(--text-ghost); }
 
-  .contacts { flex: 1; overflow-y: auto; padding: 10px; }
-  .contacts::-webkit-scrollbar, .messages::-webkit-scrollbar, .lobby-rooms::-webkit-scrollbar { width: 6px; }
+  .contacts { flex: 1; overflow-y: auto; padding: 8px; }
+  .contacts::-webkit-scrollbar, .messages::-webkit-scrollbar, .lobby-rooms::-webkit-scrollbar { width: 5px; }
   .contacts::-webkit-scrollbar-thumb, .messages::-webkit-scrollbar-thumb, .lobby-rooms::-webkit-scrollbar-thumb { background: rgba(var(--rad-green), 0.2); border-radius: 3px; }
 
-  .contact { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 14px; cursor: pointer; transition: all 0.35s var(--ease); border: 1px solid transparent; }
+  .contact { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 12px; cursor: pointer; transition: all 0.35s var(--ease); border: 1px solid transparent; }
   .contact:hover { background: rgba(var(--rad-green), 0.06); transform: translateX(3px); }
   .contact.active { background: rgba(var(--rad-green), 0.1); border-color: rgba(var(--rad-green), 0.25); box-shadow: inset 0 0 20px rgba(var(--rad-green), 0.08); }
-  .avatar { width: 44px; height: 44px; border-radius: 13px; flex-shrink: 0; display: grid; place-items: center; font-family:'JetBrains Mono',monospace; font-weight: 700; font-size: 15px; color: #0a0e0c; background: linear-gradient(135deg, var(--rust-light), var(--rust)); box-shadow: inset 0 0 12px rgba(0,0,0,0.4); position: relative; }
-  .avatar.on::after { content:""; position:absolute; right:-2px; bottom:-2px; width:12px; height:12px; border-radius:50%; background: rgb(var(--rad-green)); border: 2px solid var(--bg-deep); box-shadow: 0 0 6px rgba(var(--rad-green),0.9); }
+  .avatar { width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0; display: grid; place-items: center; font-family:'JetBrains Mono',monospace; font-weight: 700; font-size: 14px; color: #0a0e0c; background: linear-gradient(135deg, var(--rust-light), var(--rust)); box-shadow: inset 0 0 10px rgba(0,0,0,0.4); position: relative; }
+  .avatar.on::after { content:"0"; position:absolute; right:-2px; bottom:-2px; width:10px; height:10px; border-radius:50%; background: rgb(var(--rad-green)); border: 2px solid var(--bg-deep); box-shadow: 0 0 5px rgba(var(--rad-green),0.9); }
   .contact .meta { flex: 1; min-width: 0; }
-  .contact .name { font-size: 14px; font-weight: 600; color: var(--text-primary); display:flex; justify-content: space-between; }
-  .contact .name span { font-size: 10px; color: var(--text-ghost); font-family:'JetBrains Mono',monospace; font-weight:400; }
-  .contact .preview { font-size: 12px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px; }
+  .contact .name { font-size: 13px; font-weight: 600; color: var(--text-primary); display:flex; justify-content: space-between; }
+  .contact .name span { font-size: 9px; color: var(--text-ghost); font-family:'JetBrains Mono',monospace; font-weight:400; }
+  .contact .preview { font-size: 11px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
 
-  #chat { display: flex; flex-direction: column; overflow: hidden; }
-  .chat-header { padding: 14px 18px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(var(--rad-green), 0.1); }
-  .chat-header .name { font-size: 15px; font-weight: 700; letter-spacing: 0.5px; }
-  .chat-header .status { font-size: 10px; color: rgb(var(--rad-green-dim)); font-family:'JetBrains Mono',monospace; margin-top:2px; }
-  .header-actions { margin-left: auto; display:flex; align-items:center; gap: 8px; }
-  .enc { font-size: 10px; letter-spacing: 1.2px; color: var(--text-dim); font-family:'JetBrains Mono',monospace; padding: 6px 12px; border-radius: 20px; border: 1px solid rgba(var(--rad-green), 0.18); background: rgba(var(--rad-green), 0.04); display: flex; align-items: center; gap: 6px; }
+  #chat { display: flex; flex-direction: column; overflow: hidden; width: 100%; min-width: 0; }
+  
+  /* ИСПРАВЛЕННАЯ АДАПТАЦИЯ ШАПКИ ЧАТА ДЛЯ МОБИЛЬНЫХ */
+  .chat-header {
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid rgba(var(--rad-green), 0.1);
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+  .chat-header-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .chat-header .name {
+    font-size: clamp(13px, 3.5vw, 15px);
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .chat-header .status {
+    font-size: 9px;
+    color: rgb(var(--rad-green-dim));
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .enc {
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    padding: 4px 8px;
+    border-radius: 16px;
+    border: 1px solid rgba(var(--rad-green), 0.18);
+    background: rgba(var(--rad-green), 0.04);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
   @media (max-width: 900px){ .enc { display:none; } }
   
   .copy-link-btn, .exit-door {
-    display:flex; align-items:center; gap:7px; padding: 7px 12px; border-radius: 12px; cursor:pointer;
-    font-family:'JetBrains Mono',monospace; font-size: 10px; letter-spacing: 1.2px; color: rgb(var(--amber));
-    background: rgba(255,176,66,0.06); border: 1px solid rgba(255,176,66,0.25); transition: all 0.3s var(--ease);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: rgb(var(--amber));
+    background: rgba(255, 176, 66, 0.06);
+    border: 1px solid rgba(255, 176, 66, 0.25);
+    transition: all 0.3s var(--ease);
+    white-space: nowrap;
   }
-  .copy-link-btn:hover, .exit-door:hover { background: rgba(255,176,66,0.14); box-shadow: 0 0 22px -6px rgba(255,176,66,0.6); transform: translateY(-1px); }
-  .copy-link-btn svg, .exit-door svg { width: 16px; height: 16px; }
+  .copy-link-btn:hover, .exit-door:hover { background: rgba(255,176,66,0.14); box-shadow: 0 0 18px -4px rgba(255,176,66,0.6); transform: translateY(-1px); }
+  .copy-link-btn svg, .exit-door svg { width: 13px; height: 13px; }
 
-  .messages { flex: 1; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 12px; -webkit-overflow-scrolling: touch; }
-  .bubble { max-width: 78%; padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.5; position: relative; animation: msgIn 0.5s var(--ease); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-  @keyframes msgIn { from { opacity: 0; transform: translateY(14px) scale(0.96); } to { opacity: 1; transform: none; } }
-  .bubble .time { display:block; margin-top:6px; font-size:10px; color: var(--text-ghost); font-family:'JetBrains Mono',monospace; }
-  .bubble.them { align-self: flex-start; background: var(--glass-light); border: 1px solid rgba(var(--rad-green), 0.1); border-bottom-left-radius: 6px; color: var(--text-primary); }
-  .bubble.me { align-self: flex-end; background: linear-gradient(135deg, rgba(var(--rad-green), 0.16), rgba(var(--rad-green-dim), 0.08)); border: 1px solid rgba(var(--rad-green), 0.3); border-bottom-right-radius: 6px; box-shadow: 0 0 26px -8px rgba(var(--rad-green), 0.5); color: #eafbe9; }
+  .messages { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; -webkit-overflow-scrolling: touch; }
+  .bubble { max-width: 82%; padding: 10px 14px; border-radius: 16px; font-size: 13px; line-height: 1.45; position: relative; animation: msgIn 0.5s var(--ease); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); word-break: break-word; }
+  @keyframes msgIn { from { opacity: 0; transform: translateY(12px) scale(0.96); } to { opacity: 1; transform: none; } }
+  .bubble .time { display:block; margin-top:4px; font-size:9px; color: var(--text-ghost); font-family:'JetBrains Mono',monospace; }
+  .bubble.them { align-self: flex-start; background: var(--glass-light); border: 1px solid rgba(var(--rad-green), 0.1); border-bottom-left-radius: 4px; color: var(--text-primary); }
+  .bubble.me { align-self: flex-end; background: linear-gradient(135deg, rgba(var(--rad-green), 0.16), rgba(var(--rad-green-dim), 0.08)); border: 1px solid rgba(var(--rad-green), 0.3); border-bottom-right-radius: 4px; box-shadow: 0 0 22px -6px rgba(var(--rad-green), 0.5); color: #eafbe9; }
   .bubble.pulse { animation: bubblePulse 0.6s var(--ease); }
-  @keyframes bubblePulse { 0% { box-shadow: 0 0 0 0 rgba(var(--rad-green), 0.55); } 100% { box-shadow: 0 0 34px 4px rgba(var(--rad-green), 0); } }
-  .day-sep { align-self: center; font-size: 10px; letter-spacing: 2px; color: var(--text-ghost); font-family:'JetBrains Mono',monospace; padding: 4px 0; }
+  @keyframes bubblePulse { 0% { box-shadow: 0 0 0 0 rgba(var(--rad-green), 0.55); } 100% { box-shadow: 0 0 30px 4px rgba(var(--rad-green), 0); } }
+  .day-sep { align-self: center; font-size: 9px; letter-spacing: 1.5px; color: var(--text-ghost); font-family:'JetBrains Mono',monospace; padding: 2px 0; }
 
-  .voice { display:flex; align-items:center; gap: 12px; min-width: 190px; }
-  .voice .play { width: 36px; height: 36px; border-radius: 50%; flex-shrink:0; border:none; cursor:pointer; display:grid; place-items:center; background: rgba(var(--rad-green),0.18); border:1px solid rgba(var(--rad-green),0.4); color: rgb(var(--rad-green)); transition: all 0.3s var(--ease); }
+  .voice { display:flex; align-items:center; gap: 10px; min-width: 175px; }
+  .voice .play { width: 32px; height: 32px; border-radius: 50%; flex-shrink:0; border:none; cursor:pointer; display:grid; place-items:center; background: rgba(var(--rad-green),0.18); border:1px solid rgba(var(--rad-green),0.4); color: rgb(var(--rad-green)); transition: all 0.3s var(--ease); }
   .voice .play:hover { background: rgba(var(--rad-green),0.3); }
-  .voice .play svg { width:15px; height:15px; }
-  .voice .wave { flex:1; display:flex; align-items:center; gap: 3px; height: 30px; }
+  .voice .play svg { width:13px; height:13px; }
+  .voice .wave { flex:1; display:flex; align-items:center; gap: 2.5px; height: 26px; }
   .voice .wave i { flex:1; background: rgba(var(--rad-green),0.5); border-radius: 2px; min-width:2px; }
   .voice.playing .wave i { animation: eq 0.7s ease-in-out infinite alternate; }
   @keyframes eq { from { transform: scaleY(0.35); } to { transform: scaleY(1); } }
-  .voice .dur { font-family:'JetBrains Mono',monospace; font-size: 11px; color: var(--text-dim); }
-  .voice .kind { font-family:'JetBrains Mono',monospace; font-size: 9px; letter-spacing:1px; color: rgb(var(--rad-green-dim)); display:block; margin-bottom:2px; }
+  .voice .dur { font-family:'JetBrains Mono',monospace; font-size: 10px; color: var(--text-dim); }
+  .voice .kind { font-family:'JetBrains Mono',monospace; font-size: 8px; letter-spacing:0.8px; color: rgb(var(--rad-green-dim)); display:block; margin-bottom:1px; }
 
-  .composer { padding: 12px 16px; display: flex; align-items: center; gap: 8px; border-top: 1px solid rgba(var(--rad-green), 0.1); background: rgba(0,0,0,0.15); }
-  .composer .field { flex: 1; display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: rgba(0,0,0,0.3); border: 1px solid rgba(var(--rad-green), 0.12); border-radius: 16px; transition: all 0.35s var(--ease); }
-  .composer .field:focus-within { border-color: rgba(var(--rad-green), 0.4); box-shadow: 0 0 26px -8px rgba(var(--rad-green), 0.5); }
-  .composer input { flex: 1; background: none; border: none; outline: none; color: var(--text-primary); font-size: 16px; font-family: 'Inter', sans-serif; }
+  .composer { padding: 10px 12px; display: flex; align-items: center; gap: 6px; border-top: 1px solid rgba(var(--rad-green), 0.1); background: rgba(0,0,0,0.15); }
+  .composer .field { flex: 1; display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(var(--rad-green), 0.12); border-radius: 14px; transition: all 0.35s var(--ease); min-width: 0; }
+  .composer .field:focus-within { border-color: rgba(var(--rad-green), 0.4); box-shadow: 0 0 22px -6px rgba(var(--rad-green), 0.5); }
+  .composer input { flex: 1; background: none; border: none; outline: none; color: var(--text-primary); font-size: 16px; font-family: 'Inter', sans-serif; min-width: 0; }
   .composer input::placeholder { color: var(--text-ghost); }
-  .composer .field.recording { border-color: rgba(255,80,80,0.6); box-shadow: 0 0 26px -8px rgba(255,80,80,0.6); }
-  .rec-ind { display:none; align-items:center; gap:10px; flex:1; font-family:'JetBrains Mono',monospace; font-size:12px; color:#ff8a8a; }
+  .composer .field.recording { border-color: rgba(255,80,80,0.6); box-shadow: 0 0 22px -6px rgba(255,80,80,0.6); }
+  .rec-ind { display:none; align-items:center; gap:8px; flex:1; font-family:'JetBrains Mono',monospace; font-size:11px; color:#ff8a8a; }
   .field.recording .rec-ind { display:flex; }
   .field.recording input { display:none; }
-  .rec-ind .rdot { width:10px; height:10px; border-radius:50%; background:#ff5050; box-shadow:0 0 10px #ff5050; animation: pulse 1s infinite; }
+  .rec-ind .rdot { width:8px; height:8px; border-radius:50%; background:#ff5050; box-shadow:0 0 8px #ff5050; animation: pulse 1s infinite; }
 
-  .send-btn { width: 46px; height: 46px; border-radius: 14px; border: none; cursor: pointer; display: grid; place-items: center; background: linear-gradient(135deg, rgb(var(--rad-green)), rgb(var(--rad-green-dim))); color: #06120a; box-shadow: 0 0 20px -4px rgba(var(--rad-green), 0.6); transition: all 0.3s var(--ease); flex-shrink: 0; }
-  .send-btn svg { width: 20px; height: 20px; }
+  .send-btn { width: 40px; height: 40px; border-radius: 12px; border: none; cursor: pointer; display: grid; place-items: center; background: linear-gradient(135deg, rgb(var(--rad-green)), rgb(var(--rad-green-dim))); color: #06120a; box-shadow: 0 0 16px -3px rgba(var(--rad-green), 0.6); transition: all 0.3s var(--ease); flex-shrink: 0; }
+  .send-btn svg { width: 17px; height: 17px; }
 
-  .icon-btn { width: 44px; height: 44px; border-radius: 14px; background: rgba(0,0,0,0.28); border: 1px solid rgba(var(--rad-green),0.12); cursor: pointer; color: var(--text-dim); display: grid; place-items: center; transition: all 0.3s var(--ease); flex-shrink:0; }
+  .icon-btn { width: 40px; height: 40px; border-radius: 12px; background: rgba(0,0,0,0.28); border: 1px solid rgba(var(--rad-green),0.12); cursor: pointer; color: var(--text-dim); display: grid; place-items: center; transition: all 0.3s var(--ease); flex-shrink:0; }
   .icon-btn:hover { color: rgb(var(--rad-green)); border-color: rgba(var(--rad-green),0.3); }
   .icon-btn.active { color: rgb(var(--rad-green)); border-color: rgba(var(--rad-green),0.4); background: rgba(var(--rad-green),0.1); }
-  .icon-btn svg { width: 18px; height: 18px; }
+  .icon-btn svg { width: 16px; height: 16px; }
   .ptt-btn { position: relative; overflow: hidden; }
-  .ptt-btn.transmitting { color:#ff9a4a; border-color: rgba(255,176,66,0.6); background: rgba(255,176,66,0.14); box-shadow: 0 0 26px -4px rgba(255,176,66,0.7); }
-  .ptt-btn.transmitting::after { content:""; position:absolute; inset:0; border-radius:14px; border:2px solid rgba(255,176,66,0.6); animation: pttRing 0.9s ease-out infinite; }
+  .ptt-btn.transmitting { color:#ff9a4a; border-color: rgba(255,176,66,0.6); background: rgba(255,176,66,0.14); box-shadow: 0 0 22px -4px rgba(255,176,66,0.7); }
+  .ptt-btn.transmitting::after { content:""; position:absolute; inset:0; border-radius:12px; border:2px solid rgba(255,176,66,0.6); animation: pttRing 0.9s ease-out infinite; }
   @keyframes pttRing { from { transform: scale(0.8); opacity:0.8; } to { transform: scale(1.6); opacity:0; } }
 
   #ptt-overlay { position: fixed; inset:0; z-index: 55; display:none; align-items:center; justify-content:center; background: radial-gradient(ellipse at 50% 50%, rgba(20,12,4,0.6), rgba(4,6,5,0.85)); }
   #ptt-overlay.show { display:flex; }
-  .ptt-panel { text-align:center; }
-  .ptt-panel .lbl { font-family:'JetBrains Mono',monospace; letter-spacing:4px; color: rgb(var(--amber)); font-size: 14px; text-shadow: 0 0 16px rgba(255,176,66,0.6); }
-  .ptt-panel .sub { font-family:'JetBrains Mono',monospace; font-size:11px; color: var(--text-dim); letter-spacing:2px; margin-top:8px; }
-  .ptt-wave { display:flex; align-items:center; justify-content:center; gap:5px; height:70px; margin: 18px 0; }
-  .ptt-wave i { width:5px; background: rgb(var(--amber)); border-radius: 3px; box-shadow: 0 0 10px rgba(255,176,66,0.6); animation: pttEq 0.5s ease-in-out infinite alternate; }
-  @keyframes pttEq { from { height: 8px; } to { height: 60px; } }
+  .ptt-panel { text-align:center; padding: 20px; }
+  .ptt-panel .lbl { font-family:'JetBrains Mono',monospace; letter-spacing:3px; color: rgb(var(--amber)); font-size: 13px; text-shadow: 0 0 14px rgba(255,176,66,0.6); }
+  .ptt-wave { display:flex; align-items:center; justify-content:center; gap:4px; height:60px; margin: 14px 0; }
+  .ptt-wave i { width:4px; background: rgb(var(--amber)); border-radius: 2px; box-shadow: 0 0 8px rgba(255,176,66,0.6); animation: pttEq 0.5s ease-in-out infinite alternate; }
+  @keyframes pttEq { from { height: 6px; } to { height: 50px; } }
+  .ptt-panel .sub { font-family:'JetBrains Mono',monospace; font-size:10px; color: var(--text-dim); letter-spacing:1.5px; }
 
-  /* ==================== RADIO WIDGET ==================== */
+  /* ==================== RADIO WIDGET (ADAPTED FOR ALL SCREENS) ==================== */
   #radio {
-    position: fixed; left: 16px; bottom: 16px; z-index: 30; width: 280px; padding: 14px;
-    opacity: 0; pointer-events:none; transform: translateY(10px); transition: all 0.5s var(--ease);
+    position: fixed; left: 12px; bottom: 70px; z-index: 30; width: 260px; padding: 12px;
+    opacity: 0; pointer-events: none; transform: translateY(10px); transition: all 0.5s var(--ease);
   }
-  @media(max-width: 820px) {
-    #radio { display: none; }
+  @media(min-width: 820px) {
+    #radio { bottom: 16px; width: 280px; padding: 14px; }
   }
-  #radio.show { opacity:1; pointer-events:auto; transform:none; }
-  .radio-top { display:flex; align-items:center; justify-content:space-between; margin-bottom: 10px; }
-  .radio-title { font-family:'JetBrains Mono',monospace; font-size: 11px; letter-spacing: 2px; color: var(--text-dim); display:flex; align-items:center; gap:8px; }
-  .radio-fold { background:none; border:none; color: var(--text-dim); cursor:pointer; font-family:'JetBrains Mono',monospace; font-size:16px; line-height:1; padding:2px 6px; }
+  #radio.show { opacity: 1; pointer-events: auto; transform: none; }
+  .radio-top { display:flex; align-items:center; justify-content:space-between; margin-bottom: 8px; }
+  .radio-title { font-family:'JetBrains Mono',monospace; font-size: 10px; letter-spacing: 1.5px; color: var(--text-dim); display:flex; align-items:center; gap:6px; }
+  .radio-fold { background:none; border:none; color: var(--text-dim); cursor:pointer; font-family:'JetBrains Mono',monospace; font-size:15px; line-height:1; padding:2px 6px; }
   .radio-fold:hover { color: rgb(var(--rad-green)); }
   #radio.folded .radio-body { display:none; }
-  .radio-display { background: rgba(0,0,0,0.45); border:1px solid rgba(var(--rad-green),0.14); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
-  .radio-freq { font-family:'JetBrains Mono',monospace; font-size: 24px; font-weight:700; color: rgb(var(--rad-green)); text-shadow: 0 0 16px rgba(var(--rad-green),0.5); }
-  .radio-freq small { font-size: 11px; color: var(--text-dim); font-weight:400; }
-  .radio-station { font-family:'JetBrains Mono',monospace; font-size: 10px; letter-spacing: 1px; color: rgb(var(--amber)); margin-top: 4px; min-height: 14px; }
-  .radio-eq { display:flex; align-items:flex-end; gap:3px; height: 18px; margin-top: 6px; }
-  .radio-eq i { flex:1; background: rgba(var(--rad-green),0.5); border-radius:2px; height: 4px; }
+  .radio-display { background: rgba(0,0,0,0.45); border:1px solid rgba(var(--rad-green),0.14); border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; }
+  .radio-freq { font-family:'JetBrains Mono',monospace; font-size: 20px; font-weight:700; color: rgb(var(--rad-green)); text-shadow: 0 0 14px rgba(var(--rad-green),0.5); }
+  .radio-freq small { font-size: 10px; color: var(--text-dim); font-weight:400; }
+  .radio-station { font-family:'JetBrains Mono',monospace; font-size: 9px; letter-spacing: 1px; color: rgb(var(--amber)); margin-top: 3px; min-height: 12px; }
+  .radio-eq { display:flex; align-items:flex-end; gap:2.5px; height: 14px; margin-top: 5px; }
+  .radio-eq i { flex:1; background: rgba(var(--rad-green),0.5); border-radius:2px; height: 3px; }
   #radio.playing .radio-eq i { animation: eq2 0.6s ease-in-out infinite alternate; }
-  @keyframes eq2 { from { height: 3px; } to { height: 18px; } }
-  .radio-controls { display:flex; align-items:center; gap: 6px; margin-bottom: 10px; }
-  .radio-controls button { flex:1; padding: 8px; border-radius: 8px; border:1px solid rgba(var(--rad-green),0.14); background: rgba(0,0,0,0.3); color: var(--text-dim); cursor:pointer; display:grid; place-items:center; transition: all 0.3s var(--ease); }
+  @keyframes eq2 { from { height: 2px; } to { height: 14px; } }
+  .radio-controls { display:flex; align-items:center; gap: 5px; margin-bottom: 8px; }
+  .radio-controls button { flex:1; padding: 6px; border-radius: 8px; border:1px solid rgba(var(--rad-green),0.14); background: rgba(0,0,0,0.3); color: var(--text-dim); cursor:pointer; display:grid; place-items:center; transition: all 0.3s var(--ease); }
   .radio-controls button:hover { color: rgb(var(--rad-green)); border-color: rgba(var(--rad-green),0.35); }
   .radio-controls .rplay { background: rgba(var(--rad-green),0.14); color: rgb(var(--rad-green)); border-color: rgba(var(--rad-green),0.35); }
-  .radio-controls button svg { width:16px; height:16px; }
-  .radio-tuner-row { display:flex; align-items:center; gap: 8px; }
-  .radio-tuner-row span { font-family:'JetBrains Mono',monospace; font-size:9px; color: var(--text-ghost); }
+  .radio-controls button svg { width:14px; height:14px; }
+  .radio-tuner-row { display:flex; align-items:center; gap: 6px; }
+  .radio-tuner-row span { font-family:'JetBrains Mono',monospace; font-size:8px; color: var(--text-ghost); }
 </style>
 </head>
 <body>
@@ -405,14 +462,14 @@
       <div class="lobby-form">
         <div>
           <div class="field-label">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10z"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10z"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
             ПОЗЫВНОЙ · CALLSIGN
           </div>
           <input class="lobby-input" id="callsign" maxlength="18" placeholder="ARTYOM" value="ARTYOM" />
         </div>
         <div>
           <div class="field-label">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16M4 8h16M4 16h10"/></svg>
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16M4 8h16M4 16h10"/></svg>
             ЧАСТОТА · FREQUENCY
           </div>
           <div class="freq-dial">
@@ -467,7 +524,7 @@
       <div class="chan" id="brand-chan">CH — · —.— MHz</div>
     </div>
     <div class="search">
-      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#566258" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#566258" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
       <input type="text" placeholder="Search channels..." id="search-input" />
     </div>
     <div class="contacts" id="contacts"></div>
@@ -476,17 +533,17 @@
   <section id="chat" class="glass">
     <div class="chat-header">
       <div class="avatar on" id="chat-avatar">C</div>
-      <div>
+      <div class="chat-header-info">
         <div class="name" id="chat-name">The Colonel</div>
         <div class="status" id="chat-status">// signal strong · d6 metro line</div>
       </div>
       <div class="header-actions">
-        <div class="enc"><span class="dot-live"></span> FIREBASE SECURE</div>
-        <button class="copy-link-btn" id="copy-link-btn" title="Копировать ссылку на комнату">
+        <div class="enc"><span class="dot-live"></span> SECURE</div>
+        <button class="copy-link-btn" id="copy-link-btn" title="Копировать ссылку">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7 7l1.5-1.5a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7-7L5.5 5.5a5 5 0 0 0 7 7l1.5-1.5"/></svg>
           ССЫЛКА
         </button>
-        <button class="exit-door" id="exit-btn" title="Seal hermetic door and leave" aria-label="Exit room">
+        <button class="exit-door" id="exit-btn" title="Выход" aria-label="Exit room">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="1.5"/><circle cx="12" cy="12" r="4"/><path d="M12 8v-1M12 17v-1M8 12H7M17 12h-1M9.2 9.2l-.7-.7M15.5 15.5l-.7-.7M14.8 9.2l.7-.7M8.5 15.5l.7-.7"/></svg>
           ВЫХОД
         </button>
@@ -494,14 +551,14 @@
     </div>
     <div class="messages" id="messages"></div>
     <form class="composer" id="composer" autocomplete="off">
-      <button type="button" class="icon-btn" id="mic-btn" title="Аудиосообщение · Record audio message" aria-label="Record audio message">
+      <button type="button" class="icon-btn" id="mic-btn" title="Аудиосообщение" aria-label="Record audio message">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4"/></svg>
       </button>
       <div class="field" id="field">
         <input type="text" id="msg-input" placeholder="Transmit encrypted message..." aria-label="Message" />
-        <div class="rec-ind"><span class="rdot"></span><span id="rec-time">0:00</span> · REC — нажмите отправить</div>
+        <div class="rec-ind"><span class="rdot"></span><span id="rec-time">0:00</span> · REC</div>
       </div>
-      <button type="button" class="icon-btn ptt-btn" id="ptt-btn" title="Рация — держите чтобы говорить · Push to talk" aria-label="Push to talk walkie-talkie">
+      <button type="button" class="icon-btn ptt-btn" id="ptt-btn" title="Рация (держать)" aria-label="Push to talk walkie-talkie">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 2v3h2V2M10 8h4M12 14v3"/></svg>
       </button>
       <button type="submit" class="send-btn" title="Send" aria-label="Send message">
@@ -554,7 +611,7 @@
 
   let currentRoom = { callsign: 'ARTYOM', freq: '88.3', name: 'ПРЯМОЙ ЭФИР' };
   let dbRef = null;
-  let sfxOn = false; // Глобальный флаг звука исправлен
+  let sfxOn = false;
 
   window.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
@@ -1006,11 +1063,11 @@
     
     let senderHtml = '';
     if (m.sender) {
-      senderHtml = `<div style="font-size:10px; color:rgb(var(--rad-green-dim)); margin-bottom:4px; font-family:'JetBrains Mono',monospace;">${escapeHtml(m.sender)}</div>`;
+      senderHtml = `<div style="font-size:9px; color:rgb(var(--rad-green-dim)); margin-bottom:3px; font-family:'JetBrains Mono',monospace;">${escapeHtml(m.sender)}</div>`;
     }
 
     if (m.kind === 'voice' || m.kind === 'radio') {
-      const bars = Array.from({length: 22}, () => `<i style="height:${20 + Math.floor(Math.random()*70)}%"></i>`).join('');
+      const bars = Array.from({length: 20}, () => `<i style="height:${20 + Math.floor(Math.random()*70)}%"></i>`).join('');
       const label = m.kind === 'radio' ? 'РАЦИЯ · WALKIE' : 'ГОЛОС · AUDIO';
       b.innerHTML = senderHtml + `<div class="voice">
           <button class="play" aria-label="Play audio message"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
@@ -1155,7 +1212,7 @@
   const radioTuner = document.getElementById('radio-tuner');
   const radioPlay = document.getElementById('radio-play');
   const radioEqEl = document.getElementById('radio-eq');
-  for (let i = 0; i < 18; i++) { const b = document.createElement('i'); b.style.animationDelay = (i * 0.04) + 's'; radioEqEl.appendChild(b); }
+  for (let i = 0; i < 16; i++) { const b = document.createElement('i'); b.style.animationDelay = (i * 0.04) + 's'; radioEqEl.appendChild(b); }
 
   function updateRadioPlayIcon() {
     radioPlay.innerHTML = radio.playing
