@@ -265,7 +265,6 @@
   .header-actions { margin-left: auto; display:flex; align-items:center; gap: 10px; }
   .enc { font-size: 10px; letter-spacing: 1.2px; color: var(--text-dim); font-family:'JetBrains Mono',monospace; padding: 6px 12px; border-radius: 20px; border: 1px solid rgba(var(--rad-green), 0.18); background: rgba(var(--rad-green), 0.04); display: flex; align-items: center; gap: 6px; }
   @media (max-width: 900px){ .enc { display:none; } }
-  /* Exit hermetic door button */
   .exit-door {
     display:flex; align-items:center; gap:9px; padding: 8px 14px 8px 10px; border-radius: 12px; cursor:pointer;
     font-family:'JetBrains Mono',monospace; font-size: 11px; letter-spacing: 1.5px; color: rgb(var(--amber));
@@ -284,7 +283,6 @@
   @keyframes bubblePulse { 0% { box-shadow: 0 0 0 0 rgba(var(--rad-green), 0.55); } 100% { box-shadow: 0 0 34px 4px rgba(var(--rad-green), 0); } }
   .day-sep { align-self: center; font-size: 10px; letter-spacing: 2px; color: var(--text-ghost); font-family:'JetBrains Mono',monospace; padding: 4px 0; }
 
-  /* voice / audio message bubble */
   .voice { display:flex; align-items:center; gap: 12px; min-width: 210px; }
   .voice .play { width: 38px; height: 38px; border-radius: 50%; flex-shrink:0; border:none; cursor:pointer; display:grid; place-items:center; background: rgba(var(--rad-green),0.18); border:1px solid rgba(var(--rad-green),0.4); color: rgb(var(--rad-green)); transition: all 0.3s var(--ease); }
   .voice .play:hover { background: rgba(var(--rad-green),0.3); }
@@ -296,12 +294,6 @@
   .voice .dur { font-family:'JetBrains Mono',monospace; font-size: 11px; color: var(--text-dim); }
   .voice .kind { font-family:'JetBrains Mono',monospace; font-size: 9px; letter-spacing:1px; color: rgb(var(--rad-green-dim)); display:block; margin-bottom:2px; }
 
-  .typing { align-self: flex-start; display: flex; gap: 5px; padding: 14px 18px; }
-  .typing i { width: 7px; height: 7px; border-radius: 50%; background: rgba(var(--rad-green), 0.6); animation: bounce 1.2s infinite; }
-  .typing i:nth-child(2){ animation-delay: 0.15s; } .typing i:nth-child(3){ animation-delay: 0.3s; }
-  @keyframes bounce { 0%,60%,100%{ transform: translateY(0); opacity:0.4;} 30%{ transform: translateY(-6px); opacity:1;} }
-
-  /* ---------- Composer ---------- */
   .composer { padding: 14px 18px; display: flex; align-items: center; gap: 10px; border-top: 1px solid rgba(var(--rad-green), 0.1); }
   .composer .field { flex: 1; display: flex; align-items: center; gap: 10px; padding: 12px 18px; background: rgba(0,0,0,0.3); border: 1px solid rgba(var(--rad-green), 0.12); border-radius: 16px; transition: all 0.35s var(--ease); }
   .composer .field:focus-within { border-color: rgba(var(--rad-green), 0.4); box-shadow: 0 0 26px -8px rgba(var(--rad-green), 0.5); }
@@ -322,13 +314,11 @@
   .icon-btn:hover { color: rgb(var(--rad-green)); border-color: rgba(var(--rad-green),0.3); }
   .icon-btn.active { color: rgb(var(--rad-green)); border-color: rgba(var(--rad-green),0.4); background: rgba(var(--rad-green),0.1); }
   .icon-btn svg { width: 20px; height: 20px; }
-  /* Push to talk (рация) */
   .ptt-btn { position: relative; overflow: hidden; }
   .ptt-btn.transmitting { color:#ff9a4a; border-color: rgba(255,176,66,0.6); background: rgba(255,176,66,0.14); box-shadow: 0 0 26px -4px rgba(255,176,66,0.7); }
   .ptt-btn.transmitting::after { content:""; position:absolute; inset:0; border-radius:14px; border:2px solid rgba(255,176,66,0.6); animation: pttRing 0.9s ease-out infinite; }
   @keyframes pttRing { from { transform: scale(0.8); opacity:0.8; } to { transform: scale(1.6); opacity:0; } }
 
-  /* PTT transmitting overlay */
   #ptt-overlay { position: fixed; inset:0; z-index: 55; display:none; align-items:center; justify-content:center; background: radial-gradient(ellipse at 50% 50%, rgba(20,12,4,0.6), rgba(4,6,5,0.85)); }
   #ptt-overlay.show { display:flex; }
   .ptt-panel { text-align:center; }
@@ -374,7 +364,6 @@
 </head>
 <body>
 
-<!-- SVG grain filter -->
 <svg width="0" height="0" style="position:absolute">
   <filter id="grain">
     <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/>
@@ -384,7 +373,6 @@
   </filter>
 </svg>
 
-<!-- PARALLAX SCENE -->
 <div id="scene">
   <div class="layer" id="layer-far"></div>
   <div class="layer" id="layer-mid"></div>
@@ -393,7 +381,6 @@
 <div id="vignette"></div>
 <div id="scanlines"></div>
 
-<!-- ==================== BOOT / LOADING SCREEN ==================== -->
 <div id="boot">
   <div class="radiation">
     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.66 15l4.33-2.5A5 5 0 0 1 7 12H2a10 10 0 0 1 10-10zm10 10h-5a5 5 0 0 1-.67 2.5l4.33 2.5A10 10 0 0 0 22 12zM12 22a10 10 0 0 0 8.66-5l-4.33-2.5A5 5 0 0 1 12 17v5z"/><circle cx="12" cy="12" r="2.4"/></svg>
@@ -407,7 +394,6 @@
   <div class="boot-hint" id="boot-hint">INITIALIZING...</div>
 </div>
 
-<!-- ==================== LOBBY / ROOM CREATION ==================== -->
 <div id="lobby">
   <div class="lobby-card glass">
     <div class="lobby-head">
@@ -446,7 +432,6 @@
   </div>
 </div>
 
-<!-- ==================== HERMETIC BLAST DOOR ==================== -->
 <div id="airlock">
   <div class="door-half left"></div>
   <div class="door-half right"></div>
@@ -465,7 +450,6 @@
   <div class="airlock-label">// ГЕРМОДВЕРЬ · SEALING</div>
 </div>
 
-<!-- ==================== PTT OVERLAY ==================== -->
 <div id="ptt-overlay">
   <div class="ptt-panel">
     <div class="lbl">◉ ПЕРЕДАЧА · TRANSMITTING</div>
@@ -474,7 +458,6 @@
   </div>
 </div>
 
-<!-- ==================== APP ==================== -->
 <main id="app">
   <aside id="sidebar" class="glass">
     <div class="brand">
@@ -484,7 +467,7 @@
     </div>
     <div class="search">
       <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#566258" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
-      <input type="text" placeholder="Search survivors..." id="search-input" />
+      <input type="text" placeholder="Search channels..." id="search-input" />
     </div>
     <div class="contacts" id="contacts"></div>
   </aside>
@@ -497,7 +480,7 @@
         <div class="status" id="chat-status">// signal strong · d6 metro line</div>
       </div>
       <div class="header-actions">
-        <div class="enc"><span class="dot-live"></span> END-TO-END ENCRYPTED</div>
+        <div class="enc"><span class="dot-live"></span> MULTIPLAYER SECURE</div>
         <button class="exit-door" id="exit-btn" title="Seal hermetic door and leave" aria-label="Exit room">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="1.5"/><circle cx="12" cy="12" r="4"/><path d="M12 8v-1M12 17v-1M8 12H7M17 12h-1M9.2 9.2l-.7-.7M15.5 15.5l-.7-.7M14.8 9.2l.7-.7M8.5 15.5l.7-.7"/></svg>
           ВЫХОД
@@ -523,7 +506,6 @@
   </section>
 </main>
 
-<!-- ==================== RADIO WIDGET ==================== -->
 <div id="radio" class="glass">
   <div class="radio-top">
     <div class="radio-title"><span class="dot-live"></span> МЕТРО-РАДИО · FM</div>
@@ -551,6 +533,61 @@
 <script>
 (() => {
   'use strict';
+
+  /* ============ MULTIPLAYER NETWORK SETUP ============ */
+  // BroadcastChannel позволяет общаться между разными вкладками одного браузера без сервера!
+  const bc = new BroadcastChannel('metro_chat_network');
+  
+  // Для общения по сети между разными устройствами вам нужен WebSocket сервер. 
+  // Вы можете поднять простой Node.js сервер с библиотекой `ws`.
+  const WS_URL = 'ws://localhost:8080';
+  let ws = null;
+
+  function initNetwork() {
+    try {
+      ws = new WebSocket(WS_URL);
+      ws.onmessage = handleNetworkMessage;
+      ws.onerror = () => console.log('WebSocket не подключен (работаем локально между вкладками).');
+    } catch(e) { }
+
+    bc.onmessage = (e) => handleNetworkMessage({ data: e.data });
+  }
+
+  function handleNetworkMessage(e) {
+    let data;
+    try { data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch(err){ return; }
+    
+    // Игнорируем сообщения с другой частоты или от самого себя
+    if (data.freq !== currentRoom.freq || data.sender === currentRoom.callsign) return;
+    
+    data.who = 'them';
+    const c = contacts[0];
+    c.msgs.push(data);
+    c.preview = data.kind === 'text' ? data.t : (data.kind === 'voice' ? '🎙 Голосовое сообщение' : '📻 Рация');
+    
+    if (activeId === 'room') {
+      appendMessage(data, true);
+      if(data.kind === 'text') { blip(); }
+      else { staticBurst(0.18, 0.08); }
+    }
+    renderContacts(document.getElementById('search-input').value);
+  }
+
+  function broadcastMsg(msgObj) {
+    const c = contacts[0];
+    c.msgs.push(msgObj);
+    c.preview = msgObj.kind === 'text' ? msgObj.t : (msgObj.kind === 'voice' ? '🎙 Голосовое сообщение' : '📻 Рация');
+    
+    appendMessage(msgObj, true);
+    renderContacts(document.getElementById('search-input').value);
+    
+    const payload = JSON.stringify(msgObj);
+    bc.postMessage(msgObj); // отправка в другие вкладки
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(payload); // отправка на сервер
+    }
+  }
+
 
   /* ============ PARALLAX SCENE BUILD ============ */
   const far = document.getElementById('layer-far');
@@ -600,7 +637,6 @@
     if (actx.state === 'suspended') actx.resume();
     return actx;
   }
-  // shared noise buffer for static / hiss
   let noiseBuf = null;
   function getNoise() {
     ensureCtx();
@@ -612,7 +648,6 @@
     return noiseBuf;
   }
 
-  /* ---- ambient tunnel hum ---- */
   let humNodes = null;
   function startHum() {
     ensureCtx(); if (humNodes) return;
@@ -629,7 +664,6 @@
     humNodes = { master, o1, o2, lfo };
   }
 
-  /* ---- generic SFX ---- */
   function clank(vol = 0.28) {
     ensureCtx(); const t = actx.currentTime;
     const g = actx.createGain(); g.gain.setValueAtTime(0.0001, t);
@@ -647,7 +681,6 @@
     const o = actx.createOscillator(); o.type = 'sine'; o.frequency.value = freq;
     o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + 0.13);
   }
-  // single geiger tick
   function geigerTick() {
     ensureCtx(); const t = actx.currentTime;
     const src = actx.createBufferSource(); src.buffer = getNoise();
@@ -663,7 +696,6 @@
     const loop = () => { if (sfxOn) geigerTick(); geigerTimer = setTimeout(loop, 200 + Math.random() * 1400); };
     loop();
   }
-  // radio static burst
   function staticBurst(dur = 0.5, vol = 0.14) {
     ensureCtx(); const t = actx.currentTime;
     const src = actx.createBufferSource(); src.buffer = getNoise(); src.loop = true;
@@ -672,23 +704,18 @@
     src.connect(hp); hp.connect(g); g.connect(actx.destination);
     src.start(t); src.stop(t + dur);
   }
-  // heavy hydraulic hermetic-door groan
   function doorHydraulic() {
     ensureCtx(); const t = actx.currentTime;
-    // metallic groan
     const o = actx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(70, t); o.frequency.exponentialRampToValueAtTime(38, t + 1.0);
     const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(400, t); lp.frequency.exponentialRampToValueAtTime(120, t + 1.0);
     const g = actx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.3, t + 0.15); g.gain.linearRampToValueAtTime(0.12, t + 0.8); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.15);
     o.connect(lp); lp.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + 1.2);
-    // steam hiss
     const src = actx.createBufferSource(); src.buffer = getNoise(); src.loop = true;
     const bp = actx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 3200; bp.Q.value = 1.2;
     const hg = actx.createGain(); hg.gain.setValueAtTime(0.0001, t + 0.7); hg.gain.linearRampToValueAtTime(0.12, t + 0.85); hg.gain.exponentialRampToValueAtTime(0.0001, t + 1.5);
     src.connect(bp); bp.connect(hg); hg.connect(actx.destination); src.start(t + 0.7); src.stop(t + 1.55);
-    // final heavy clunk
     setTimeout(() => { if (actx) clank(0.4); }, 1000);
   }
-  // garbled radio voice transmission
   function playTransmission(seconds) {
     ensureCtx(); const t0 = actx.currentTime; const dur = Math.max(0.6, Math.min(seconds, 6));
     const master = actx.createGain(); master.gain.value = 0.0; master.connect(actx.destination);
@@ -696,13 +723,10 @@
     master.gain.setValueAtTime(0.18, t0 + dur - 0.15);
     master.gain.linearRampToValueAtTime(0.0001, t0 + dur);
     const bp = actx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = 4; bp.connect(master);
-    // carrier hiss
     const src = actx.createBufferSource(); src.buffer = getNoise(); src.loop = true;
     const sg = actx.createGain(); sg.gain.value = 0.35; src.connect(sg); sg.connect(bp); src.start(t0); src.stop(t0 + dur);
-    // formant wobble
     const o = actx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 130;
     const og = actx.createGain(); og.gain.value = 0.4; o.connect(og); og.connect(bp);
-    // syllable modulation
     let tt = t0;
     while (tt < t0 + dur) {
       const step = 0.09 + Math.random() * 0.13;
@@ -711,14 +735,11 @@
       tt += step;
     }
     o.start(t0); o.stop(t0 + dur);
-    // opening + closing squelch
     staticBurst(0.12, 0.1);
     setTimeout(() => { if (actx && sfxOn) blip(1200, 0.08); }, dur * 1000);
   }
 
-  /* ============ RADIO STATIONS (procedural music) ============ */
-  // NOTE: original procedural loops inspired by the moods of the Metro games,
-  // generated live with the Web Audio API (no copyrighted tracks are bundled).
+  /* ============ RADIO STATIONS ============ */
   function mtof(m) { return 440 * Math.pow(2, (m - 69) / 12); }
   const stations = [
     { name: 'DEAD CITY · 2033',   freq: 76.5,  tempo: 1500, wave: 'sine',     gain: 0.16, notes: [40,43,45,47,50], mood: 'drone' },
@@ -726,9 +747,7 @@
     { name: 'LAST LIGHT',         freq: 101.7, tempo: 780,  wave: 'triangle', gain: 0.13, notes: [50,52,53,55,57,60], mood: 'melancholic' },
     { name: 'AURORA · EXODUS',    freq: 107.4, tempo: 620,  wave: 'square',   gain: 0.10, notes: [52,55,57,59,62,64,67], mood: 'hopeful' },
   ];
-  const radio = {
-    ctxReady: false, playing: false, idx: 1, freq: 88.3, seq: null, delay: null, master: null, staticSrc: null, staticGain: null,
-  };
+  const radio = { ctxReady: false, playing: false, idx: 1, freq: 88.3, seq: null, delay: null, master: null, staticSrc: null, staticGain: null };
   function nearestStation(freq) {
     let best = -1, bd = 0.45;
     stations.forEach((s, i) => { const d = Math.abs(s.freq - freq); if (d < bd) { bd = d; best = i; } });
@@ -776,7 +795,7 @@
     if (radio.seq) clearInterval(radio.seq);
     const st = nearestStation(radio.freq);
     stopStatic();
-    if (st < 0) { // between stations => static, no music
+    if (st < 0) {
       radio.master.gain.linearRampToValueAtTime(0.0, actx.currentTime + 0.2);
       startStatic();
       radioStationEl.textContent = '— НЕТ СИГНАЛА · STATIC —';
@@ -793,7 +812,7 @@
       let n; do { n = station.notes[Math.floor(Math.random() * station.notes.length)]; } while (n === last && station.notes.length > 2);
       last = n;
       playNote(n, station);
-      if (Math.random() < 0.4) playNote(n + 12, station); // occasional octave
+      if (Math.random() < 0.4) playNote(n + 12, station);
     };
     tick();
     radio.seq = setInterval(tick, station.tempo);
@@ -811,52 +830,17 @@
     ensureCtx(); radio.playing = true; staticBurst(0.25, 0.1); radioStartSeq(); updateRadioPlayIcon();
   }
 
-  /* ============ SOUND MASTER TOGGLE STATE ============ */
-  let sfxOn = false; // becomes true once user enters (unlocks audio)
-
-  /* ============ DATA ============ */
-  const contacts = [
-    { id: 'colonel', name: 'The Colonel', init: 'C', on: true, preview: 'The tunnel to D6 is clear. Move at dawn.', status: '// signal strong · d6 metro line',
-      msgs: [
-        { who: 'them', kind:'text', t: 'Artyom. You copy?', time: '06:12' },
-        { who: 'me', kind:'text', t: 'Loud and clear, Colonel.', time: '06:12' },
-        { who: 'them', kind:'voice', dur: 4, time: '06:13' },
-        { who: 'them', kind:'text', t: 'The tunnel to D6 is clear. We move at dawn. Bring the filters — air up top is still hot.', time: '06:13' },
-        { who: 'me', kind:'text', t: 'Understood. Packing extra rounds too.', time: '06:14' },
-      ] },
-    { id: 'sarah', name: 'Sarah', init: 'S', on: true, preview: 'Found a working water filter near Exhibition.', status: '// online · exhibition station',
-      msgs: [
-        { who: 'them', kind:'text', t: 'Found a working water filter near Exhibition. Big score.', time: '22:40' },
-        { who: 'me', kind:'text', t: 'Nice. Any Rangers around?', time: '22:41' },
-        { who: 'them', kind:'radio', dur: 3, t:'', time: '22:42' },
-      ] },
-    { id: 'john', name: 'John', init: 'J', on: false, preview: 'Radio went dark 2 hrs ago...', status: '// last seen 2h ago',
-      msgs: [
-        { who: 'them', kind:'text', t: 'Something is in the vents on level 3. I hear it breathing.', time: '19:03' },
-        { who: 'me', kind:'text', t: 'John? Get to high ground. Talk to me.', time: '19:05' },
-        { who: 'them', kind:'voice', dur: 5, time: '19:06' },
-      ] },
-    { id: 'anna', name: 'Anna', init: 'A', on: true, preview: 'Sniper nest secured. Overwatch ready.', status: '// online · spartan order',
-      msgs: [
-        { who: 'them', kind:'text', t: 'Sniper nest secured. I have overwatch on the whole platform.', time: '05:30' },
-        { who: 'me', kind:'text', t: 'Copy. Watch the left flank, movement reported.', time: '05:31' },
-      ] },
-    { id: 'khan', name: 'Khan', init: 'K', on: false, preview: 'The metro remembers. Trust the phantoms.', status: '// wandering the lines',
-      msgs: [
-        { who: 'them', kind:'text', t: 'The metro remembers everything, Artyom. Trust the phantoms on the line.', time: '03:17' },
-        { who: 'me', kind:'text', t: 'You always speak in riddles, Khan.', time: '03:20' },
-        { who: 'them', kind:'radio', dur: 2, t:'', time: '03:21' },
-      ] },
-  ];
-
+  /* ============ APP DATA & LOGIC ============ */
+  let sfxOn = false;
+  let contacts = []; 
+  
   const roomPresets = [
-    { freq: '90.6', name: 'D6 COMMAND', members: 'The Colonel · Anna · +4' },
-    { freq: '101.7', name: 'EXHIBITION TRADE', members: 'Sarah · Rangers · +11' },
-    { freq: '76.5', name: 'DEAD CITY WATCH', members: 'Khan · phantoms' },
-    { freq: '107.4', name: 'AURORA CREW', members: 'Spartan Order · +8' },
+    { freq: '90.6', name: 'D6 COMMAND', members: 'Frequency 90.6 MHz' },
+    { freq: '101.7', name: 'EXHIBITION TRADE', members: 'Frequency 101.7 MHz' },
+    { freq: '76.5', name: 'DEAD CITY WATCH', members: 'Frequency 76.5 MHz' },
+    { freq: '107.4', name: 'AURORA CREW', members: 'Frequency 107.4 MHz' },
   ];
 
-  /* ============ BOOT SEQUENCE ============ */
   const bootEl = document.getElementById('boot');
   const bootLog = document.getElementById('boot-log');
   const bootFill = document.getElementById('boot-fill');
@@ -897,7 +881,6 @@
   setTimeout(bootTick, 700);
 
   function enterLobby() {
-    // unlock audio (user gesture) and enable metro atmosphere
     ensureCtx(); sfxOn = true;
     startHum(); startGeiger(); doorHydraulic();
     bootEl.classList.add('hide');
@@ -906,7 +889,6 @@
     radioEl.classList.add('show');
   }
 
-  /* ============ LOBBY ============ */
   const lobbyEl = document.getElementById('lobby');
   const callsignEl = document.getElementById('callsign');
   const freqTuner = document.getElementById('freq-tuner');
@@ -945,38 +927,44 @@
   function joinRoom(callsign, freq, name) {
     currentRoom = { callsign, freq, name };
     brandChan.textContent = `CH ${name} · ${freq} MHz`;
+    
+    contacts = [{
+      id: 'room', name: name, init: 'CH', on: true, preview: 'Ожидание передачи...', status: `// frequency · ${freq} MHz`,
+      msgs: []
+    }];
+    activeId = 'room';
+    
+    initNetwork();
+
     airlockTransition(() => {
       lobbyEl.classList.remove('show');
       appEl.classList.add('show');
-      renderContacts(); selectContact('colonel');
+      renderContacts(); selectContact('room');
     });
   }
 
-  /* ============ HERMETIC DOOR TRANSITION ============ */
   const airlock = document.getElementById('airlock');
   function airlockTransition(swapCb) {
     airlock.classList.add('active');
-    // start from open (offscreen) — force reflow then close
     airlock.classList.remove('closing');
     void airlock.offsetWidth;
     if (sfxOn) doorHydraulic();
     airlock.classList.add('closing');
     setTimeout(() => { swapCb && swapCb(); }, 1050);
     setTimeout(() => {
-      airlock.classList.remove('closing'); // doors slide back open
+      airlock.classList.remove('closing');
       if (sfxOn) { staticBurst(0.2, 0.08); setTimeout(() => clank(0.25), 300); }
     }, 1350);
     setTimeout(() => { airlock.classList.remove('active'); }, 2500);
   }
 
-  /* ============ APP RENDER ============ */
   const appEl = document.getElementById('app');
   const contactsEl = document.getElementById('contacts');
   const messagesEl = document.getElementById('messages');
   const chatName = document.getElementById('chat-name');
   const chatStatus = document.getElementById('chat-status');
   const chatAvatar = document.getElementById('chat-avatar');
-  let activeId = 'colonel';
+  let activeId = 'room';
 
   function renderContacts(filter = '') {
     contactsEl.innerHTML = '';
@@ -1000,10 +988,16 @@
   function appendMessage(m, pulse) {
     const b = document.createElement('div');
     b.className = 'bubble ' + m.who + (pulse ? ' pulse' : '');
+    
+    let senderHtml = '';
+    if (m.who === 'them' && m.sender) {
+      senderHtml = `<div style="font-size:10px; color:rgb(var(--rad-green-dim)); margin-bottom:4px; font-family:'JetBrains Mono',monospace;">${escapeHtml(m.sender)}</div>`;
+    }
+
     if (m.kind === 'voice' || m.kind === 'radio') {
       const bars = Array.from({length: 22}, () => `<i style="height:${20 + Math.floor(Math.random()*70)}%"></i>`).join('');
       const label = m.kind === 'radio' ? 'РАЦИЯ · WALKIE' : 'ГОЛОС · AUDIO';
-      b.innerHTML = `<div class="voice">
+      b.innerHTML = senderHtml + `<div class="voice">
           <button class="play" aria-label="Play audio message"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
           <div style="flex:1"><span class="kind">${label}</span><div class="wave">${bars}</div></div>
           <span class="dur">0:0${m.dur}</span>
@@ -1018,7 +1012,7 @@
         setTimeout(() => voice.classList.remove('playing'), m.dur * 1000);
       });
     } else {
-      b.innerHTML = `${escapeHtml(m.t)}<span class="time">${m.time}</span>`;
+      b.innerHTML = senderHtml + `${escapeHtml(m.t)}<span class="time">${m.time}</span>`;
     }
     messagesEl.appendChild(b);
     messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -1028,6 +1022,7 @@
   function selectContact(id) {
     activeId = id;
     const c = contacts.find(x => x.id === id);
+    if(!c) return;
     chatName.textContent = c.name;
     chatStatus.textContent = c.status;
     chatAvatar.textContent = c.init;
@@ -1039,7 +1034,6 @@
 
   function nowTime() { const n = new Date(); return String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0'); }
 
-  /* ============ SEND (text) ============ */
   const composer = document.getElementById('composer');
   const input = document.getElementById('msg-input');
   const field = document.getElementById('field');
@@ -1049,19 +1043,17 @@
     if (recording) { stopAndSendAudio(); return; }
     const text = input.value.trim();
     if (!text) return;
-    const c = contacts.find(x => x.id === activeId);
-    const m = { who: 'me', kind:'text', t: text, time: nowTime() };
-    c.msgs.push(m); c.preview = text;
-    appendMessage(m, true); clank();
+    
+    const m = { who: 'me', kind: 'text', t: text, time: nowTime(), sender: currentRoom.callsign, freq: currentRoom.freq };
+    broadcastMsg(m);
+    clank();
+    
     input.value = '';
-    renderContacts(document.getElementById('search-input').value);
-    maybeReply(c);
   });
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && (e.nativeEvent?.isComposing || e.isComposing || e.keyCode === 229)) { e.stopPropagation(); }
   });
 
-  /* ============ AUDIO MESSAGE (record) ============ */
   const micBtn = document.getElementById('mic-btn');
   const recTime = document.getElementById('rec-time');
   let recording = false, recStart = 0, recTimer = null;
@@ -1083,15 +1075,12 @@
     field.classList.remove('recording'); micBtn.classList.remove('active');
     const dur = Math.max(1, Math.min(9, Math.round((Date.now() - recStart) / 1000)));
     recTime.textContent = '0:00';
-    const c = contacts.find(x => x.id === activeId);
-    const m = { who: 'me', kind:'voice', dur, time: nowTime() };
-    c.msgs.push(m); c.preview = '🎙 Голосовое сообщение (0:0' + dur + ')';
-    appendMessage(m, true); blip(1200, 0.08);
-    renderContacts(document.getElementById('search-input').value);
-    maybeReply(c);
+    
+    const m = { who: 'me', kind: 'voice', dur, time: nowTime(), sender: currentRoom.callsign, freq: currentRoom.freq };
+    broadcastMsg(m);
+    blip(1200, 0.08);
   }
 
-  /* ============ PTT / РАЦИЯ (push to talk) ============ */
   const pttBtn = document.getElementById('ptt-btn');
   const pttOverlay = document.getElementById('ptt-overlay');
   const pttWave = document.getElementById('ptt-wave');
@@ -1108,47 +1097,16 @@
     pttBtn.classList.remove('transmitting'); pttOverlay.classList.remove('show');
     const dur = Math.max(1, Math.min(9, Math.round((Date.now() - pttStart) / 1000)));
     staticBurst(0.15, 0.1); blip(500, 0.08);
-    if (Date.now() - pttStart < 350) return; // too short, cancel
-    const c = contacts.find(x => x.id === activeId);
-    const m = { who: 'me', kind:'radio', dur, time: nowTime() };
-    c.msgs.push(m); c.preview = '📻 Рация (0:0' + dur + ')';
-    appendMessage(m, true);
-    renderContacts(document.getElementById('search-input').value);
-    maybeReply(c);
+    if (Date.now() - pttStart < 350) return;
+    
+    const m = { who: 'me', kind: 'radio', dur, time: nowTime(), sender: currentRoom.callsign, freq: currentRoom.freq };
+    broadcastMsg(m);
   }
   pttBtn.addEventListener('mousedown', pttDown);
   window.addEventListener('mouseup', pttUp);
   pttBtn.addEventListener('touchstart', pttDown, { passive: false });
   window.addEventListener('touchend', pttUp);
 
-  /* ============ AUTO REPLY ============ */
-  const replies = [
-    'Copy that. Staying on this frequency.',
-    'Understood. Watch the shadows out there.',
-    'Roger. The metro is quiet tonight… too quiet.',
-    'Message received. Encryption holding.',
-    'Good. Keep your light charged and your gas mask sealed.',
-    'Acknowledged. See you at the checkpoint.',
-  ];
-  function maybeReply(c) {
-    const typing = document.createElement('div');
-    typing.className = 'typing'; typing.innerHTML = '<i></i><i></i><i></i>';
-    setTimeout(() => { messagesEl.appendChild(typing); messagesEl.scrollTop = messagesEl.scrollHeight; }, 500);
-    setTimeout(() => {
-      typing.remove();
-      const roll = Math.random();
-      let m;
-      if (roll < 0.25) { m = { who:'them', kind:'voice', dur: 2 + Math.floor(Math.random()*4), time: nowTime() }; c.preview = '🎙 Голосовое сообщение'; }
-      else if (roll < 0.4) { m = { who:'them', kind:'radio', dur: 2 + Math.floor(Math.random()*3), time: nowTime() }; c.preview = '📻 Рация'; }
-      else { const r = replies[Math.floor(Math.random() * replies.length)]; m = { who:'them', kind:'text', t: r, time: nowTime() }; c.preview = r; }
-      c.msgs.push(m);
-      appendMessage(m, false);
-      if (m.kind === 'text') blip(); else { staticBurst(0.18, 0.08); }
-      renderContacts(document.getElementById('search-input').value);
-    }, 2200);
-  }
-
-  /* ============ EXIT (seal hermetic door) ============ */
   document.getElementById('exit-btn').addEventListener('click', () => {
     airlockTransition(() => {
       appEl.classList.remove('show');
@@ -1156,7 +1114,6 @@
     });
   });
 
-  /* ============ RADIO WIDGET WIRING ============ */
   const radioEl = document.getElementById('radio');
   const radioFreqEl = document.getElementById('radio-freq');
   const radioStationEl = document.getElementById('radio-station');
