@@ -791,6 +791,7 @@
 
   /* ============ EXTERNAL STREAMING RADIO (3 TRACKS FROM GITHUB) ============ */
   /* ============ EXTERNAL STREAMING RADIO ============ */
+ /* ============ EXTERNAL STREAMING RADIO ============ */
   const stations = [
     { name: 'EXODUS BLUES', freq: 88.3,  url: 'https://raw.githubusercontent.com/NitshianecGo/icq_old/main/ExodusBlues.mp3' },
     { name: 'LAST TRAIN TO YAMANTAU', freq: 96.5,  url: 'https://raw.githubusercontent.com/NitshianecGo/icq_old/main/LastTraintoYamantau.mp3' },
@@ -802,32 +803,35 @@
 
   function nearestStation(freq) {
     let best = 0, bd = 999;
-    stations.forEach((s, i) => { const d = Math.abs(s.freq - freq); if (d < bd) { bd = d; best = i; } });
+    stations.forEach((s, i) => { 
+      const d = Math.abs(s.freq - freq); 
+      if (d < bd) { bd = d; best = i; } 
+    });
     return best;
   }
 
-  function radioStart() {
+  function playCurrentStation() {
     ensureCtx();
-    const stIdx = nearestStation(radio.freq);
-    const station = stations[stIdx];
-    radio.idx = stIdx;
+    const station = stations[radio.idx];
     radio.freq = station.freq;
+
     document.getElementById('radio-freq').innerHTML = station.freq.toFixed(1) + '<small> MHz</small>';
     document.getElementById('radio-tuner').value = station.freq;
     document.getElementById('radio-station').textContent = '♪ ' + station.name;
 
-    // Полная остановка и сброс предыдущего аудио для стабильной смены трека
+    // Полностью останавливаем предыдущий поток
     if (currentAudioStream) {
       currentAudioStream.pause();
-      currentAudioStream.currentTime = 0;
+      currentAudioStream.removeAttribute('src');
+      currentAudioStream.load();
       currentAudioStream = null;
     }
 
-    // Создаем новый объект аудио под выбранный трек
+    // Создаем новый объект под нужный трек
     currentAudioStream = new Audio(station.url);
-    currentAudioStream.crossOrigin = "anonymous";
     currentAudioStream.loop = true;
 
+    // Запускаем воспроизведение
     currentAudioStream.play().then(() => {
       radio.playing = true;
       document.getElementById('radio').classList.add('playing');
@@ -841,6 +845,11 @@
     });
   }
 
+  function radioStart() {
+    radio.idx = nearestStation(radio.freq);
+    playCurrentStation();
+  }
+
   function radioStop() {
     radio.playing = false;
     if (currentAudioStream) {
@@ -850,6 +859,21 @@
     document.getElementById('radio-station').textContent = '— ТИШИНА В ЭФИРЕ —';
     updateRadioPlayIcon();
   }
+
+  /* ============ ОБРАБОТЧИКИ КНОПОК РАДИО ============ */
+  // Вставьте это в конец скрипта (где привязываются кнопки):
+  
+  document.getElementById('radio-prev').addEventListener('click', () => {
+    radio.idx = (radio.idx - 1 + stations.length) % stations.length;
+    playCurrentStation();
+    if (typeof staticBurst === 'function') staticBurst(0.15, 0.08);
+  });
+
+  document.getElementById('radio-next').addEventListener('click', () => {
+    radio.idx = (radio.idx + 1) % stations.length;
+    playCurrentStation();
+    if (typeof staticBurst === 'function') staticBurst(0.15, 0.08);
+  });
 
   /* ============ APP DATA & LOGIC ============ */
   let contacts = [];
