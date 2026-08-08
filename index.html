@@ -356,6 +356,8 @@
   .voice .dur { font-family:'JetBrains Mono',monospace; font-size: 10px; color: var(--text-dim); }
   .voice .kind { font-family:'JetBrains Mono',monospace; font-size: 8px; letter-spacing:0.8px; color: rgb(var(--rad-green-dim)); display:block; margin-bottom:1px; }
 
+  .media-bubble-content img, .media-bubble-content video { max-width: 100%; border-radius: 10px; margin-top: 4px; display: block; max-height: 240px; object-fit: cover; }
+
   .composer { padding: 10px 12px; display: flex; align-items: center; gap: 6px; border-top: 1px solid rgba(var(--rad-green), 0.1); background: rgba(0,0,0,0.15); }
   .composer .field { flex: 1; display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(var(--rad-green), 0.12); border-radius: 14px; transition: all 0.35s var(--ease); min-width: 0; }
   .composer .field:focus-within { border-color: rgba(var(--rad-green), 0.4); box-shadow: 0 0 22px -6px rgba(var(--rad-green), 0.5); }
@@ -552,6 +554,10 @@
     <form class="composer" id="composer" autocomplete="off">
       <button type="button" class="icon-btn" id="mic-btn" title="Аудиосообщение" aria-label="Record audio message">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4"/></svg>
+      </button>
+      <input type="file" id="media-file-input" accept="image/*,video/*" style="display: none;" />
+      <button type="button" class="icon-btn" id="media-btn" title="Добавить фото или видео" aria-label="Add photo or video">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
       </button>
       <div class="field" id="field">
         <input type="text" id="msg-input" placeholder="Transmit encrypted message..." aria-label="Message" />
@@ -757,28 +763,6 @@
     src.connect(bp); bp.connect(hg); hg.connect(actx.destination); src.start(t + 0.7); src.stop(t + 1.55);
     setTimeout(() => { if (actx) clank(0.4); }, 1000);
   }
-  function playTransmission(seconds) {
-    ensureCtx(); const t0 = actx.currentTime; const dur = Math.max(0.6, Math.min(seconds, 6));
-    const master = actx.createGain(); master.gain.value = 0.0; master.connect(actx.destination);
-    master.gain.linearRampToValueAtTime(0.18, t0 + 0.05);
-    master.gain.setValueAtTime(0.18, t0 + dur - 0.15);
-    master.gain.linearRampToValueAtTime(0.0001, t0 + dur);
-    const bp = actx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = 4; bp.connect(master);
-    const src = actx.createBufferSource(); src.buffer = getNoise(); src.loop = true;
-    const sg = actx.createGain(); sg.gain.value = 0.35; src.connect(sg); sg.connect(bp); src.start(t0); src.stop(t0 + dur);
-    const o = actx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 130;
-    const og = actx.createGain(); og.gain.value = 0.4; o.connect(og); og.connect(bp);
-    let tt = t0;
-    while (tt < t0 + dur) {
-      const step = 0.09 + Math.random() * 0.13;
-      o.frequency.setValueAtTime(90 + Math.random() * 160, tt);
-      bp.frequency.setValueAtTime(700 + Math.random() * 1600, tt);
-      tt += step;
-    }
-    o.start(t0); o.stop(t0 + dur);
-    staticBurst(0.12, 0.1);
-    setTimeout(() => { if (actx && sfxOn) blip(1200, 0.08); }, dur * 1000);
-  }
 
   /* ============ REAL VOICE RECORDER (MICROPHONE) ============ */
   let mediaRecorder = null;
@@ -805,95 +789,60 @@
   }
   initMicrophone();
 
-  /* ============ RADIO STATIONS ============ */
-  function mtof(m) { return 440 * Math.pow(2, (m - 69) / 12); }
+  /* ============ EXTERNAL STREAMING RADIO (3 TRACKS FROM GITHUB) ============ */
   const stations = [
-    { name: 'DEAD CITY · 2033',   freq: 76.5,  tempo: 1500, wave: 'sine',     gain: 0.16, notes: [40,43,45,47,50], mood: 'drone' },
-    { name: 'ARTYOM FM',          freq: 88.3,  tempo: 900,  wave: 'triangle', gain: 0.14, notes: [45,48,50,52,55,57], mood: 'minor' },
-    { name: 'LAST LIGHT',         freq: 101.7, tempo: 780,  wave: 'triangle', gain: 0.13, notes: [50,52,53,55,57,60], mood: 'melancholic' },
-    { name: 'AURORA · EXODUS',    freq: 107.4, tempo: 620,  wave: 'square',   gain: 0.10, notes: [52,55,57,59,62,64,67], mood: 'hopeful' },
+    { name: 'ТРЕК 1 · GITHUB', freq: 88.3,  url: 'https://raw.githubusercontent.com/ВАШ_АККАУНТ/ВАШ_РЕПОЗИТОРИЙ/main/track1.mp3' },
+    { name: 'ТРЕК 2 · GITHUB', freq: 96.5,  url: 'https://raw.githubusercontent.com/ВАШ_АККАУНТ/ВАШ_РЕПОЗИТОРИЙ/main/track2.mp3' },
+    { name: 'ТРЕК 3 · GITHUB', freq: 104.1, url: 'https://raw.githubusercontent.com/ВАШ_АККАУНТ/ВАШ_РЕПОЗИТОРИЙ/main/track3.mp3' }
   ];
-  const radio = { ctxReady: false, playing: false, idx: 1, freq: 88.3, seq: null, delay: null, master: null, staticSrc: null, staticGain: null };
+
+  let currentAudioStream = null;
+  const radio = { playing: false, idx: 0, freq: 88.3 };
+
   function nearestStation(freq) {
-    let best = -1, bd = 0.45;
+    let best = 0, bd = 999;
     stations.forEach((s, i) => { const d = Math.abs(s.freq - freq); if (d < bd) { bd = d; best = i; } });
     return best;
   }
-  function radioSetup() {
+
+  function radioStart() {
     ensureCtx();
-    if (radio.master) return;
-    radio.master = actx.createGain(); radio.master.gain.value = 0.0; radio.master.connect(actx.destination);
-    radio.delay = actx.createDelay(); radio.delay.delayTime.value = 0.32;
-    const fb = actx.createGain(); fb.gain.value = 0.32;
-    radio.delay.connect(fb); fb.connect(radio.delay); radio.delay.connect(radio.master);
-    radio.busGain = actx.createGain(); radio.busGain.gain.value = 1; radio.busGain.connect(radio.master); radio.busGain.connect(radio.delay);
-  }
-  function playNote(m, station) {
-    const t = actx.currentTime;
-    const o = actx.createOscillator(); o.type = station.wave; o.frequency.value = mtof(m);
-    const g = actx.createGain(); const peak = station.gain;
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(peak, t + 0.05);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + (station.mood === 'drone' ? 1.6 : 0.7));
-    const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2600;
-    o.connect(lp); lp.connect(g); g.connect(radio.busGain);
-    o.start(t); o.stop(t + (station.mood === 'drone' ? 1.8 : 0.9));
-  }
-  function startStatic() {
-    radioSetup();
-    if (radio.staticSrc) return;
-    radio.staticSrc = actx.createBufferSource(); radio.staticSrc.buffer = getNoise(); radio.staticSrc.loop = true;
-    const hp = actx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1400;
-    radio.staticGain = actx.createGain(); radio.staticGain.gain.value = 0.0;
-    radio.staticGain.gain.linearRampToValueAtTime(0.09, actx.currentTime + 0.3);
-    radio.staticSrc.connect(hp); hp.connect(radio.staticGain); radio.staticGain.connect(actx.destination);
-    radio.staticSrc.start();
-  }
-  function stopStatic() {
-    if (!radio.staticSrc) return;
-    const s = radio.staticSrc, g = radio.staticGain;
-    g.gain.linearRampToValueAtTime(0.0001, actx.currentTime + 0.2);
-    setTimeout(() => { try { s.stop(); } catch(e){} }, 260);
-    radio.staticSrc = null; radio.staticGain = null;
-  }
-  function radioStartSeq() {
-    radioSetup();
-    if (radio.seq) clearInterval(radio.seq);
-    const st = nearestStation(radio.freq);
-    stopStatic();
-    if (st < 0) {
-      radio.master.gain.linearRampToValueAtTime(0.0, actx.currentTime + 0.2);
-      startStatic();
-      document.getElementById('radio-station').textContent = '— НЕТ СИГНАЛА · STATIC —';
-      document.getElementById('radio').classList.remove('playing');
-      return;
-    }
-    const station = stations[st];
-    radio.idx = st;
-    radio.master.gain.linearRampToValueAtTime(0.9, actx.currentTime + 0.4);
+    const stIdx = nearestStation(radio.freq);
+    const station = stations[stIdx];
+    radio.idx = stIdx;
+    radio.freq = station.freq;
+    document.getElementById('radio-freq').innerHTML = station.freq.toFixed(1) + '<small> MHz</small>';
+    document.getElementById('radio-tuner').value = station.freq;
     document.getElementById('radio-station').textContent = '♪ ' + station.name;
-    document.getElementById('radio').classList.add('playing');
-    let last = -1;
-    const tick = () => {
-      let n; do { n = station.notes[Math.floor(Math.random() * station.notes.length)]; } while (n === last && station.notes.length > 2);
-      last = n;
-      playNote(n, station);
-      if (Math.random() < 0.4) playNote(n + 12, station);
-    };
-    tick();
-    radio.seq = setInterval(tick, station.tempo);
+
+    if (!currentAudioStream) {
+      currentAudioStream = new Audio(station.url);
+      currentAudioStream.loop = true;
+    } else {
+      currentAudioStream.src = station.url;
+    }
+
+    currentAudioStream.play().then(() => {
+      radio.playing = true;
+      document.getElementById('radio').classList.add('playing');
+      updateRadioPlayIcon();
+    }).catch(err => {
+      console.warn("Stream playback failed:", err);
+      document.getElementById('radio-station').textContent = '— ОШИБКА ПОТОКА —';
+      radio.playing = false;
+      document.getElementById('radio').classList.remove('playing');
+      updateRadioPlayIcon();
+    });
   }
+
   function radioStop() {
     radio.playing = false;
-    if (radio.seq) { clearInterval(radio.seq); radio.seq = null; }
-    stopStatic();
-    if (radio.master) radio.master.gain.linearRampToValueAtTime(0.0, actx.currentTime + 0.2);
+    if (currentAudioStream) {
+      currentAudioStream.pause();
+    }
     document.getElementById('radio').classList.remove('playing');
     document.getElementById('radio-station').textContent = '— ТИШИНА В ЭФИРЕ —';
     updateRadioPlayIcon();
-  }
-  function radioStart() {
-    ensureCtx(); radio.playing = true; staticBurst(0.25, 0.1); radioStartSeq(); updateRadioPlayIcon();
   }
 
   /* ============ APP DATA & LOGIC ============ */
@@ -914,7 +863,7 @@
     'BIOS METRO-OS v33.2 ......... <span class="ok">OK</span>',
     'CHECKING GAS MASK SEAL ...... <span class="ok">OK</span>',
     'LOADING FIREBASE DB KEYS .... <span class="ok">OK</span>',
-    'SCANNING METRO LINES ........ <b>4 CHANNELS</b>',
+    'SCANNING METRO LINES ........ <b>3 STREAMS</b>',
     'ESTABLISHING UPLINK ......... <span class="ok">SECURE</span>',
     'READY. AWAITING OPERATOR.',
   ];
@@ -1018,10 +967,10 @@
       data.who = isMe ? 'me' : 'them';
 
       const c = contacts[0];
-      const exists = c.msgs.some(m => m.time === data.time && m.t === data.t && m.sender === data.sender && m.audioUrl === data.audioUrl);
+      const exists = c.msgs.some(m => m.time === data.time && m.t === data.t && m.sender === data.sender && m.audioUrl === data.audioUrl && m.mediaUrl === data.mediaUrl);
       if (!exists) {
         c.msgs.push(data);
-        c.preview = data.kind === 'text' ? data.t : (data.kind === 'voice' ? '🎙 Голосовое' : '📻 Рация');
+        c.preview = data.kind === 'text' ? data.t : (data.kind === 'voice' ? '🎙 Голосовое' : (data.kind === 'media' ? '📷 Медиа' : '📻 Рация'));
         
         if (activeId === 'room') {
           appendMessage(data, true);
@@ -1124,6 +1073,14 @@
           setTimeout(() => voice.classList.remove('playing'), m.dur * 1000);
         }
       });
+    } else if (m.kind === 'media') {
+      let mediaContent = '';
+      if (m.mediaType && m.mediaType.startsWith('video')) {
+        mediaContent = `<video src="${m.mediaUrl}" controls></video>`;
+      } else {
+        mediaContent = `<img src="${m.mediaUrl}" alt="media" />`;
+      }
+      b.innerHTML = senderHtml + `<div class="media-bubble-content">${mediaContent}</div><span class="time">${m.time}</span>`;
     } else {
       b.innerHTML = senderHtml + `${escapeHtml(m.t)}<span class="time">${m.time}</span>`;
     }
@@ -1224,6 +1181,33 @@
     }, 300);
   }
 
+  /* ============ MEDIA (PHOTO/VIDEO) UPLOAD BUTTON ============ */
+  const mediaBtn = document.getElementById('media-btn');
+  const mediaFileInput = document.getElementById('media-file-input');
+
+  mediaBtn.addEventListener('click', () => {
+    mediaFileInput.click();
+  });
+
+  mediaFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      const m = {
+        kind: 'media',
+        mediaUrl: evt.target.result,
+        mediaType: file.type,
+        time: nowTime(),
+        sender: currentRoom.callsign
+      };
+      sendToFirebase(m);
+      clank(0.2);
+    };
+    reader.readAsDataURL(file);
+    mediaFileInput.value = '';
+  });
+
   const pttBtn = document.getElementById('ptt-btn');
   const pttOverlay = document.getElementById('ptt-overlay');
   const pttWave = document.getElementById('ptt-wave');
@@ -1241,7 +1225,7 @@
     pttBtn.classList.remove('transmitting'); pttOverlay.classList.remove('show');
     const dur = Math.max(1, Math.min(9, Math.round((Date.now() - pttStart) / 1000)));
     staticBurst(0.15, 0.1); blip(500, 0.08);
-    if (Date.Now ? Date.now() - pttStart < 350 : false) return;
+    if (Date.now() - pttStart < 350) return;
     
     const m = {
       kind: 'radio',
@@ -1279,15 +1263,15 @@
     radio.freq = parseFloat(v);
     radioFreqEl.innerHTML = radio.freq.toFixed(1) + '<small> MHz</small>';
     radioTuner.value = radio.freq;
-    if (radio.playing) radioStartSeq();
+    if (radio.playing) radioStart();
   }
   radioTuner.addEventListener('input', () => { setRadioFreq(radioTuner.value); if (sfxOn && !radio.playing) blip(300 + radio.freq * 5, 0.05); });
   radioPlay.addEventListener('click', () => { if (radio.playing) radioStop(); else radioStart(); });
   document.getElementById('radio-prev').addEventListener('click', () => {
-    let i = radio.idx - 1; if (i < 0) i = stations.length - 1; radio.idx = i; setRadioFreq(stations[i].freq); if (!radio.playing) radioStart(); else radioStartSeq(); staticBurst(0.15,0.08);
+    let i = radio.idx - 1; if (i < 0) i = stations.length - 1; radio.idx = i; setRadioFreq(stations[i].freq); radioStart(); staticBurst(0.15,0.08);
   });
   document.getElementById('radio-next').addEventListener('click', () => {
-    let i = radio.idx + 1; if (i >= stations.length) i = 0; radio.idx = i; setRadioFreq(stations[i].freq); if (!radio.playing) radioStart(); else radioStartSeq(); staticBurst(0.15,0.08);
+    let i = radio.idx + 1; if (i >= stations.length) i = 0; radio.idx = i; setRadioFreq(stations[i].freq); radioStart(); staticBurst(0.15,0.08);
   });
   document.getElementById('radio-fold').addEventListener('click', (e) => {
     radioEl.classList.toggle('folded');
