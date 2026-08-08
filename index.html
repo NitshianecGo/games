@@ -6,7 +6,7 @@
 <link rel="icon" href="data:," />
 <title>METRO_CHAT // Encrypted Uplink</title>
 <meta name="theme-color" content="#0a0e0c" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -791,9 +791,9 @@
 
   /* ============ EXTERNAL STREAMING RADIO (3 TRACKS FROM GITHUB) ============ */
   const stations = [
-    { name: 'ТРЕК 1 · GITHUB', freq: 88.3,  url: 'https://raw.githubusercontent.com/ВАШ_АККАУНТ/ВАШ_РЕПОЗИТОРИЙ/main/track1.mp3' },
-    { name: 'ТРЕК 2 · GITHUB', freq: 96.5,  url: 'https://raw.githubusercontent.com/ВАШ_АККАУНТ/ВАШ_РЕПОЗИТОРИЙ/main/track2.mp3' },
-    { name: 'ТРЕК 3 · GITHUB', freq: 104.1, url: 'https://raw.githubusercontent.com/ВАШ_АККАУНТ/ВАШ_РЕПОЗИТОРИЙ/main/track3.mp3' }
+    { name: 'EXODUS BLUES', freq: 88.3,  url: 'https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/metro_exodus_14._Exodus_Blues.mp3' },
+    { name: 'LAST TRAIN TO YAMANTAU', freq: 96.5,  url: 'https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/metro_exodus_10._Last_Train_to_Yamantau.mp3' },
+    { name: 'METRO EXODUS THEME', freq: 104.1, url: 'https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/metro_exodus_02._Exodus.mp3' }
   ];
 
   let currentAudioStream = null;
@@ -816,9 +816,12 @@
     document.getElementById('radio-station').textContent = '♪ ' + station.name;
 
     if (!currentAudioStream) {
-      currentAudioStream = new Audio(station.url);
+      currentAudioStream = new Audio();
+      currentAudioStream.crossOrigin = "anonymous";
       currentAudioStream.loop = true;
-    } else {
+    }
+    
+    if (currentAudioStream.src !== station.url) {
       currentAudioStream.src = station.url;
     }
 
