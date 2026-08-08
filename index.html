@@ -257,7 +257,7 @@
   .contact:hover { background: rgba(var(--rad-green), 0.06); transform: translateX(3px); }
   .contact.active { background: rgba(var(--rad-green), 0.1); border-color: rgba(var(--rad-green), 0.25); box-shadow: inset 0 0 20px rgba(var(--rad-green), 0.08); }
   .avatar { width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0; display: grid; place-items: center; font-family:'JetBrains Mono',monospace; font-weight: 700; font-size: 14px; color: #0a0e0c; background: linear-gradient(135deg, var(--rust-light), var(--rust)); box-shadow: inset 0 0 10px rgba(0,0,0,0.4); position: relative; }
-  .avatar.on::after { content:"0"; position:absolute; right:-2px; bottom:-2px; width:10px; height:10px; border-radius:50%; background: rgb(var(--rad-green)); border: 2px solid var(--bg-deep); box-shadow: 0 0 5px rgba(var(--rad-green),0.9); }
+  .avatar.on::after { content:""; position:absolute; right:-2px; bottom:-2px; width:10px; height:10px; border-radius:50%; background: rgb(var(--rad-green)); border: 2px solid var(--bg-deep); box-shadow: 0 0 5px rgba(var(--rad-green),0.9); }
   .contact .meta { flex: 1; min-width: 0; }
   .contact .name { font-size: 13px; font-weight: 600; color: var(--text-primary); display:flex; justify-content: space-between; }
   .contact .name span { font-size: 9px; color: var(--text-ghost); font-family:'JetBrains Mono',monospace; font-weight:400; }
@@ -265,7 +265,6 @@
 
   #chat { display: flex; flex-direction: column; overflow: hidden; width: 100%; min-width: 0; }
   
-  /* ИСПРАВЛЕННАЯ АДАПТАЦИЯ ШАПКИ ЧАТА ДЛЯ МОБИЛЬНЫХ */
   .chat-header {
     padding: 10px 14px;
     display: flex;
@@ -389,7 +388,7 @@
   @keyframes pttEq { from { height: 6px; } to { height: 50px; } }
   .ptt-panel .sub { font-family:'JetBrains Mono',monospace; font-size:10px; color: var(--text-dim); letter-spacing:1.5px; }
 
-  /* ==================== RADIO WIDGET (ADAPTED FOR ALL SCREENS) ==================== */
+  /* ==================== RADIO WIDGET ==================== */
   #radio {
     position: fixed; left: 12px; bottom: 70px; z-index: 30; width: 260px; padding: 12px;
     opacity: 0; pointer-events: none; transform: translateY(10px); transition: all 0.5s var(--ease);
@@ -465,7 +464,7 @@
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10z"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
             ПОЗЫВНОЙ · CALLSIGN
           </div>
-          <input class="lobby-input" id="callsign" maxlength="18" placeholder="ARTYOM" value="ARTYOM" />
+          <input class="lobby-input" id="callsign" maxlength="18" placeholder="Метро 2033" value="Метро 2033" />
         </div>
         <div>
           <div class="field-label">
@@ -609,7 +608,7 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
-  let currentRoom = { callsign: 'ARTYOM', freq: '88.3', name: 'ПРЯМОЙ ЭФИР' };
+  let currentRoom = { callsign: 'Метро 2033', freq: '88.3', name: 'ПРЯМОЙ ЭФИР' };
   let dbRef = null;
   let sfxOn = false;
 
@@ -781,6 +780,31 @@
     setTimeout(() => { if (actx && sfxOn) blip(1200, 0.08); }, dur * 1000);
   }
 
+  /* ============ REAL VOICE RECORDER (MICROPHONE) ============ */
+  let mediaRecorder = null;
+  let audioChunks = [];
+  let realAudioBlob = null;
+  let realAudioUrl = null;
+
+  async function initMicrophone() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunks.push(event.data);
+        }
+      };
+      mediaRecorder.onstop = () => {
+        realAudioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        realAudioUrl = URL.createObjectURL(realAudioBlob);
+      };
+    } catch (e) {
+      console.warn("Microphone access denied or not available", e);
+    }
+  }
+  initMicrophone();
+
   /* ============ RADIO STATIONS ============ */
   function mtof(m) { return 440 * Math.pow(2, (m - 69) / 12); }
   const stations = [
@@ -944,7 +968,7 @@
       el.innerHTML = `<div class="room-freq">${r.freq}</div><div class="room-info"><div class="rn">${r.name}</div><div class="rm">${r.members}</div></div>`;
       el.addEventListener('click', () => {
         blip(700); freqTuner.value = r.freq; freqRead.innerHTML = r.freq + '<small> MHz</small>';
-        joinRoom(callsignEl.value.trim() || 'ARTYOM', r.freq, r.name);
+        joinRoom(callsignEl.value.trim() || 'Метро 2033', r.freq, r.name);
       });
       roomListEl.appendChild(el);
     });
@@ -958,7 +982,7 @@
   });
   enterBtn.addEventListener('click', () => {
     clank(0.3);
-    joinRoom(callsignEl.value.trim() || 'ARTYOM', parseFloat(freqTuner.value).toFixed(1), 'ЧАСТОТА ' + freqTuner.value);
+    joinRoom(callsignEl.value.trim() || 'Метро 2033', parseFloat(freqTuner.value).toFixed(1), 'ЧАСТОТА ' + freqTuner.value);
   });
 
   const brandChan = document.getElementById('brand-chan');
@@ -994,7 +1018,7 @@
       data.who = isMe ? 'me' : 'them';
 
       const c = contacts[0];
-      const exists = c.msgs.some(m => m.time === data.time && m.t === data.t && m.sender === data.sender);
+      const exists = c.msgs.some(m => m.time === data.time && m.t === data.t && m.sender === data.sender && m.audioUrl === data.audioUrl);
       if (!exists) {
         c.msgs.push(data);
         c.preview = data.kind === 'text' ? data.t : (data.kind === 'voice' ? '🎙 Голосовое' : '📻 Рация');
@@ -1074,14 +1098,31 @@
           <div style="flex:1"><span class="kind">${label}</span><div class="wave">${bars}</div></div>
           <span class="dur">0:0${m.dur}</span>
         </div><span class="time">${m.time}</span>`;
+      
       const voice = b.querySelector('.voice');
       const playBtn = b.querySelector('.play');
+      
       playBtn.addEventListener('click', () => {
         if (!sfxOn) ensureCtx();
         voice.classList.add('playing');
-        if (m.kind === 'radio') { staticBurst(0.2, 0.1); }
-        playTransmission(m.dur);
-        setTimeout(() => voice.classList.remove('playing'), m.dur * 1000);
+        
+        if (m.audioUrl) {
+          const realAudio = new Audio(m.audioUrl);
+          if (m.kind === 'radio') {
+            staticBurst(0.2, 0.1);
+          }
+          realAudio.play().catch(err => console.warn("Playback error:", err));
+          realAudio.onended = () => {
+            voice.classList.remove('playing');
+          };
+          setTimeout(() => {
+            if (!realAudio.ended) voice.classList.remove('playing');
+          }, (m.dur + 1) * 1000);
+        } else {
+          if (m.kind === 'radio') { staticBurst(0.2, 0.1); }
+          playTransmission(m.dur);
+          setTimeout(() => voice.classList.remove('playing'), m.dur * 1000);
+        }
       });
     } else {
       b.innerHTML = senderHtml + `${escapeHtml(m.t)}<span class="time">${m.time}</span>`;
@@ -1139,11 +1180,17 @@
   const micBtn = document.getElementById('mic-btn');
   const recTime = document.getElementById('rec-time');
   let recording = false, recStart = 0, recTimer = null;
+
   micBtn.addEventListener('click', () => {
     if (!recording) startAudioRecord(); else stopAndSendAudio();
   });
+
   function startAudioRecord() {
     ensureCtx(); recording = true; recStart = Date.now();
+    audioChunks = [];
+    if (mediaRecorder && mediaRecorder.state === 'inactive') {
+      try { mediaRecorder.start(); } catch(e){}
+    }
     field.classList.add('recording'); micBtn.classList.add('active');
     staticBurst(0.15, 0.08); blip(1000, 0.08);
     recTimer = setInterval(() => {
@@ -1151,21 +1198,30 @@
       recTime.textContent = '0:' + String(s).padStart(2,'0');
     }, 250);
   }
+
   function stopAndSendAudio() {
     if (!recording) return;
     recording = false; clearInterval(recTimer);
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      try { mediaRecorder.stop(); } catch(e){}
+    }
     field.classList.remove('recording'); micBtn.classList.remove('active');
     const dur = Math.max(1, Math.min(9, Math.round((Date.now() - recStart) / 1000)));
     recTime.textContent = '0:00';
     
-    const m = {
-      kind: 'voice',
-      dur: dur,
-      time: nowTime(),
-      sender: currentRoom.callsign
-    };
-    sendToFirebase(m);
-    blip(1200, 0.08);
+    setTimeout(() => {
+      const m = {
+        kind: 'voice',
+        dur: dur,
+        time: nowTime(),
+        sender: currentRoom.callsign,
+        audioUrl: realAudioUrl || null
+      };
+      sendToFirebase(m);
+      blip(1200, 0.08);
+      realAudioBlob = null;
+      realAudioUrl = null;
+    }, 300);
   }
 
   const pttBtn = document.getElementById('ptt-btn');
@@ -1185,7 +1241,7 @@
     pttBtn.classList.remove('transmitting'); pttOverlay.classList.remove('show');
     const dur = Math.max(1, Math.min(9, Math.round((Date.now() - pttStart) / 1000)));
     staticBurst(0.15, 0.1); blip(500, 0.08);
-    if (Date.now() - pttStart < 350) return;
+    if (Date.Now ? Date.now() - pttStart < 350 : false) return;
     
     const m = {
       kind: 'radio',
