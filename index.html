@@ -791,11 +791,24 @@
 
   /* ============ EXTERNAL STREAMING RADIO (3 TRACKS FROM GITHUB) ============ */
   /* ============ EXTERNAL STREAMING RADIO ============ */
- /* ============ EXTERNAL STREAMING RADIO ============ */
+/* ============ EXTERNAL STREAMING RADIO ============ */
+  // Используем jsDelivr CDN — он идеально отдает MP3 без ошибок CORS и 404
   const stations = [
-    { name: 'EXODUS BLUES', freq: 88.3,  url: 'https://raw.githubusercontent.com/NitshianecGo/icq_old/main/ExodusBlues.mp3' },
-    { name: 'LAST TRAIN TO YAMANTAU', freq: 96.5,  url: 'https://raw.githubusercontent.com/NitshianecGo/icq_old/main/LastTraintoYamantau.mp3' },
-    { name: 'METRO EXODUS THEME', freq: 104.1, url: 'https://raw.githubusercontent.com/NitshianecGo/icq_old/main/Exodus.mp3' }
+    { 
+      name: 'EXODUS BLUES', 
+      freq: 88.3,  
+      url: 'https://cdn.jsdelivr.net/gh/NitshianecGo/icq_old@main/ExodusBlues.mp3' 
+    },
+    { 
+      name: 'LAST TRAIN TO YAMANTAU', 
+      freq: 96.5,  
+      url: 'https://cdn.jsdelivr.net/gh/NitshianecGo/icq_old@main/LastTraintoYamantau.mp3' 
+    },
+    { 
+      name: 'METRO EXODUS THEME', 
+      freq: 104.1, 
+      url: 'https://cdn.jsdelivr.net/gh/NitshianecGo/icq_old@main/Exodus.mp3' 
+    }
   ];
 
   let currentAudioStream = null;
@@ -819,19 +832,21 @@
     document.getElementById('radio-tuner').value = station.freq;
     document.getElementById('radio-station').textContent = '♪ ' + station.name;
 
-    // Полностью останавливаем предыдущий поток
+    // Полный сброс предыдущего потока
     if (currentAudioStream) {
       currentAudioStream.pause();
-      currentAudioStream.removeAttribute('src');
+      currentAudioStream.src = "";
       currentAudioStream.load();
       currentAudioStream = null;
     }
 
-    // Создаем новый объект под нужный трек
-    currentAudioStream = new Audio(station.url);
+    // Создаем новый элемент
+    currentAudioStream = new Audio();
+    currentAudioStream.crossOrigin = "anonymous";
+    currentAudioStream.src = station.url;
     currentAudioStream.loop = true;
 
-    // Запускаем воспроизведение
+    // Запуск
     currentAudioStream.play().then(() => {
       radio.playing = true;
       document.getElementById('radio').classList.add('playing');
@@ -860,9 +875,41 @@
     updateRadioPlayIcon();
   }
 
-  /* ============ ОБРАБОТЧИКИ КНОПОК РАДИО ============ */
-  // Вставьте это в конец скрипта (где привязываются кнопки):
+  const radioEl = document.getElementById('radio');
+  const radioFreqEl = document.getElementById('radio-freq');
+  const radioTuner = document.getElementById('radio-tuner');
+  const radioPlay = document.getElementById('radio-play');
+  const radioEqEl = document.getElementById('radio-eq');
   
+  if (radioEqEl && radioEqEl.children.length === 0) {
+    for (let i = 0; i < 16; i++) { 
+      const b = document.createElement('i'); 
+      b.style.animationDelay = (i * 0.04) + 's'; 
+      radioEqEl.appendChild(b); 
+    }
+  }
+
+  function updateRadioPlayIcon() {
+    radioPlay.innerHTML = radio.playing
+      ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+  }
+
+  function setRadioFreq(v) {
+    radio.freq = parseFloat(v);
+    radio.idx = nearestStation(radio.freq);
+    if (radio.playing) playCurrentStation();
+  }
+
+  radioTuner.addEventListener('input', () => { 
+    setRadioFreq(radioTuner.value); 
+    if (sfxOn && !radio.playing) blip(300 + radio.freq * 5, 0.05); 
+  });
+
+  radioPlay.addEventListener('click', () => { 
+    if (radio.playing) radioStop(); else radioStart(); 
+  });
+
   document.getElementById('radio-prev').addEventListener('click', () => {
     radio.idx = (radio.idx - 1 + stations.length) % stations.length;
     playCurrentStation();
@@ -874,6 +921,13 @@
     playCurrentStation();
     if (typeof staticBurst === 'function') staticBurst(0.15, 0.08);
   });
+
+  document.getElementById('radio-fold').addEventListener('click', (e) => {
+    radioEl.classList.toggle('folded');
+    e.target.textContent = radioEl.classList.contains('folded') ? '+' : '–';
+  });
+
+  updateRadioPlayIcon();
 
   /* ============ APP DATA & LOGIC ============ */
   let contacts = [];
